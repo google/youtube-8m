@@ -62,3 +62,8 @@ run configuration.
 ### Misc
 *   `README.md`: This documentation.
 *   `utils.py`: Common functions.
+
+## About this project
+This project is meant help people quickly get started working with the
+[YouTube 8M](https://research.google.com/youtube8m/) dataset.
+This is not an official Google product.
