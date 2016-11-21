@@ -3,7 +3,7 @@
 ## Requirements
 
 This starter code requires Tensorflow. If you haven't installed it yet, follow
-the directions on [tensorflow.org](https://tensorflow.org).
+the instructions on [tensorflow.org](https://tensorflow.org).
 
 ## Quick Start on Video Level Features
 
