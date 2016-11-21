@@ -1,5 +1,10 @@
 # YouTube 8M Tensorflow Starter Code
 
+## Requirements
+
+This starter code requires Tensorflow. If you haven't installed it yet, follow
+the directions on [tensorflow.org](https://tensorflow.org).
+
 ## Quick Start on Video Level Features
 
 To start training a logistic model on the video-level features, run
