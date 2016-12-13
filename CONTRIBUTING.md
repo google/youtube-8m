@@ -1,7 +1,15 @@
 # How to contribute
 
-We'd love to accept your patches and contributions to this project. There are
-just a few small guidelines you need to follow.
+We are accepting patches and contributions to this project. To set expectations,
+this project is primarily intended to be a flexible starting point for
+researchers working with the YouTube-8M dataset. As such, we would like to keep
+it simple. We are more likely to accept small bug fixes and optimizations, and
+less likely to accept patches which add significant complexity. For the latter
+type of contribution, we recommend creating a Github fork of the project
+instead.
+
+If you would like to contribute, there are a few small guidelines you need to
+follow.
 
 ## Contributor License Agreement
 
