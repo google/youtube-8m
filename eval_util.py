@@ -201,5 +201,5 @@ class EvaluationMetrics(object):
     self.sum_hit_at_one = 0.0
     self.sum_perr = 0.0
     self.sum_loss = 0.0
-    self.map_calculator.clear_map()
+    self.map_calculator.clear()
     self._num_examples = 0

@@ -9,6 +9,10 @@ the instructions on [tensorflow.org](https://tensorflow.org).
 
 To start training a logistic model on the video-level features, run
 
+TODO(sobhan): be more specific about what the "video-level features" are, e.g.
+where to get them from. Also emphasize that if the training data is split into
+multiple parts give the list of all files as input
+
 ```sh
 MODEL_DIR=/tmp/yt8m
 python train.py --train_data_pattern='/path/to/features/train*.tfrecord' --train_dir=$MODEL_DIR/logistic_model
@@ -32,7 +36,7 @@ and navigating to http://localhost:6006 in your web browser.
 ## Using Frame Level Features
 
 Follow the same instructions as above, appending
-`--FrameFeatures=True --model=FrameLevelLogisticModel`
+`--frame_features=True --model=FrameLevelLogisticModel`
 for the train.py and eval.py scripts.
 
 ## Notes

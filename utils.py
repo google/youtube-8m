@@ -85,7 +85,7 @@ def AddGlobalStepSummary(summary_writer,
 
   summary_writer.flush()
   info = ("global_step {0} | Hit@1: {1:.3f} | PERR: {2:.3f} | Loss: {3:.3f} "
-          "| Examples_per_sec: {4:.3f}s | AccuTime: {5:.3f}s").format(
+          "| Examples_per_sec: {4:.3f} | AccuTime: {5:.3f}s").format(
               global_step_val, this_hit_at_one, this_perr, this_loss,
               examples_per_second, accumulate_time)
   return info

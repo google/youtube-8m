@@ -44,6 +44,9 @@ if __name__ == '__main__':
       "File glob defining the evaluation dataset in tensorflow.SequenceExample "
       "format. The SequenceExamples are expected to have an 'INC6' byte array "
       "sequence feature as well as a 'labels' int64 context feature.")
+  flags.DEFINE_string("feature_name", "mean_inc3", "Name of the feature column "
+                      "to use for training");
+  flags.DEFINE_integer("feature_size", 1024, "length of the feature vectors");
 
   # Model flags.
   flags.DEFINE_bool(
@@ -280,9 +283,12 @@ def evaluate():
   """Evaluate for a number of steps."""
   with tf.Graph().as_default():
     if FLAGS.frame_features:
-      reader = readers.YT8MFrameFeatureReader()
+      reader = readers.YT8MFrameFeatureReader(feature_name=FLAGS.feature_name,
+                                              feature_size=FLAGS.feature_size)
     else:
-      reader = readers.YT8MAggregatedFeatureReader()
+      reader = readers.YT8MAggregatedFeatureReader(
+          feature_name=FLAGS.feature_name, feature_size=FLAGS.feature_size)
+
     model = find_class_by_name(FLAGS.model, [models])()
     label_loss = find_class_by_name(FLAGS.label_loss, [losses])()
 

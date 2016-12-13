@@ -45,6 +45,9 @@ if __name__ == '__main__':
       "features (i.e. tensorflow.SequenceExample), then set --reader_type "
       "format. The (Sequence)Examples are expected to have 'inc3' byte array "
       "sequence feature as well as a 'labels' int64 context feature.")
+  flags.DEFINE_string("feature_name", "mean_inc3", "Name of the feature column "
+                      "to use for training");
+  flags.DEFINE_integer("feature_size", 1024, "length of the feature vectors");
 
   # Model flags.
   flags.DEFINE_bool(
@@ -74,6 +77,7 @@ if __name__ == '__main__':
       "regularization_penalty", 1e-3,
       "How much weight to give to the regularization loss (the label loss has "
       "a weight of 1).")
+
   # Other flags.
   flags.DEFINE_integer("num_readers", 8,
                        "How many threads to use for reading input files.")
@@ -142,7 +146,8 @@ def get_input_data_tensors(reader,
   with tf.name_scope("train_input"):
     files = gfile.Glob(data_pattern)
     if not files:
-      raise IOError("Unable to find training files.")
+      raise IOError("Unable to find training files. data_pattern='" +
+                    data_pattern + "'")
     logging.info("number of training files: " + str(len(files)))
     filename_queue = tf.train.string_input_producer(files,
                                                     capacity=10000,
@@ -376,9 +381,11 @@ def main(unused_argv):
 
   if not saver:
     if FLAGS.frame_features:
-      reader = readers.YT8MFrameFeatureReader()
+      reader = readers.YT8MFrameFeatureReader(feature_name=FLAGS.feature_name,
+                                              feature_size=FLAGS.feature_size)
     else:
-      reader = readers.YT8MAggregatedFeatureReader()
+      reader = readers.YT8MAggregatedFeatureReader(
+          feature_name=FLAGS.feature_name, feature_size=FLAGS.feature_size)
 
     model = find_class_by_name(FLAGS.model, [models])()
     label_loss = find_class_by_name(FLAGS.label_loss, [losses])()
