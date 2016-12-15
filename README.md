@@ -1,4 +1,4 @@
-# YouTube 8M Tensorflow Starter Code
+# YouTube-8M Tensorflow Starter Code
 
 ## Requirements
 
@@ -63,11 +63,15 @@ run configuration.
 *   `mean_average_precision_calculator.py`: Functions for calculating mean
                                             average precision.
 
+### Inference
+*   `inference.py`: Generates an output file containing predictions of
+                    the model over a set of videos.
+
 ### Misc
 *   `README.md`: This documentation.
 *   `utils.py`: Common functions.
 
 ## About this project
 This project is meant help people quickly get started working with the
-[YouTube 8M](https://research.google.com/youtube8m/) dataset.
+[YouTube-8M](https://research.google.com/youtube8m/) dataset.
 This is not an official Google product.

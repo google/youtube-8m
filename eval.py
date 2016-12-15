@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Binary for training Tensorflow models on VCA datasets."""
+"""Binary for training Tensorflow models on the YouTube-8M dataset."""
 
 import os
 import time

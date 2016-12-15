@@ -45,9 +45,9 @@ if __name__ == '__main__':
       "features (i.e. tensorflow.SequenceExample), then set --reader_type "
       "format. The (Sequence)Examples are expected to have 'inc3' byte array "
       "sequence feature as well as a 'labels' int64 context feature.")
-  flags.DEFINE_string("feature_name", "mean_inc3", "Name of the feature column "
-                      "to use for training");
-  flags.DEFINE_integer("feature_size", 1024, "length of the feature vectors");
+  flags.DEFINE_string("feature_name", "mean_inc3", "Name of the feature "
+                      "to use for training.");
+  flags.DEFINE_integer("feature_size", 1024, "Length of the feature vectors.");
 
   # Model flags.
   flags.DEFINE_bool(
@@ -159,7 +159,8 @@ def get_input_data_tensors(reader,
         tf.train.shuffle_batch_join(examples_and_labels,
                                     batch_size=batch_size,
                                     capacity=10000,
-                                    min_after_dequeue=5000))
+                                    min_after_dequeue=5000,
+                                    allow_smaller_final_batch=True))
     tf.histogram_summary("video_batch", video_batch)
     return video_batch, labels_batch, num_frames_batch
 
@@ -377,6 +378,7 @@ def main(unused_argv):
     else:
       logging.info("Restoring from meta graph file %s", meta_filename)
       saver = tf.train.import_meta_graph(meta_filename)
+      saver.restore(sess, latest_checkpoint)
       restored_from_checkpoint = True
 
   if not saver:
