@@ -21,7 +21,7 @@ python train.py --train_data_pattern='/path/to/features/train*.tfrecord' --train
 To evaluate the model, run
 
 ```sh
-python eval.py --eval_data_pattern='/path/to/features/validate*.tfrecord' --eval_dir=$MODEL_DIR/logistic_model
+python eval.py --eval_data_pattern='/path/to/features/validate*.tfrecord' --train_dir=$MODEL_DIR/logistic_model
 ```
 
 As the model is training or evaluating, you can view the results on tensorboard

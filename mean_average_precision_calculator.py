@@ -41,11 +41,11 @@ import numpy
 import average_precision_calculator
 
 
-class MeanAveragePrecisionCaculator(object):
+class MeanAveragePrecisionCalculator(object):
   """This class is to calculate mean average precision.
   """
 
-  def __init__(self, num_class, top_n_array=None):
+  def __init__(self, num_class):
     """Construct a calculator to calculate the (macro) average precision.
 
     Args:
@@ -61,47 +61,36 @@ class MeanAveragePrecisionCaculator(object):
     """
     if not isinstance(num_class, int) or num_class <= 1:
       raise ValueError("num_class must be a positive integer.")
-    if top_n_array is None:
-      top_n_array = [1000 for _ in xrange(num_class)]
-    if len(top_n_array) != num_class:
-      raise ValueError("top_n_array must have the length of " + str(num_class))
 
     self._ap_calculators = []  # member of AveragePrecisionCalculator
     self._num_class = num_class  # total number of classes
-    # top_n array to calculate ap@n for each class
-    self._top_n_array = top_n_array
-    for top_n in top_n_array:
+    for i in xrange(num_class):
       self._ap_calculators.append(
-          average_precision_calculator.AveragePrecisionCalculator(top_n))
+          average_precision_calculator.AveragePrecisionCalculator())
 
-  def _check_input(self, predictions, actuals):
-    if (not isinstance(predictions, numpy.ndarray) or
-        not isinstance(actuals, numpy.ndarray) or
-        predictions.shape != actuals.shape or len(predictions.shape) != 2):
-      return False
-    else:
-      return True
-
-  def accumulate(self, predictions, actuals):
+  def accumulate(self, predictions, actuals, num_positives=None):
     """Accumulate the predictions and their ground truth labels.
 
     Args:
-      predictions: a numpy 2-D array storing the prediction scores. Each
-      column represents a class and each row indicates a sample.
-      actuals: a numpy 2-D array storing the ground truth labels. Each
-      column represents a class and each row indicates a sample. Any value
+      predictions: A list of lists storing the prediction scores. The outer
+      dimension corresponds to classes.
+      actuals: A list of lists storing the ground truth labels. The dimensions
+      should correspond to the predictions input. Any value
       larger than 0 will be treated as positives, otherwise as negatives.
+      num_positives: If provided, it is a list of numbers representing the
+      number of true positives for each class. If not provided, the number of
+      true positives will be inferred from the 'actuals' array.
 
     Raises:
       ValueError: An error occurred when the shape of predictions and actuals
       does not match.
     """
-    if not self._check_input(predictions, actuals):
-      raise ValueError("predictions and actuals must be the numpy 2-D"
-                       "array of the same shape.")
+    if not num_positives:
+      num_positives = [None for i in predictions.shape[1]]
+
     calculators = self._ap_calculators
-    for i in xrange(predictions.shape[1]):
-      calculators[i].accumulate(predictions[:, i], actuals[:, i])
+    for i in xrange(len(predictions)):
+      calculators[i].accumulate(predictions[i], actuals[i], num_positives[i])
 
   def clear(self):
     for calculator in self._ap_calculators:

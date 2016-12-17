@@ -55,6 +55,7 @@ ap3 = calculator.peek_interpolated_ap_at_n(inter_points=1000)
 
 import heapq
 import random
+import numbers
 
 import numpy
 
@@ -62,20 +63,20 @@ import numpy
 class AveragePrecisionCalculator(object):
   """Calculate the average precision and average precision at n."""
 
-  def __init__(self, top_n=1000):
+  def __init__(self, top_n=None):
     """Construct an AveragePrecisionCalculator to calculate average precision.
 
     This class is used to calculate the average precision for a single label.
 
     Args:
-      top_n: A positive Integer specifying the average precision at n (default
-      value 1000).
+      top_n: A positive Integer specifying the average precision at n, or
+        None to use all provided data points.
 
     Raises:
       ValueError: An error occurred when the top_n is not a positive integer.
     """
-    if not isinstance(top_n, int) or top_n <= 0:
-      raise ValueError("top_n must be a positive integer.")
+    if not ((isinstance(top_n, int) and top_n >= 0) or top_n is None):
+      raise ValueError("top_n must be a positive integer or None.")
 
     self._top_n = top_n  # average precision at n
     self._total_positives = 0  # total number of positives have seen
@@ -91,7 +92,7 @@ class AveragePrecisionCalculator(object):
     """Gets the number of positive samples that have been accumulated."""
     return self._total_positives
 
-  def accumulate(self, predictions, actuals):
+  def accumulate(self, predictions, actuals, num_positives=None):
     """Accumulate the predictions and their ground truth labels.
 
     After the function call, we may call peek_ap_at_n to actually calculate
@@ -99,27 +100,33 @@ class AveragePrecisionCalculator(object):
     Note predictions and actuals must have the same shape.
 
     Args:
-      predictions: a numpy 1-D array storing the prediction scores.
-      actuals: a numpy 1-D array storing the ground truth labels. Any value
+      predictions: a list storing the prediction scores.
+      actuals: a list storing the ground truth labels. Any value
       larger than 0 will be treated as positives, otherwise as negatives.
+      num_positives = If the 'predictions' and 'actuals' inputs aren't complete,
+      then it's possible some true positives were missed in them. In that case,
+      you can provide 'num_positives' in order to accurately track recall.
 
     Raises:
       ValueError: An error occurred when the format of the input is not the
       numpy 1-D array or the shape of predictions and actuals does not match.
     """
-    if (not isinstance(predictions, numpy.ndarray) or
-        not isinstance(actuals, numpy.ndarray)):
-      raise ValueError("predictions and actuals must be the numpy 1-D array.")
-
-    if predictions.shape != actuals.shape:
+    if len(predictions) != len(actuals):
       raise ValueError("the shape of predictions and actuals does not match.")
 
-    self._total_positives += numpy.size(numpy.where(actuals > 0))
+    if not num_positives is None:
+      if not isinstance(num_positives, numbers.Number) or num_positives < 0:
+        raise ValueError("'num_positives' was provided but it wan't a nonzero number.")
+
+    if not num_positives is None:
+      self._total_positives += num_positives
+    else:
+      self._total_positives += numpy.size(numpy.where(actuals > 0))
     topk = self._top_n
     heap = self._heap
 
     for i in xrange(numpy.size(predictions)):
-      if len(heap) < topk:
+      if topk is None or len(heap) < topk:
         heapq.heappush(heap, (predictions[i], actuals[i]))
       else:
         if predictions[i] > heap[0][0]:  # heap[0] is the smallest
@@ -158,7 +165,7 @@ class AveragePrecisionCalculator(object):
         predlists[0],
         predlists[1],
         inter_points=inter_points,
-        total_num_positives=min(self._total_positives, self._top_n))
+        total_num_positives= min(self._total_positives, self._top_n) if self._top_n else self._total_positives)
     return ap
 
   @staticmethod

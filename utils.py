@@ -65,7 +65,6 @@ def AddGlobalStepSummary(summary_writer,
   this_hit_at_one = global_step_info_dict["hit_at_one"]
   this_perr = global_step_info_dict["perr"]
   this_loss = global_step_info_dict["loss"]
-  accumulate_time = global_step_info_dict.get("accumulate_time", -1)
   examples_per_second = global_step_info_dict.get("examples_per_second", -1)
 
   summary_writer.add_summary(
@@ -84,10 +83,10 @@ def AddGlobalStepSummary(summary_writer,
                     examples_per_second), global_step_val)
 
   summary_writer.flush()
-  info = ("global_step {0} | Hit@1: {1:.3f} | PERR: {2:.3f} | Loss: {3:.3f} "
-          "| Examples_per_sec: {4:.3f} | AccuTime: {5:.3f}s").format(
+  info = ("global_step {0} | Batch Hit@1: {1:.3f} | Batch PERR: {2:.3f} | Batch Loss: {3:.3f} "
+          "| Examples_per_sec: {4:.3f}").format(
               global_step_val, this_hit_at_one, this_perr, this_loss,
-              examples_per_second, accumulate_time)
+              examples_per_second)
   return info
 
 
@@ -112,6 +111,9 @@ def AddEpochSummary(summary_writer,
   avg_perr = epoch_info_dict["avg_perr"]
   avg_loss = epoch_info_dict["avg_loss"]
   aps = epoch_info_dict["aps"]
+  gap = epoch_info_dict["gap"]
+
+  print ("aps: " + str(aps))
 
   summary_writer.add_summary(
       MakeSummary("Epoch/" + summary_scope + "_Avg_Hit@1", avg_hit_at_one),
@@ -122,14 +124,15 @@ def AddEpochSummary(summary_writer,
   summary_writer.add_summary(
       MakeSummary("Epoch/" + summary_scope + "_Avg_Loss", avg_loss),
       global_step_val)
-  if not isinstance(aps, float):
-    summary_writer.add_summary(
-        MakeSummary("Epoch/" + summary_scope + "_MAP", numpy.mean(aps)),
-        global_step_val)
+  summary_writer.add_summary(
+      MakeSummary("Epoch/" + summary_scope + "_MAP", numpy.mean(aps)),
+          global_step_val)
+  summary_writer.add_summary(
+      MakeSummary("Epoch/" + summary_scope + "_GAP", gap),
+          global_step_val)
   summary_writer.flush()
 
   info = ("epoch/eval number {0} | Avg_Hit@1: {1:.3f} | Avg_PERR: {2:.3f} "
-          "| MAP: {3:.3f} | Avg_Loss: {4:3f}").format(epoch_id, avg_hit_at_one,
-                                                      avg_perr, numpy.mean(aps),
-                                                      avg_loss)
+          "| MAP: {3:.3f} | GAP: {3:.3f} | Avg_Loss: {4:3f}").format(
+          epoch_id, avg_hit_at_one, avg_perr, numpy.mean(aps), gap, avg_loss)
   return info
