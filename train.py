@@ -378,7 +378,6 @@ def main(unused_argv):
     else:
       logging.info("Restoring from meta graph file %s", meta_filename)
       saver = tf.train.import_meta_graph(meta_filename)
-      saver.restore(sess, latest_checkpoint)
       restored_from_checkpoint = True
 
   if not saver:
