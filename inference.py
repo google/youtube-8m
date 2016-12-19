@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 """Binary for generating predictions over a set of videos."""
 
 import os
@@ -32,10 +33,11 @@ import models
 
 FLAGS = flags.FLAGS
 
-if __name__ == "__main__":
+if __name__ == '__main__':
   flags.DEFINE_string("train_dir", "/tmp/yt8m_model/",
-                      "The directory to save the model files in.")
-  flags.DEFINE_string("output_file", "", "The file to save the predictions to.")
+                      "The directory to load the model files from.")
+  flags.DEFINE_string("output_file", "",
+                      "The file to save the predictions to.")
   flags.DEFINE_string(
       "input_data_pattern", "",
       "File glob defining the evaluation dataset in tensorflow.SequenceExample "
@@ -49,17 +51,18 @@ if __name__ == "__main__":
       "Otherwise, --eval_data_pattern must be aggregated video-level "
       "features. The model must also be set appropriately (i.e. to read 3D "
       "batches VS 4D batches.")
-  flags.DEFINE_integer("batch_size", 8192,
-                       "How many examples to process per batch.")
+  flags.DEFINE_integer(
+      "batch_size", 8192,
+      "How many examples to process per batch.")
   flags.DEFINE_string("feature_name", "mean_inc3", "Name of the feature "
-                      "to use for training.")
-  flags.DEFINE_integer("feature_size", 1024, "Length of the feature vectors.")
+                      "to use for training.");
+  flags.DEFINE_integer("feature_size", 1024, "Length of the feature vectors.");
 
   # Other flags.
   flags.DEFINE_integer("num_readers", 1,
                        "How many threads to use for reading input files.")
-  flags.DEFINE_integer("top_k", 20, "How many predictions to output per video.")
-
+  flags.DEFINE_integer("top_k", 20,
+                       "How many predictions to output per video.")
 
 def format_lines(video_ids, predictions, top_k):
   batch_size = len(video_ids)
@@ -92,36 +95,31 @@ def get_input_data_tensors(reader, data_pattern, batch_size, num_readers=1):
   with tf.name_scope("input"):
     files = gfile.Glob(data_pattern)
     if not files:
-      raise IOError("Unable to find input files. data_pattern='" + data_pattern
-                    + "'")
+      raise IOError("Unable to find input files. data_pattern='" +
+                    data_pattern + "'")
     logging.info("number of input files: " + str(len(files)))
     filename_queue = tf.train.string_input_producer(
         files, num_epochs=1, shuffle=False)
-    examples_and_labels = [
-        reader.prepare_reader(filename_queue) for _ in xrange(num_readers)
-    ]
+    examples_and_labels = [reader.prepare_reader(filename_queue)
+                           for _ in xrange(num_readers)]
 
     video_id_batch, video_batch, unused_labels, num_frames_batch = (
-        tf.train.batch_join(
-            examples_and_labels,
-            batch_size=batch_size,
-            allow_smaller_final_batch=True))
+        tf.train.batch_join(examples_and_labels,
+                            batch_size=batch_size,
+                            allow_smaller_final_batch = True))
     return video_id_batch, video_batch, num_frames_batch
 
-
-def inference(reader, train_dir, data_pattern, out_file_location, batch_size,
-              top_k):
+def inference(reader, train_dir, data_pattern, out_file_location, batch_size, top_k):
   with tf.Session() as sess, open(out_file_location, "w+") as out_file:
-    video_id_batch, video_batch, num_frames_batch = get_input_data_tensors(
-        reader, data_pattern, batch_size)
+    video_id_batch, video_batch, num_frames_batch = get_input_data_tensors(reader, data_pattern, batch_size)
     latest_checkpoint = tf.train.latest_checkpoint(train_dir)
     if latest_checkpoint is None:
       raise Exception("unable to find a checkpoint at location: %s" % train_dir)
     else:
       meta_graph_location = latest_checkpoint + ".meta"
-      print "loading meta-graph: " + meta_graph_location
+      logging.info("loading meta-graph: " + meta_graph_location)
     saver = tf.train.import_meta_graph(meta_graph_location)
-    print "restoring variables from " + latest_checkpoint
+    logging.info("restoring variables from " + latest_checkpoint)
     saver.restore(sess, latest_checkpoint)
     input_tensor = tf.get_collection("input_batch_raw")[0]
     num_frames_tensor = tf.get_collection("num_frames")[0]
@@ -136,27 +134,20 @@ def inference(reader, train_dir, data_pattern, out_file_location, batch_size,
 
     try:
       while not coord.should_stop():
-        video_id_batch_val, video_batch_val, num_frames_batch_val = sess.run(
-            [video_id_batch, video_batch, num_frames_batch])
-        predictions_val, = sess.run([predictions_tensor],
-                                    feed_dict={
-                                        input_tensor: video_batch_val,
-                                        num_frames_tensor: num_frames_batch_val
-                                    })
-        now = time.time()
-        num_examples_processed += len(video_batch_val)
-        num_classes = predictions_val.shape[1]
-        print "num examples processed: " + str(
-            num_examples_processed) + " elapsed seconds: " + "{0:.2f}".format(
-                now - start_time)
-        for line in format_lines(video_id_batch_val, predictions_val, top_k):
-          out_file.write(line)
+          video_id_batch_val, video_batch_val,num_frames_batch_val = sess.run([video_id_batch, video_batch, num_frames_batch])
+          predictions_val, = sess.run([predictions_tensor], feed_dict={input_tensor: video_batch_val, num_frames_tensor: num_frames_batch_val})
+          now = time.time()
+          num_examples_processed += len(video_batch_val)
+          num_classes = predictions_val.shape[1]
+          logging.info("num examples processed: " + str(num_examples_processed) + " elapsed seconds: " + "{0:.2f}".format(now-start_time))
+          for line in format_lines(video_id_batch_val, predictions_val, top_k):
+            out_file.write(line)
+
 
     except tf.errors.OutOfRangeError:
-      print("Done with inference. The output file was written to " +
-            out_file_location)
+        logging.info('Done with inference. The output file was written to ' + out_file_location)
     finally:
-      coord.request_stop()
+        coord.request_stop()
 
     coord.join(threads)
     sess.close()
@@ -165,13 +156,13 @@ def inference(reader, train_dir, data_pattern, out_file_location, batch_size,
 def main(unused_argv):
   logging.set_verbosity(tf.logging.INFO)
   if FLAGS.frame_features:
-    reader = readers.YT8MFrameFeatureReader(
-        feature_name=FLAGS.feature_name, feature_size=FLAGS.feature_size)
+    reader = readers.YT8MFrameFeatureReader(feature_name=FLAGS.feature_name,
+                                            feature_size=FLAGS.feature_size)
   else:
     reader = readers.YT8MAggregatedFeatureReader(
         feature_name=FLAGS.feature_name, feature_size=FLAGS.feature_size)
-  inference(reader, FLAGS.train_dir, FLAGS.input_data_pattern,
-            FLAGS.output_file, FLAGS.batch_size, FLAGS.top_k)
+  inference(reader, FLAGS.train_dir,
+      FLAGS.input_data_pattern, FLAGS.output_file, FLAGS.batch_size, FLAGS.top_k)
 
 
 if __name__ == "__main__":

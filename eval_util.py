@@ -19,6 +19,7 @@ import numpy
 from tensorflow.python.platform import gfile
 
 import mean_average_precision_calculator as map_calculator
+import average_precision_calculator as ap_calculator
 
 
 def calculate_hit_at_one(predictions, actuals):
@@ -66,8 +67,8 @@ def calculate_precision_at_equal_recall_rate(predictions, actuals):
   return aggregated_precision
 
 
-def topk_thresholding_matrix(predictions, k=20):
-  """Get the top_k for each prediction in the predictions matrix.
+def top_k_by_class(predictions, labels, k=20):
+  """Extracts the top k predictions for each video, sorted by class.
 
   Args:
     predictions: A numpy matrix containing the outputs of the model.
@@ -75,7 +76,13 @@ def topk_thresholding_matrix(predictions, k=20):
     k: the top k non-zero entries to preserve in each prediction.
 
   Returns:
-    The predictions matrix after applying the topk thresholding.
+    A tuple (predictions,labels, true_positives). 'predictions' and 'labels'
+    are lists of lists of floats. 'true_positives' is a list of scalars. The
+    length of the lists are equal to the number of classes. The entries in the
+    predictions variable are probability predictions, and
+    the corresponding entries in the labels variable are the ground truth for
+    those predictions. The entries in 'true_positives' are the number of true
+    positives for each class in the ground truth.
 
   Raises:
     ValueError: An error occurred when the k is a positive integer.
@@ -83,18 +90,27 @@ def topk_thresholding_matrix(predictions, k=20):
   if k <= 0:
     raise ValueError("k must be a positive integer.")
   k = min(k, predictions.shape[1])
-  for row in range(predictions.shape[0]):
-    predictions[row] = _topk_thresholding_array(predictions[row], k)
-  return predictions
+  num_classes = predictions.shape[1]
+  prediction_triplets= []
+  for video_index in range(predictions.shape[0]):
+    prediction_triplets.extend(top_k_triplets(predictions[video_index],labels[video_index], k))
+  out_predictions = [[] for v in xrange(num_classes)]
+  out_labels = [[] for v in xrange(num_classes)]
+  for triplet in prediction_triplets:
+    out_predictions[triplet[0]].append(triplet[1])
+    out_labels[triplet[0]].append(triplet[2])
+  out_true_positives = [numpy.sum(labels[:,i]) for i in xrange(num_classes)]
 
-def _topk_thresholding_array(arr, k=20):
-  """Get the top_k for a 1-d numpy array."""
-  m = len(arr)
+  return out_predictions, out_labels, out_true_positives
+
+def top_k_triplets(predictions, labels, k=20):
+  """Get the top_k for a 1-d numpy array. Returns a sparse list of tuples in
+  (prediction, class) format"""
+  m = len(predictions)
   k = min(k, m)
-  out_vector = numpy.copy(arr)
-  idx = numpy.argpartition(arr, m - k)[0:m - k]
-  out_vector[idx] = 0
-  return out_vector
+  indices = numpy.argpartition(predictions, k)[-k:]
+  return [(index, predictions[index], labels[index]) for index in indices]
+
 
 def _quantize(predictions, num_of_bins=1e03):
   """Quantize the predictions.
@@ -117,26 +133,26 @@ def _quantize(predictions, num_of_bins=1e03):
 class EvaluationMetrics(object):
   """A class to store the evaluation metrics."""
 
-  def __init__(self, num_class, top_n_array=None):
+  def __init__(self, num_class, top_k):
     """Construct an EvaluationMetrics object to store the evaluation metrics.
 
     Args:
       num_class: A positive integer specifying the number of classes.
-      top_n_array: A list of positive integers specifying the top n for
-        calculating the average precision for each class.
+      top_k: A positive integer specifying how many predictions are considered per video.
 
     Raises:
-      ValueError: An error occurred when MeanAveragePrecisionCaculator cannot
+      ValueError: An error occurred when MeanAveragePrecisionCalculator cannot
         not be constructed.
     """
     self.sum_hit_at_one = 0.0
     self.sum_perr = 0.0
     self.sum_loss = 0.0
-    self.map_calculator = map_calculator.MeanAveragePrecisionCaculator(
-        num_class, top_n_array)
+    self.map_calculator = map_calculator.MeanAveragePrecisionCalculator(num_class)
+    self.global_ap_calculator = ap_calculator.AveragePrecisionCalculator()
+    self.top_k = top_k
+    self.num_examples = 0
 
-  def accumulate(self, predictions, labels, loss,
-                 accumulate_average_precision=False):
+  def accumulate(self, predictions, labels, loss):
     """Accumulate the metrics calculated locally for this mini-batch.
 
     Args:
@@ -145,33 +161,36 @@ class EvaluationMetrics(object):
       labels: A numpy matrix containing the ground truth labels.
         Dimensions are 'batch' x 'num_classes'.
       loss: A numpy array containing the loss for each sample.
-      accumulate_average_precision: whether to accumulate average precision.
 
     Returns:
-      dictionary: a dictionary storing the metrics for the mini-batch.
+      dictionary: A dictionary storing the metrics for the mini-batch.
 
     Raises:
       ValueError: An error occurred when the shape of predictions and actuals
         does not match.
     """
+    batch_size = labels.shape[0]
     mean_hit_at_one = calculate_hit_at_one(predictions, labels)
     mean_perr = calculate_precision_at_equal_recall_rate(predictions, labels)
     mean_loss = numpy.mean(loss)
 
-    if accumulate_average_precision:
-      # Take the top 20 predictions and use 1000 bins.
-      predictions_val = _quantize(predictions, num_of_bins=10**3)
-      predictions_val = topk_thresholding_matrix(predictions_val, k=20)
-      self.map_calculator.accumulate(predictions_val, labels)
+    # Take the top 20 predictions and use 1000 bins.
+    predictions_val = _quantize(predictions, num_of_bins=10**3)
+    sparse_predictions, sparse_labels, num_positives = top_k_by_class(predictions_val, labels, self.top_k)
+    self.map_calculator.accumulate(sparse_predictions, sparse_labels, num_positives)
+    def flatten(l):
+      return [item for sublist in l for item in sublist]
 
-    self._num_examples += 1
-    self.sum_hit_at_one += mean_hit_at_one * labels.shape[0]
-    self.sum_perr += mean_perr * labels.shape[0]
-    self.sum_loss += mean_loss * labels.shape[0]
+    self.global_ap_calculator.accumulate(flatten(sparse_predictions), flatten(sparse_labels), sum(num_positives))
+
+    self.num_examples += batch_size
+    self.sum_hit_at_one += mean_hit_at_one * batch_size
+    self.sum_perr += mean_perr * batch_size
+    self.sum_loss += mean_loss * batch_size
 
     return {"hit_at_one": mean_hit_at_one, "perr": mean_perr, "loss": mean_loss}
 
-  def get(self, num_accumulated_examples):
+  def get(self):
     """Calculate the evaluation metrics for the whole epoch.
 
     Raises:
@@ -182,19 +201,18 @@ class EvaluationMetrics(object):
         dictionary has the fields: avg_hit_at_one, avg_perr, avg_loss, and
         aps (default nan).
     """
-    if self._num_examples <= 0:
+    if self.num_examples <= 0:
       raise ValueError("total_sample must be positive.")
-    avg_hit_at_one = self.sum_hit_at_one / self._num_examples
-    avg_perr = self.sum_perr / self._num_examples
-    avg_loss = self.sum_loss / self._num_examples
+    avg_hit_at_one = self.sum_hit_at_one / self.num_examples
+    avg_perr = self.sum_perr / self.num_examples
+    avg_loss = self.sum_loss / self.num_examples
 
-    aps = numpy.core.numeric.nan
-    if not self.map_calculator.is_empty():
-      aps = self.map_calculator.peek_interpolated_map_at_n(inter_points=1000)
+    aps = self.map_calculator.peek_interpolated_map_at_n(inter_points=1000)
+    gap = self.global_ap_calculator.peek_interpolated_ap_at_n(inter_points=1000)
 
     epoch_info_dict = {}
     return {"avg_hit_at_one": avg_hit_at_one, "avg_perr": avg_perr,
-            "avg_loss": avg_loss, "aps": aps}
+            "avg_loss": avg_loss, "aps": aps, "gap": gap}
 
   def clear(self):
     """Clear the evaluation metrics and reset the EvaluationMetrics object."""
@@ -202,4 +220,5 @@ class EvaluationMetrics(object):
     self.sum_perr = 0.0
     self.sum_loss = 0.0
     self.map_calculator.clear()
-    self._num_examples = 0
+    self.global_ap_calculator.clear()
+    self.num_examples = 0

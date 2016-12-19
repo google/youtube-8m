@@ -36,9 +36,9 @@ FLAGS = flags.FLAGS
 if __name__ == '__main__':
   # Dataset flags.
   flags.DEFINE_string("train_dir", "/tmp/yt8m_model/",
-                      "The directory to save the model files in.")
-  flags.DEFINE_string("eval_dir", "/tmp/yt8m_eval/",
-                      "The directory to save the evaluation results.")
+                      "The directory to load the model files from. "
+                      "The tensorboard metrics files are also saved to this "
+                      "directory.")
   flags.DEFINE_string(
       "eval_data_pattern", "",
       "File glob defining the evaluation dataset in tensorflow.SequenceExample "
@@ -60,19 +60,18 @@ if __name__ == '__main__':
       "Which architecture to use for the model. Options include 'Logistic', "
       "'SingleMixtureMoe', and 'TwoLayerSigmoid'. See aggregated_models.py and "
       "frame_level_models.py for the model definitions.")
-
   flags.DEFINE_integer(
       "batch_size", 1024,
       "How many examples to process per batch.")
-  flags.DEFINE_integer("num_eval_examples", 1698333,
-                       "Number of examples in the validation set.")
   flags.DEFINE_string("label_loss", "CrossEntropyLoss",
                       "Loss computed on validation data")
-  flags.DEFINE_boolean("run_once", False, "Whether to run eval only once.")
 
   # Other flags.
   flags.DEFINE_integer("num_readers", 8,
                        "How many threads to use for reading input files.")
+  flags.DEFINE_boolean("run_once", False, "Whether to run eval only once.")
+  flags.DEFINE_integer("top_k", 20,
+                       "How many predictions to output per video.")
 
 def find_class_by_name(name, modules):
   """Searches the provided modules for the named class and returns it."""
@@ -83,7 +82,6 @@ def find_class_by_name(name, modules):
 def get_input_evaluation_tensors(reader,
                                  data_pattern,
                                  batch_size=1024,
-                                 num_epochs=None,
                                  num_readers=1):
   """Creates the section of the graph which reads the evaluation data.
 
@@ -91,8 +89,6 @@ def get_input_evaluation_tensors(reader,
     reader: A class which parses the training data.
     data_pattern: A 'glob' style path to the data files.
     batch_size: How many examples to process at a time.
-    num_epochs: How many passes to make over the training data. Set to 'None'
-                to run indefinitely.
     num_readers: How many I/O threads to use.
 
   Returns:
@@ -103,25 +99,20 @@ def get_input_evaluation_tensors(reader,
   Raises:
     IOError: If no files matching the given pattern were found.
   """
-  tf.set_random_seed(0)  # must fix the seed for evaluation tensors.
   logging.info("Using batch size of " + str(batch_size) + " for evaluation.")
   with tf.name_scope("eval_input"):
     files = gfile.Glob(data_pattern)
     if not files:
       raise IOError("Unable to find the evaluation files.")
     logging.info("number of evaluation files: " + str(len(files)))
-    filename_queue = tf.train.string_input_producer(files,
-                                                    num_epochs=num_epochs,
-                                                    shuffle=False)
+    filename_queue = tf.train.string_input_producer(files, shuffle=False, num_epochs=1)
     examples_and_labels = [reader.prepare_reader(filename_queue)
                            for _ in xrange(num_readers)]
-
-    min_after_dequeue = 10000
-    capacity = min_after_dequeue + 3 * batch_size
     video_id_batch, video_batch, labels_batch, num_frames_batch = (
         tf.train.batch_join(examples_and_labels,
                             batch_size=batch_size,
-                            capacity=capacity))
+                            capacity=3 * batch_size,
+                            allow_smaller_final_batch=True))
     tf.histogram_summary("video_batch", video_batch)
     return video_id_batch, video_batch, labels_batch, num_frames_batch
 
@@ -150,8 +141,7 @@ def build_graph(reader,
       reader,
       eval_data_pattern,
       batch_size=batch_size,
-      num_readers=num_readers,
-      num_epochs=None)
+      num_readers=num_readers)
 
   feature_dim = len(model_input_raw.get_shape()) - 1
   feature_size = model_input_raw.get_shape()[feature_dim]
@@ -221,6 +211,8 @@ def evaluation_loop(video_id_batch, prediction_batch, label_batch, loss,
                    "(same as the previous one).", global_step_val)
       return global_step_val
 
+    sess.run([tf.local_variables_initializer()])
+
     # Start the queue runners.
     fetches = [video_id_batch, prediction_batch, label_batch, loss, summary_op]
     coord = tf.train.Coordinator()
@@ -230,47 +222,45 @@ def evaluation_loop(video_id_batch, prediction_batch, label_batch, loss,
         threads.extend(qr.create_threads(
             sess, coord=coord, daemon=True,
             start=True))
-      max_eval_step = int(
-          numpy.ceil(FLAGS.num_eval_examples / float(FLAGS.batch_size)))
-      current_step = 0
-      logging.info("enter eval_once loop global_step_val = %s. "
-                   "Max step to run = %d", global_step_val, max_eval_step)
+      logging.info("enter eval_once loop global_step_val = %s. ", global_step_val)
 
-      evl_metrics.clear()  # clear the metrics
+      evl_metrics.clear()
 
-      while current_step < max_eval_step and not coord.should_stop():
+      examples_processed = 0
+      while not coord.should_stop():
         batch_start_time = time.time()
         _, predictions_val, labels_val, loss_val, summary_val = sess.run(
             fetches)
         seconds_per_batch = time.time() - batch_start_time
         example_per_second = labels_val.shape[0] / seconds_per_batch
+        examples_processed += labels_val.shape[0]
 
         iteration_info_dict = evl_metrics.accumulate(
-            predictions_val, labels_val, loss_val,
-            accumulate_average_precision=True)
+            predictions_val, labels_val, loss_val)
+        seconds_per_batch_with_metrics = time.time() - batch_start_time
         iteration_info_dict["examples_per_second"] = example_per_second
 
-        if not FLAGS.run_once:
-          iterinfo = utils.AddGlobalStepSummary(summary_writer,
-                                                global_step_val,
-                                                iteration_info_dict,
-                                                summary_scope="Eval")
-          logging.info("eval_step: %d | %s", current_step, iterinfo)
-        current_step += 1
+        iterinfo = utils.AddGlobalStepSummary(summary_writer,
+                                              global_step_val,
+                                              iteration_info_dict,
+                                              summary_scope="Eval")
+        logging.info("examples_processed: %d | %s", examples_processed, iterinfo)
 
-      # calculating the metrics for the entire epoch
-      if not FLAGS.sample:
-        epoch_info_dict = evl_metrics.get(FLAGS.num_eval_examples)
-        epoch_info_dict["epoch_id"] = global_step_val
+    except tf.errors.OutOfRangeError as e:
+      logging.info("Done with batched inference. Now calculating global performance metrics.")
+      # calculate the metrics for the entire epoch
+      epoch_info_dict = evl_metrics.get()
+      epoch_info_dict["epoch_id"] = global_step_val
 
-        summary_writer.add_summary(summary_val, global_step_val)
-        epochinfo = utils.AddEpochSummary(summary_writer,
-                                          global_step_val,
-                                          epoch_info_dict,
-                                          summary_scope="Eval")
-        logging.info("--- " + epochinfo)
+      summary_writer.add_summary(summary_val, global_step_val)
+      epochinfo = utils.AddEpochSummary(summary_writer,
+                                        global_step_val,
+                                        epoch_info_dict,
+                                        summary_scope="Eval")
+      logging.info(epochinfo)
       evl_metrics.clear()
     except Exception as e:  # pylint: disable=broad-except
+      logging.info("Unexpected exception: " + str(e))
       coord.request_stop(e)
 
     coord.request_stop()
@@ -280,7 +270,7 @@ def evaluation_loop(video_id_batch, prediction_batch, label_batch, loss,
 
 
 def evaluate():
-  """Evaluate for a number of steps."""
+  tf.set_random_seed(0) # for reproducibility
   with tf.Graph().as_default():
     if FLAGS.frame_features:
       reader = readers.YT8MFrameFeatureReader(feature_name=FLAGS.feature_name,
@@ -306,11 +296,10 @@ def evaluate():
     summary_op = tf.get_collection("summary_op")[0]
 
     saver = tf.train.Saver(tf.all_variables())
-    summary_writer = tf.train.SummaryWriter(FLAGS.eval_dir,
+    summary_writer = tf.train.SummaryWriter(FLAGS.train_dir,
                                             graph=tf.get_default_graph())
 
-    evl_metrics = (eval_util.EvaluationMetrics(
-        reader.num_classes, [10000 for _ in range(reader.num_classes)]))
+    evl_metrics = eval_util.EvaluationMetrics(reader.num_classes, FLAGS.top_k)
 
     last_global_step_val = -1
     while True:
@@ -324,8 +313,6 @@ def evaluate():
 
 def main(unused_argv):
   logging.set_verbosity(tf.logging.INFO)
-  if not gfile.Exists(FLAGS.eval_dir):
-    gfile.MakeDirs(FLAGS.eval_dir)
   evaluate()
 
 
