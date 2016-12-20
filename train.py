@@ -39,9 +39,9 @@ if __name__ == "__main__":
       "features (i.e. tensorflow.SequenceExample), then set --reader_type "
       "format. The (Sequence)Examples are expected to have 'inc3' byte array "
       "sequence feature as well as a 'labels' int64 context feature.")
-  flags.DEFINE_string("feature_name", "mean_inc3", "Name of the feature "
+  flags.DEFINE_string("feature_names", "mean_inc3", "Name of the feature "
                       "to use for training.")
-  flags.DEFINE_integer("feature_size", 1024, "Length of the feature vectors.")
+  flags.DEFINE_string("feature_sizes", "1024", "Length of the feature vectors.")
 
   # Model flags.
   flags.DEFINE_bool(
@@ -358,13 +358,25 @@ def main(unused_argv):
       logging.info("Restoring from meta graph file %s", meta_filename)
       saver = tf.train.import_meta_graph(meta_filename)
 
+  # convert feature_names and feature_sizes to lists of values
+  list_of_feature_names = [
+      feature_names.strip() for feature_names in FLAGS.feature_names.split(',')]
+  list_of_feature_sizes = [
+      int(feature_sizes) for feature_sizes in FLAGS.feature_sizes.split(',')]
+  if len(list_of_feature_names) != len(list_of_feature_sizes):
+    logging.error("length of the feature names (=" +
+                  str(len(list_of_feature_names)) + ") != length of feature "
+                  "sizes (=" + str(len(list_of_feature_sizes)) + ")")
+
   if not saver:
     if FLAGS.frame_features:
-      reader = readers.YT8MFrameFeatureReader(feature_name=FLAGS.feature_name,
-                                              feature_size=FLAGS.feature_size)
+      reader = readers.YT8MFrameFeatureReader(
+          feature_names=list_of_feature_names,
+          feature_sizes=list_of_feature_sizes)
     else:
       reader = readers.YT8MAggregatedFeatureReader(
-          feature_name=FLAGS.feature_name, feature_size=FLAGS.feature_size)
+          feature_names=list_of_feature_names,
+          feature_sizes=list_of_feature_sizes)
 
     model = find_class_by_name(FLAGS.model, [models])()
     label_loss_fn = find_class_by_name(FLAGS.label_loss, [losses])()
