@@ -358,25 +358,19 @@ def main(unused_argv):
       logging.info("Restoring from meta graph file %s", meta_filename)
       saver = tf.train.import_meta_graph(meta_filename)
 
-  # convert feature_names and feature_sizes to lists of values
-  list_of_feature_names = [
-      feature_names.strip() for feature_names in FLAGS.feature_names.split(',')]
-  list_of_feature_sizes = [
-      int(feature_sizes) for feature_sizes in FLAGS.feature_sizes.split(',')]
-  if len(list_of_feature_names) != len(list_of_feature_sizes):
-    logging.error("length of the feature names (=" +
-                  str(len(list_of_feature_names)) + ") != length of feature "
-                  "sizes (=" + str(len(list_of_feature_sizes)) + ")")
-
   if not saver:
+    # convert feature_names and feature_sizes to lists of values
+    feature_names, feature_sizes = utils.GetListOfFeatureNamesAndSizes(
+        FLAGS.feature_names, FLAGS.feature_sizes)
+
     if FLAGS.frame_features:
       reader = readers.YT8MFrameFeatureReader(
-          feature_names=list_of_feature_names,
-          feature_sizes=list_of_feature_sizes)
+          feature_names=feature_names,
+          feature_sizes=feature_sizes)
     else:
       reader = readers.YT8MAggregatedFeatureReader(
-          feature_names=list_of_feature_names,
-          feature_sizes=list_of_feature_sizes)
+          feature_names=feature_names,
+          feature_sizes=feature_sizes)
 
     model = find_class_by_name(FLAGS.model, [models])()
     label_loss_fn = find_class_by_name(FLAGS.label_loss, [losses])()
