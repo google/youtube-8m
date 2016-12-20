@@ -5,18 +5,21 @@
 This starter code requires Tensorflow. If you haven't installed it yet, follow
 the instructions on [tensorflow.org](https://tensorflow.org).
 
-## Quick Start on Video Level Features
+You can download the YouTube-8M data files from
+[here](https://research.google.com/youtube8m/download.html). We recommend downloading
+the smaller video-level features dataset first when getting started.
+
+## Quick Start on Video-Level Features
 
 To start training a logistic model on the video-level features, run
-
-TODO(sobhan): be more specific about what the "video-level features" are, e.g.
-where to get them from. Also emphasize that if the training data is split into
-multiple parts give the list of all files as input
 
 ```sh
 MODEL_DIR=/tmp/yt8m
 python train.py --train_data_pattern='/path/to/features/train*.tfrecord' --train_dir=$MODEL_DIR/logistic_model
 ```
+
+Since the dataset is sharded into 4096 individual files, we use a wildcard (\*)
+to represent all of those files.
 
 To evaluate the model, run
 
@@ -36,8 +39,12 @@ and navigating to http://localhost:6006 in your web browser.
 ## Using Frame Level Features
 
 Follow the same instructions as above, appending
-`--frame_features=True --model=FrameLevelLogisticModel`
+`--frame_features=True --model=FrameLevelLogisticModel --feature_names=inc3`
 for the train.py and eval.py scripts.
+
+The 'FrameLevelLogisticModel' is designed to provide equivalent results to a
+logistic model trained over the video-level features. Please look at the
+'models.py' file to see how to implement your own models.
 
 ## Notes
 One important thing to note is that by default, the train job will try to resume
@@ -57,7 +64,7 @@ run configuration.
 
 ### Evaluation
 *   `eval.py`: The primary script for evaluating models.
-*   `eval_util.py`: Functions for calculating Hit@1, PERR, etc.
+*   `eval_util.py`: Provides a class that calculates all evaluation metrics.
 *   `average_precision_calculator.py`: Functions for calculating
                                        average precision.
 *   `mean_average_precision_calculator.py`: Functions for calculating mean
