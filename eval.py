@@ -11,29 +11,24 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Binary for training Tensorflow models on the YouTube-8M dataset."""
 
-import os
 import time
 
-import numpy
+import eval_util
+import losses
+import models
+import readers
 import tensorflow as tf
-
 from tensorflow import app
 from tensorflow import flags
 from tensorflow import gfile
 from tensorflow import logging
-
-import eval_util
-import losses
-import readers
 import utils
-import models
 
 FLAGS = flags.FLAGS
 
-if __name__ == '__main__':
+if __name__ == "__main__":
   # Dataset flags.
   flags.DEFINE_string("train_dir", "/tmp/yt8m_model/",
                       "The directory to load the model files from. "
@@ -45,8 +40,8 @@ if __name__ == '__main__':
       "format. The SequenceExamples are expected to have an 'INC6' byte array "
       "sequence feature as well as a 'labels' int64 context feature.")
   flags.DEFINE_string("feature_name", "mean_inc3", "Name of the feature column "
-                      "to use for training");
-  flags.DEFINE_integer("feature_size", 1024, "length of the feature vectors");
+                      "to use for training")
+  flags.DEFINE_integer("feature_size", 1024, "length of the feature vectors")
 
   # Model flags.
   flags.DEFINE_bool(
@@ -60,9 +55,8 @@ if __name__ == '__main__':
       "Which architecture to use for the model. Options include 'Logistic', "
       "'SingleMixtureMoe', and 'TwoLayerSigmoid'. See aggregated_models.py and "
       "frame_level_models.py for the model definitions.")
-  flags.DEFINE_integer(
-      "batch_size", 1024,
-      "How many examples to process per batch.")
+  flags.DEFINE_integer("batch_size", 1024,
+                       "How many examples to process per batch.")
   flags.DEFINE_string("label_loss", "CrossEntropyLoss",
                       "Loss computed on validation data")
 
@@ -70,8 +64,8 @@ if __name__ == '__main__':
   flags.DEFINE_integer("num_readers", 8,
                        "How many threads to use for reading input files.")
   flags.DEFINE_boolean("run_once", False, "Whether to run eval only once.")
-  flags.DEFINE_integer("top_k", 20,
-                       "How many predictions to output per video.")
+  flags.DEFINE_integer("top_k", 20, "How many predictions to output per video.")
+
 
 def find_class_by_name(name, modules):
   """Searches the provided modules for the named class and returns it."""
@@ -105,22 +99,22 @@ def get_input_evaluation_tensors(reader,
     if not files:
       raise IOError("Unable to find the evaluation files.")
     logging.info("number of evaluation files: " + str(len(files)))
-    filename_queue = tf.train.string_input_producer(files, shuffle=False, num_epochs=1)
-    examples_and_labels = [reader.prepare_reader(filename_queue)
-                           for _ in xrange(num_readers)]
-    video_id_batch, video_batch, labels_batch, num_frames_batch = (
-        tf.train.batch_join(examples_and_labels,
-                            batch_size=batch_size,
-                            capacity=3 * batch_size,
-                            allow_smaller_final_batch=True))
-    tf.histogram_summary("video_batch", video_batch)
-    return video_id_batch, video_batch, labels_batch, num_frames_batch
+    filename_queue = tf.train.string_input_producer(
+        files, shuffle=False, num_epochs=1)
+    eval_data = [
+        reader.prepare_reader(filename_queue) for _ in xrange(num_readers)
+    ]
+    return tf.train.batch_join(
+        eval_data,
+        batch_size=batch_size,
+        capacity=3 * batch_size,
+        allow_smaller_final_batch=True)
 
 
 def build_graph(reader,
                 model,
                 eval_data_pattern,
-                label_loss,
+                label_loss_fn,
                 batch_size=1024,
                 num_readers=1):
   """Creates the Tensorflow graph for evaluation.
@@ -130,7 +124,7 @@ def build_graph(reader,
     model: The core model (e.g. logistic or neural net). It should inherit
            from BaseModel.
     eval_data_pattern: glob path to the evaluation data files.
-    label_loss: What kind of loss to apply to the model. It should inherit
+    label_loss_fn: What kind of loss to apply to the model. It should inherit
                 from BaseLoss.
     batch_size: How many examples to process at a time.
     num_readers: How many threads to use for I/O operations.
@@ -142,9 +136,9 @@ def build_graph(reader,
       eval_data_pattern,
       batch_size=batch_size,
       num_readers=num_readers)
+  tf.summary.histogram("model_input_raw", model_input_raw)
 
   feature_dim = len(model_input_raw.get_shape()) - 1
-  feature_size = model_input_raw.get_shape()[feature_dim]
 
   # Normalize input features.
   model_input = tf.nn.l2_normalize(model_input_raw, feature_dim)
@@ -156,20 +150,20 @@ def build_graph(reader,
                                 labels=labels_batch,
                                 is_training=False)
     predictions = result["predictions"]
-    tf.histogram_summary("model_activations", predictions)
+    tf.summary.histogram("model_activations", predictions)
     if "loss" in result.keys():
-      label_loss_val = result["loss"]
+      label_loss = result["loss"]
     else:
-      label_loss_val = label_loss.calculate_loss(predictions, labels_batch)
+      label_loss = label_loss_fn.calculate_loss(predictions, labels_batch)
 
   tf.add_to_collection("global_step", global_step)
-  tf.add_to_collection("loss", label_loss_val)
+  tf.add_to_collection("loss", label_loss)
   tf.add_to_collection("predictions", predictions)
   tf.add_to_collection("input_batch", model_input)
   tf.add_to_collection("video_id_batch", video_id_batch)
   tf.add_to_collection("num_frames", num_frames)
   tf.add_to_collection("labels", tf.cast(labels_batch, tf.float32))
-  tf.add_to_collection("summary_op", tf.merge_all_summaries())
+  tf.add_to_collection("summary_op", tf.summary.merge_all())
 
 
 def evaluation_loop(video_id_batch, prediction_batch, label_batch, loss,
@@ -222,7 +216,8 @@ def evaluation_loop(video_id_batch, prediction_batch, label_batch, loss,
         threads.extend(qr.create_threads(
             sess, coord=coord, daemon=True,
             start=True))
-      logging.info("enter eval_once loop global_step_val = %s. ", global_step_val)
+      logging.info("enter eval_once loop global_step_val = %s. ",
+                   global_step_val)
 
       evl_metrics.clear()
 
@@ -235,28 +230,32 @@ def evaluation_loop(video_id_batch, prediction_batch, label_batch, loss,
         example_per_second = labels_val.shape[0] / seconds_per_batch
         examples_processed += labels_val.shape[0]
 
-        iteration_info_dict = evl_metrics.accumulate(
-            predictions_val, labels_val, loss_val)
-        seconds_per_batch_with_metrics = time.time() - batch_start_time
+        iteration_info_dict = evl_metrics.accumulate(predictions_val,
+                                                     labels_val, loss_val)
         iteration_info_dict["examples_per_second"] = example_per_second
 
-        iterinfo = utils.AddGlobalStepSummary(summary_writer,
-                                              global_step_val,
-                                              iteration_info_dict,
-                                              summary_scope="Eval")
-        logging.info("examples_processed: %d | %s", examples_processed, iterinfo)
+        iterinfo = utils.AddGlobalStepSummary(
+            summary_writer,
+            global_step_val,
+            iteration_info_dict,
+            summary_scope="Eval")
+        logging.info("examples_processed: %d | %s", examples_processed,
+                     iterinfo)
 
     except tf.errors.OutOfRangeError as e:
-      logging.info("Done with batched inference. Now calculating global performance metrics.")
+      logging.info(
+          "Done with batched inference. Now calculating global performance "
+          "metrics.")
       # calculate the metrics for the entire epoch
       epoch_info_dict = evl_metrics.get()
       epoch_info_dict["epoch_id"] = global_step_val
 
       summary_writer.add_summary(summary_val, global_step_val)
-      epochinfo = utils.AddEpochSummary(summary_writer,
-                                        global_step_val,
-                                        epoch_info_dict,
-                                        summary_scope="Eval")
+      epochinfo = utils.AddEpochSummary(
+          summary_writer,
+          global_step_val,
+          epoch_info_dict,
+          summary_scope="Eval")
       logging.info(epochinfo)
       evl_metrics.clear()
     except Exception as e:  # pylint: disable=broad-except
@@ -270,24 +269,25 @@ def evaluation_loop(video_id_batch, prediction_batch, label_batch, loss,
 
 
 def evaluate():
-  tf.set_random_seed(0) # for reproducibility
+  tf.set_random_seed(0)  # for reproducibility
   with tf.Graph().as_default():
     if FLAGS.frame_features:
-      reader = readers.YT8MFrameFeatureReader(feature_name=FLAGS.feature_name,
-                                              feature_size=FLAGS.feature_size)
+      reader = readers.YT8MFrameFeatureReader(
+          feature_name=FLAGS.feature_name, feature_size=FLAGS.feature_size)
     else:
       reader = readers.YT8MAggregatedFeatureReader(
           feature_name=FLAGS.feature_name, feature_size=FLAGS.feature_size)
 
     model = find_class_by_name(FLAGS.model, [models])()
-    label_loss = find_class_by_name(FLAGS.label_loss, [losses])()
+    label_loss_fn = find_class_by_name(FLAGS.label_loss, [losses])()
 
-    build_graph(reader=reader,
-                model=model,
-                eval_data_pattern=FLAGS.eval_data_pattern,
-                label_loss=label_loss,
-                num_readers=FLAGS.num_readers,
-                batch_size=FLAGS.batch_size)
+    build_graph(
+        reader=reader,
+        model=model,
+        eval_data_pattern=FLAGS.eval_data_pattern,
+        label_loss_fn=label_loss_fn,
+        num_readers=FLAGS.num_readers,
+        batch_size=FLAGS.batch_size)
     logging.info("built evaluation graph")
     video_id_batch = tf.get_collection("video_id_batch")[0]
     prediction_batch = tf.get_collection("predictions")[0]
@@ -296,8 +296,8 @@ def evaluate():
     summary_op = tf.get_collection("summary_op")[0]
 
     saver = tf.train.Saver(tf.all_variables())
-    summary_writer = tf.train.SummaryWriter(FLAGS.train_dir,
-                                            graph=tf.get_default_graph())
+    summary_writer = tf.train.SummaryWriter(
+        FLAGS.train_dir, graph=tf.get_default_graph())
 
     evl_metrics = eval_util.EvaluationMetrics(reader.num_classes, FLAGS.top_k)
 
@@ -318,3 +318,4 @@ def main(unused_argv):
 
 if __name__ == "__main__":
   app.run()
+
