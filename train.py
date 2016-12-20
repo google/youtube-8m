@@ -11,8 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Binary for training Tensorflow models on VCA datasets."""
-# TODO(haija): regularization loss does not currently work. Fix it.
+"""Binary for training Tensorflow models on the YouTube-8M dataset."""
 
 import time
 
@@ -65,18 +64,17 @@ if __name__ == "__main__":
       "How many examples to process per batch for training.")
   flags.DEFINE_string(
       "label_loss", "CrossEntropyLoss",
-      "Which loss function to use for training the model. This is distinct from"
-      " regularization which is defined within the models themselves.")
+      "Which loss function to use for training the model.")
   flags.DEFINE_float(
       "regularization_penalty", 1e-3,
       "How much weight to give to the regularization loss (the label loss has "
       "a weight of 1).")
+  flags.DEFINE_float("base_learning_rate", 0.01,
+                     "Which learning rate to start with.")
 
   # Other flags.
   flags.DEFINE_integer("num_readers", 8,
                        "How many threads to use for reading input files.")
-  flags.DEFINE_float("base_learning_rate", 0.01,
-                     "Which learning rate to start with.")
   flags.DEFINE_string("master", "", "TensorFlow master to use.")
   flags.DEFINE_integer("task", 0, "Task id of the replica running the training."
                        " 0 implies chief Supervisor.""")
@@ -146,7 +144,6 @@ def get_input_data_tensors(reader,
                     data_pattern + "'")
     logging.info("number of training files: " + str(len(files)))
     filename_queue = tf.train.string_input_producer(files,
-                                                    capacity=10000,
                                                     num_epochs=num_epochs)
     training_data = [
         reader.prepare_reader(filename_queue) for _ in xrange(num_readers)]
@@ -178,8 +175,8 @@ def build_graph(reader,
   """Creates the Tensorflow graph.
 
   This will only be called once in the life of
-  a model, because after the graph is created the model will be restored from a
-  meta graph file rather than being recreated.
+  a training model, because after the graph is created the model will be
+  restored from a meta graph file rather than being recreated.
 
   Args:
     reader: The data file reader. It should inherit from BaseReader.
