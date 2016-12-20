@@ -3,11 +3,13 @@
 ## Requirements
 
 This starter code requires Tensorflow. If you haven't installed it yet, follow
-the instructions on [tensorflow.org](https://tensorflow.org).
+the instructions on [tensorflow.org](https://tensorflow.org). This code has been
+tested with Tensorflow version 0.12.0-rc1. Going forward, we will continue to
+target the latest released version of Tensorflow.
 
 You can download the YouTube-8M data files from
-[here](https://research.google.com/youtube8m/download.html). We recommend downloading
-the smaller video-level features dataset first when getting started.
+[here](https://research.google.com/youtube8m/download.html). We recommend
+downloading the smaller video-level features dataset first when getting started.
 
 ## Quick Start on Video-Level Features
 
