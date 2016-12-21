@@ -20,6 +20,7 @@ import losses
 import models
 import readers
 import tensorflow as tf
+import tensorflow.contrib.slim as slim
 from tensorflow import app
 from tensorflow import flags
 from tensorflow import gfile
@@ -216,6 +217,9 @@ def build_graph(reader,
                                   num_frames=num_frames,
                                   vocab_size=reader.num_classes,
                                   labels=labels_batch)
+
+      for variable in slim.get_model_variables():
+        tf.summary.histogram(variable.op.name, variable)
 
       predictions = result["predictions"]
       tf.summary.histogram("model_activations", predictions)
