@@ -54,9 +54,10 @@ if __name__ == '__main__':
   flags.DEFINE_integer(
       "batch_size", 8192,
       "How many examples to process per batch.")
-  flags.DEFINE_string("feature_name", "mean_inc3", "Name of the feature "
-                      "to use for training.");
-  flags.DEFINE_integer("feature_size", 1024, "Length of the feature vectors.");
+  flags.DEFINE_string("feature_names", "mean_inc3", "Name of the feature "
+                      "to use for training.")
+  flags.DEFINE_string("feature_sizes", "1024", "Length of the feature vectors.")
+
 
   # Other flags.
   flags.DEFINE_integer("num_readers", 1,
@@ -155,12 +156,17 @@ def inference(reader, train_dir, data_pattern, out_file_location, batch_size, to
 
 def main(unused_argv):
   logging.set_verbosity(tf.logging.INFO)
+
+  # convert feature_names and feature_sizes to lists of values
+  feature_names, feature_sizes = utils.GetListOfFeatureNamesAndSizes(
+      FLAGS.feature_names, FLAGS.feature_sizes)
+
   if FLAGS.frame_features:
-    reader = readers.YT8MFrameFeatureReader(feature_name=FLAGS.feature_name,
-                                            feature_size=FLAGS.feature_size)
+    reader = readers.YT8MFrameFeatureReader(feature_names=feature_names,
+                                            feature_sizes=feature_sizes)
   else:
-    reader = readers.YT8MAggregatedFeatureReader(
-        feature_name=FLAGS.feature_name, feature_size=FLAGS.feature_size)
+    reader = readers.YT8MAggregatedFeatureReader(feature_names=feature_names,
+                                                 feature_sizes=feature_sizes)
   inference(reader, FLAGS.train_dir,
       FLAGS.input_data_pattern, FLAGS.output_file, FLAGS.batch_size, FLAGS.top_k)
 
