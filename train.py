@@ -11,8 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Binary for training Tensorflow models on VCA datasets."""
-# TODO(haija): regularization loss does not currently work. Fix it.
+"""Binary for training Tensorflow models on the YouTube-8M dataset."""
 
 import time
 
@@ -21,6 +20,7 @@ import losses
 import models
 import readers
 import tensorflow as tf
+import tensorflow.contrib.slim as slim
 from tensorflow import app
 from tensorflow import flags
 from tensorflow import gfile
@@ -65,18 +65,17 @@ if __name__ == "__main__":
       "How many examples to process per batch for training.")
   flags.DEFINE_string(
       "label_loss", "CrossEntropyLoss",
-      "Which loss function to use for training the model. This is distinct from"
-      " regularization which is defined within the models themselves.")
+      "Which loss function to use for training the model.")
   flags.DEFINE_float(
       "regularization_penalty", 1e-3,
       "How much weight to give to the regularization loss (the label loss has "
       "a weight of 1).")
+  flags.DEFINE_float("base_learning_rate", 0.01,
+                     "Which learning rate to start with.")
 
   # Other flags.
   flags.DEFINE_integer("num_readers", 8,
                        "How many threads to use for reading input files.")
-  flags.DEFINE_float("base_learning_rate", 0.01,
-                     "Which learning rate to start with.")
   flags.DEFINE_string("master", "", "TensorFlow master to use.")
   flags.DEFINE_integer("task", 0, "Task id of the replica running the training."
                        " 0 implies chief Supervisor.""")
@@ -146,7 +145,6 @@ def get_input_data_tensors(reader,
                     data_pattern + "'")
     logging.info("number of training files: " + str(len(files)))
     filename_queue = tf.train.string_input_producer(files,
-                                                    capacity=10000,
                                                     num_epochs=num_epochs)
     training_data = [
         reader.prepare_reader(filename_queue) for _ in xrange(num_readers)]
@@ -178,8 +176,8 @@ def build_graph(reader,
   """Creates the Tensorflow graph.
 
   This will only be called once in the life of
-  a model, because after the graph is created the model will be restored from a
-  meta graph file rather than being recreated.
+  a training model, because after the graph is created the model will be
+  restored from a meta graph file rather than being recreated.
 
   Args:
     reader: The data file reader. It should inherit from BaseReader.
@@ -219,6 +217,9 @@ def build_graph(reader,
                                   num_frames=num_frames,
                                   vocab_size=reader.num_classes,
                                   labels=labels_batch)
+
+      for variable in slim.get_model_variables():
+        tf.summary.histogram(variable.op.name, variable)
 
       predictions = result["predictions"]
       tf.summary.histogram("model_activations", predictions)
@@ -358,25 +359,19 @@ def main(unused_argv):
       logging.info("Restoring from meta graph file %s", meta_filename)
       saver = tf.train.import_meta_graph(meta_filename)
 
-  # convert feature_names and feature_sizes to lists of values
-  list_of_feature_names = [
-      feature_names.strip() for feature_names in FLAGS.feature_names.split(',')]
-  list_of_feature_sizes = [
-      int(feature_sizes) for feature_sizes in FLAGS.feature_sizes.split(',')]
-  if len(list_of_feature_names) != len(list_of_feature_sizes):
-    logging.error("length of the feature names (=" +
-                  str(len(list_of_feature_names)) + ") != length of feature "
-                  "sizes (=" + str(len(list_of_feature_sizes)) + ")")
-
   if not saver:
+    # convert feature_names and feature_sizes to lists of values
+    feature_names, feature_sizes = utils.GetListOfFeatureNamesAndSizes(
+        FLAGS.feature_names, FLAGS.feature_sizes)
+
     if FLAGS.frame_features:
       reader = readers.YT8MFrameFeatureReader(
-          feature_names=list_of_feature_names,
-          feature_sizes=list_of_feature_sizes)
+          feature_names=feature_names,
+          feature_sizes=feature_sizes)
     else:
       reader = readers.YT8MAggregatedFeatureReader(
-          feature_names=list_of_feature_names,
-          feature_sizes=list_of_feature_sizes)
+          feature_names=feature_names,
+          feature_sizes=feature_sizes)
 
     model = find_class_by_name(FLAGS.model, [models])()
     label_loss_fn = find_class_by_name(FLAGS.label_loss, [losses])()

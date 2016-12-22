@@ -74,18 +74,24 @@ class YT8MAggregatedFeatureReader(BaseReader):
 
   def __init__(self,
                num_classes=4800,
-               feature_size=1024,
-               feature_name="mean_inc3"):
+               feature_sizes=[1024],
+               feature_names=["mean_inc3"]):
     """Construct a YT8MAggregatedFeatureReader.
 
     Args:
       num_classes: a positive integer for the number of classes.
-      feature_size: a positive integer for the feature dimension.
-      feature_name: the feature name in the tensorflow record.
+      feature_sizes: positive integer(s) for the feature dimensions as a list.
+      feature_names: the feature name(s) in the tensorflow record as a list.
     """
     self.num_classes = num_classes
-    self.feature_size = feature_size
-    self.feature_name = feature_name
+    self.feature_sizes = feature_sizes
+    self.feature_names = feature_names
+
+    # TODO(sobhan): remove the following assertions after implementing the
+    #               functionality to use multiple feature for the aggregated
+    #               features
+    assert len(feature_names) == 1
+    assert len(feature_sizes) == 1
 
   def prepare_reader(self, filename_queue,):
     """Creates a single reader thread for pre-aggregated YouTube 8M Examples.
@@ -104,15 +110,15 @@ class YT8MAggregatedFeatureReader(BaseReader):
             "video_id": tf.FixedLenFeature(
                 [], tf.string),
             "labels": tf.VarLenFeature(tf.int64),
-            self.feature_name: tf.FixedLenFeature(
-                [self.feature_size], tf.float32)
+            self.feature_names[0]: tf.FixedLenFeature(
+                [self.feature_sizes[0]], tf.float32)
         })
 
     labels = (tf.cast(
         tf.sparse_to_dense(features["labels"].values, (self.num_classes,), 1),
         tf.bool))
     return features["video_id"], features[
-        self.feature_name], labels, tf.constant(1)
+        self.feature_names[0]], labels, tf.constant(1)
 
 
 class YT8MFrameFeatureReader(BaseReader):

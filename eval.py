@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Binary for training Tensorflow models on the YouTube-8M dataset."""
+"""Binary for evaluating Tensorflow models on the YouTube-8M dataset."""
 
 import time
 
@@ -39,9 +39,9 @@ if __name__ == "__main__":
       "File glob defining the evaluation dataset in tensorflow.SequenceExample "
       "format. The SequenceExamples are expected to have an 'INC6' byte array "
       "sequence feature as well as a 'labels' int64 context feature.")
-  flags.DEFINE_string("feature_name", "mean_inc3", "Name of the feature column "
-                      "to use for training")
-  flags.DEFINE_integer("feature_size", 1024, "length of the feature vectors")
+  flags.DEFINE_string("feature_names", "mean_inc3", "Name of the feature "
+                      "to use for training.")
+  flags.DEFINE_string("feature_sizes", "1024", "Length of the feature vectors.")
 
   # Model flags.
   flags.DEFINE_bool(
@@ -271,12 +271,16 @@ def evaluation_loop(video_id_batch, prediction_batch, label_batch, loss,
 def evaluate():
   tf.set_random_seed(0)  # for reproducibility
   with tf.Graph().as_default():
+    # convert feature_names and feature_sizes to lists of values
+    feature_names, feature_sizes = utils.GetListOfFeatureNamesAndSizes(
+        FLAGS.feature_names, FLAGS.feature_sizes)
+
     if FLAGS.frame_features:
-      reader = readers.YT8MFrameFeatureReader(
-          feature_name=FLAGS.feature_name, feature_size=FLAGS.feature_size)
+      reader = readers.YT8MFrameFeatureReader(feature_names=feature_names,
+                                              feature_sizes=feature_sizes)
     else:
-      reader = readers.YT8MAggregatedFeatureReader(
-          feature_name=FLAGS.feature_name, feature_size=FLAGS.feature_size)
+      reader = readers.YT8MAggregatedFeatureReader(feature_names=feature_names,
+                                                   feature_sizes=feature_sizes)
 
     model = find_class_by_name(FLAGS.model, [models])()
     label_loss_fn = find_class_by_name(FLAGS.label_loss, [losses])()

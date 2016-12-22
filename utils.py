@@ -17,6 +17,7 @@
 
 import numpy
 import tensorflow as tf
+from tensorflow import logging
 
 
 def Dequantize(feat_vector, max_quantized_value=2, min_quantized_value=-2):
@@ -136,3 +137,27 @@ def AddEpochSummary(summary_writer,
           "| MAP: {3:.3f} | GAP: {3:.3f} | Avg_Loss: {4:3f}").format(
           epoch_id, avg_hit_at_one, avg_perr, numpy.mean(aps), gap, avg_loss)
   return info
+
+def GetListOfFeatureNamesAndSizes(feature_names, feature_sizes):
+  """Extract the list of feature names and the dimensionality of each feature
+     from string of comma separated values.
+
+  Args:
+    feature_names: string containing comma separated list of feature names
+    feature_sizes: string containing comma separated list of feature sizes
+
+  Returns:
+    List of the feature names and list of the dimensionality of each feature.
+    Elements in the first/second list are strings/integers.
+  """
+  list_of_feature_names = [
+      feature_names.strip() for feature_names in feature_names.split(',')]
+  list_of_feature_sizes = [
+      int(feature_sizes) for feature_sizes in feature_sizes.split(',')]
+  if len(list_of_feature_names) != len(list_of_feature_sizes):
+    logging.error("length of the feature names (=" +
+                  str(len(list_of_feature_names)) + ") != length of feature "
+                  "sizes (=" + str(len(list_of_feature_sizes)) + ")")
+
+  return list_of_feature_names, list_of_feature_sizes
+
