@@ -1,5 +1,11 @@
 # YouTube-8M Tensorflow Starter Code
 
+This repo contains starter code for training and evaluating machine learning
+models over the [YouTube-8M](https://research.google.com/youtube8m/) dataset.
+Out of the box, you can train a logistic classification model over either
+frame-level or video-level features. The code can be easily extended to train
+more sophisticated models.
+
 ## Requirements
 
 This starter code requires Tensorflow. If you haven't installed it yet, follow
