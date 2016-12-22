@@ -167,8 +167,17 @@ def main(unused_argv):
   else:
     reader = readers.YT8MAggregatedFeatureReader(feature_names=feature_names,
                                                  feature_sizes=feature_sizes)
-  inference(reader, FLAGS.train_dir,
-      FLAGS.input_data_pattern, FLAGS.output_file, FLAGS.batch_size, FLAGS.top_k)
+
+  if FLAGS.output_file is "":
+    raise ValueError("'output_file' was not specified. "
+      "Unable to continue with inference.")
+
+  if FLAGS.input_data_pattern is "":
+    raise ValueError("'input_data_pattern' was not specified. "
+      "Unable to continue with inference.")
+
+  inference(reader, FLAGS.train_dir, FLAGS.input_data_pattern,
+    FLAGS.output_file, FLAGS.batch_size, FLAGS.top_k)
 
 
 if __name__ == "__main__":
