@@ -285,6 +285,10 @@ def evaluate():
     model = find_class_by_name(FLAGS.model, [models])()
     label_loss_fn = find_class_by_name(FLAGS.label_loss, [losses])()
 
+    if FLAGS.eval_data_pattern is "":
+      raise IOError("'eval_data_pattern' was not specified. " +
+                     "Nothing to evaluate.")
+
     build_graph(
         reader=reader,
         model=model,
