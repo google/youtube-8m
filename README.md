@@ -33,11 +33,21 @@ tensorboard --logdir=$MODEL_DIR
 
 and navigating to http://localhost:6006 in your web browser.
 
+When you are happy with your model, you can generate a csv file of predictions
+from it by running
+
+```sh
+python inference.py --output_file=predictions.csv --input_data_pattern='/path/to/features/validate*.tfrecord' --train_dir=$MODEL_DIR/logistic_model
+```
+
+This will output the top 20 predicted labels from the model for every example to
+'predictions.csv'.
+
 ## Using Frame Level Features
 
 Follow the same instructions as above, appending
-`--frame_features=True --model=FrameLevelLogisticModel`
-for the train.py and eval.py scripts.
+`--frame_features=True --model=FrameLevelLogisticModel --feature_names=inc3`
+for the train.py, eval.py, and inference.py scripts.
 
 ## Notes
 One important thing to note is that by default, the train job will try to resume
