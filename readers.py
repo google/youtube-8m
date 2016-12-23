@@ -83,15 +83,14 @@ class YT8MAggregatedFeatureReader(BaseReader):
       feature_sizes: positive integer(s) for the feature dimensions as a list.
       feature_names: the feature name(s) in the tensorflow record as a list.
     """
+
+    assert len(feature_names) == len(feature_sizes), \
+    "length of feature_names (=%r) != length of feature_sizes (=%r)" \
+    % len(feature_names) % len(feature_sizes)
+
     self.num_classes = num_classes
     self.feature_sizes = feature_sizes
     self.feature_names = feature_names
-
-    # TODO(sobhan): remove the following assertions after implementing the
-    #               functionality to use multiple feature for the aggregated
-    #               features
-    assert len(feature_names) == 1
-    assert len(feature_sizes) == 1
 
   def prepare_reader(self, filename_queue,):
     """Creates a single reader thread for pre-aggregated YouTube 8M Examples.
@@ -104,22 +103,35 @@ class YT8MAggregatedFeatureReader(BaseReader):
     """
     reader = tf.TFRecordReader()
     _, serialized_example = reader.read(filename_queue)
-    features = tf.parse_single_example(
-        serialized_example,
-        features={
-            "video_id": tf.FixedLenFeature(
-                [], tf.string),
-            "labels": tf.VarLenFeature(tf.int64),
-            self.feature_names[0]: tf.FixedLenFeature(
-                [self.feature_sizes[0]], tf.float32)
-        })
+
+    # set the mapping from the fields to data types in the proto
+    num_features = len(self.feature_names)
+    assert num_features > 0, "self.feature_names is empty!"
+    assert len(self.feature_names) == len(self.feature_sizes), \
+    "length of feature_names (=%r) != length of feature_sizes (=%r)" \
+    % len(self.feature_names) % len(self.feature_sizes)
+
+    feature_map = {"video_id": tf.FixedLenFeature([], tf.string),
+                   "labels": tf.VarLenFeature(tf.int64)}
+    for feature_index in range(num_features):
+      feature_map[self.feature_names[feature_index]] = tf.FixedLenFeature(
+          [self.feature_sizes[feature_index]], tf.float32)
+    
+    features = tf.parse_single_example(serialized_example,
+                                       features=feature_map)
 
     labels = (tf.cast(
         tf.sparse_to_dense(features["labels"].values, (self.num_classes,), 1),
         tf.bool))
-    return features["video_id"], features[
-        self.feature_names[0]], labels, tf.constant(1)
+    concatenated_features = tf.concat(0, [
+        features[feature_name] for feature_name in self.feature_names])
+    fdim = concatenated_features.get_shape()[0].value
+    assert fdim == sum(self.feature_sizes), \
+        "dimensionality of the concatenated feature (=%r) != sum of " \
+        "dimensionalities of groups of features (=%r)" % fdim % \
+        sum(self.feature_sizes)
 
+    return features["video_id"], concatenated_features, labels, tf.constant(1)
 
 class YT8MFrameFeatureReader(BaseReader):
   """Reads TFRecords of SequenceExamples.
@@ -144,10 +156,9 @@ class YT8MFrameFeatureReader(BaseReader):
       max_frames: the maximum number of frames to process.
     """
 
-    if len(feature_names) != len(feature_sizes):
-      logging.error("length of the feature names "
-                    "(=" + str(len(feature_names)) + ") != length of "
-                    "feature sizes (=" + str(len(feature_sizes)) + ")")
+    assert len(feature_names) == len(feature_sizes), \
+    "length of feature_names (=%r) != length of feature_sizes (=%r)" \
+    % len(feature_names) % len(feature_sizes)
 
     self.num_classes = num_classes
     self.feature_sizes = feature_sizes
@@ -218,8 +229,11 @@ class YT8MFrameFeatureReader(BaseReader):
 
     # loads (potentially) different types of features and concatenates them
     num_features = len(self.feature_names)
-    if num_features == 0:
-      logging.error("No feature selected: self.feature_names is empty!");
+    assert num_features > 0, "No feature selected: feature_names is empty!"
+
+    assert len(self.feature_names) == len(self.feature_sizes), \
+    "length of feature_names (=%r) != length of feature_sizes (=%r)" \
+    % len(self.feature_names) % len(self.feature_sizes)
 
     num_frames = -1  # the number of frames in the video
     feature_matrices = [None] * num_features  # an array of different features
@@ -238,7 +252,7 @@ class YT8MFrameFeatureReader(BaseReader):
       feature_matrices[feature_index] = feature_matrix
 
     # cap the number of frames at self.max_frames
-    num_frames = tf.minimum(num_frames, self.max_frames);
+    num_frames = tf.minimum(num_frames, self.max_frames)
     
     # concatenate different features
     video_matrix = tf.concat(1, feature_matrices)
