@@ -114,8 +114,6 @@ def AddEpochSummary(summary_writer,
   aps = epoch_info_dict["aps"]
   gap = epoch_info_dict["gap"]
 
-  print ("aps: " + str(aps))
-
   summary_writer.add_summary(
       MakeSummary("Epoch/" + summary_scope + "_Avg_Hit@1", avg_hit_at_one),
       global_step_val)

@@ -108,27 +108,8 @@ def top_k_triplets(predictions, labels, k=20):
   (prediction, class) format"""
   m = len(predictions)
   k = min(k, m)
-  indices = numpy.argpartition(predictions, k)[-k:]
+  indices = numpy.argpartition(predictions, -k)[-k:]
   return [(index, predictions[index], labels[index]) for index in indices]
-
-
-def _quantize(predictions, num_of_bins=1e03):
-  """Quantize the predictions.
-
-  Args:
-    predictions: A numpy matrix containing the outputs of the model.
-      Dimensions are 'batch' x 'num_classes'.
-    num_of_bins: a positive number of bins used in quantization.
-
-  Returns:
-    The quantized predictions matrix.
-
-  Raises:
-    ValueError: An error occurred when the num_of_bins is not positive.
-  """
-  if num_of_bins <= 0:
-    raise ValueError("num_of_bins must be positive.")
-  return numpy.floor(predictions * num_of_bins) / float(num_of_bins)
 
 class EvaluationMetrics(object):
   """A class to store the evaluation metrics."""
@@ -174,9 +155,8 @@ class EvaluationMetrics(object):
     mean_perr = calculate_precision_at_equal_recall_rate(predictions, labels)
     mean_loss = numpy.mean(loss)
 
-    # Take the top 20 predictions and use 1000 bins.
-    predictions_val = _quantize(predictions, num_of_bins=10**3)
-    sparse_predictions, sparse_labels, num_positives = top_k_by_class(predictions_val, labels, self.top_k)
+    # Take the top 20 predictions.
+    sparse_predictions, sparse_labels, num_positives = top_k_by_class(predictions, labels, self.top_k)
     self.map_calculator.accumulate(sparse_predictions, sparse_labels, num_positives)
     def flatten(l):
       return [item for sublist in l for item in sublist]
@@ -207,8 +187,8 @@ class EvaluationMetrics(object):
     avg_perr = self.sum_perr / self.num_examples
     avg_loss = self.sum_loss / self.num_examples
 
-    aps = self.map_calculator.peek_interpolated_map_at_n(inter_points=1000)
-    gap = self.global_ap_calculator.peek_interpolated_ap_at_n(inter_points=1000)
+    aps = self.map_calculator.peek_map_at_n()
+    gap = self.global_ap_calculator.peek_ap_at_n()
 
     epoch_info_dict = {}
     return {"avg_hit_at_one": avg_hit_at_one, "avg_perr": avg_perr,

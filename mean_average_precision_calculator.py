@@ -14,12 +14,12 @@
 
 """Calculate the mean average precision.
 
-It provides an interface for calculating interpolated mean average precision
+It provides an interface for calculating mean average precision
 for an entire list or the top-n ranked items.
 
 Example usages:
 We first call the function accumulate many times to process parts of the ranked
-list. After processing all the parts, we call peek_interpolated_map_at_n
+list. After processing all the parts, we call peek_map_at_n
 to calculate the mean average precision.
 
 ```
@@ -29,11 +29,11 @@ p = np.array([[random.random() for _ in xrange(50)] for _ in xrange(1000)])
 a = np.array([[random.choice([0, 1]) for _ in xrange(50)]
      for _ in xrange(1000)])
 
-# interpolated mean average precision at 1000 for 50 classes.
-calculator = mean_average_precision_calculator.MeanAveragePrecisionCaculator(
-            num_class=50, top_n_array=[1000 for _ in xrange(50)])
+# mean average precision for 50 classes.
+calculator = mean_average_precision_calculator.MeanAveragePrecisionCalculator(
+            num_class=50)
 calculator.accumulate(p, a)
-aps = calculator.peek_interpolated_map_at_n()
+aps = calculator.peek_map_at_n()
 ```
 """
 
@@ -100,17 +100,13 @@ class MeanAveragePrecisionCalculator(object):
     return ([calculator.heap_size for calculator in self._ap_calculators] ==
             [0 for _ in range(self._num_class)])
 
-  def peek_interpolated_map_at_n(self, inter_points=1000):
-    """Peek the interpolated average precision at n.
-
-    Args:
-      inter_points: the interpolating points for calculating the
-      mean average precision (default 1000).
+  def peek_map_at_n(self):
+    """Peek the non-interpolated mean average precision at n.
 
     Returns:
       An array of non-interpolated average precision at n (default 0) for each
       class.
     """
-    aps = [self._ap_calculators[i].peek_interpolated_ap_at_n(inter_points)
+    aps = [self._ap_calculators[i].peek_ap_at_n()
            for i in xrange(self._num_class)]
     return aps
