@@ -85,7 +85,7 @@ def top_k_by_class(predictions, labels, k=20):
     positives for each class in the ground truth.
 
   Raises:
-    ValueError: An error occurred when the k is a positive integer.
+    ValueError: An error occurred when the k is not a positive integer.
   """
   if k <= 0:
     raise ValueError("k must be a positive integer.")
