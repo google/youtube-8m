@@ -29,9 +29,7 @@ import random
 p = np.array([random.random() for _ in xrange(10)])
 a = np.array([random.choice([0, 1]) for _ in xrange(10)])
 
-# interpolated average precision using 1000 break points
-ap = average_precision_calculator.AveragePrecisionCalculator.interpolated_ap(p,
-      a, inter_points=1000)
+ap = average_precision_calculator.AveragePrecisionCalculator.ap(p, a)
 ```
 
 2) Use it as an object for long ranked list that cannot be stored in memory or
@@ -49,7 +47,7 @@ a2 = np.array([random.choice([0, 1]) for _ in xrange(5)])
 calculator = average_precision_calculator.AveragePrecisionCalculator(10)
 calculator.accumulate(p1, a1)
 calculator.accumulate(p2, a2)
-ap3 = calculator.peek_interpolated_ap_at_n(inter_points=1000)
+ap3 = calculator.peek_ap_at_n()
 ```
 """
 
@@ -155,36 +153,6 @@ class AveragePrecisionCalculator(object):
                       total_num_positives=self._total_positives)
     return ap
 
-  def peek_interpolated_ap_at_n(self, inter_points=1000):
-    r"""Peek the interpolated average precision at n.
-
-    The definition of the interpolated average precision is calculated by:
-    $ap = \\sum_{j=0}^interp P(\tau_j) * [R(\tau_j) - R(\tau_{j+1})]$,
-    where $\tau_j = j/interp$ and $interp$ is the number of interpolating
-    points: inter_points. The $P(\tau_j)$ and $R(\tau_j)$ are the precision
-    and the recall at the threshold $\tau_j$ for the top n items.
-    The difference between the function interpolated_ap_at_n and interpolated_ap
-    is that in calculating the interpolated_ap_at_n, we let the number of
-    positive equal min(n, #true_positive), so that a perfect ranked list can
-    get ap of 1.0.
-
-    Args:
-      inter_points: the interpolating points for calculating average precision
-      (default 1000).
-
-    Returns:
-      The interpolated average precision at n (default 0).
-    """
-    if self.heap_size <= 0:
-      return 0
-    predlists = numpy.array(zip(*self._heap))
-    ap = self.interpolated_ap(
-        predlists[0],
-        predlists[1],
-        inter_points=inter_points,
-        total_num_positives=min(self._total_positives, self._top_n))
-    return ap
-
   @staticmethod
   def ap(predictions, actuals):
     """Calculate the non-interpolated average precision.
@@ -273,95 +241,6 @@ class AveragePrecisionCalculator(object):
       if actuals[sortidx[i]] > 0:
         poscount += 1
         ap += poscount / (i + 1) * delta_recall
-    return ap
-
-  @staticmethod
-  def interpolated_ap(predictions,
-                      actuals,
-                      inter_points=1000,
-                      total_num_positives=None):
-    """Calculate the interpolated average precision.
-
-    Calculate the interpolated average precision at multiple points.
-    The complexity of the code is O(nlogn), where n is the number of the sample
-    in the list.
-
-    Args:
-      predictions: a numpy 1-D array storing the sparse prediction scores.
-      The prediction scores will be normalized to 0.0 and 1.0 if they are not
-      in the range.
-      actuals: a numpy 1-D array storing the ground truth labels. Any value
-      larger than 0 will be treated as positives, otherwise as negatives.
-      inter_points: the number interpolating points evenly distributed between
-      0 and 1.
-      total_num_positives : (optionally) you can specify the number of total
-      positive
-      in the list. If specified, it will be used in calculation.
-
-    Returns:
-      The interpolated average precision.
-
-    Raises:
-      ValueError: An error occurred when
-      1) the format of the input is not the numpy 1-D array;
-      2) the shape of predictions and actuals does not match;
-      3) the inter_points is not a positive integer.
-    """
-    if (not isinstance(predictions, numpy.ndarray) or
-        not isinstance(actuals, numpy.ndarray)):
-      raise ValueError("predictions and actuals must be the numpy 1-D array.")
-
-    if predictions.shape != actuals.shape:
-      raise ValueError("the shape of predictions and actuals does not match.")
-
-    if not isinstance(inter_points, int) or inter_points <= 0:
-      raise ValueError("inter_points must be a positive integer.")
-
-    if numpy.min(predictions) < 0 or numpy.max(predictions) > 1:
-      predictions = AveragePrecisionCalculator._zero_one_normalize(predictions)
-
-    # add a shuffler to avoid overestimating the ap
-    predictions, actuals = AveragePrecisionCalculator._shuffle(predictions,
-                                                               actuals)
-    sortidx = sorted(
-        range(len(predictions)),
-        key=lambda k: predictions[k],
-        reverse=True)
-
-    if total_num_positives is None:
-      numpos = numpy.size(numpy.where(actuals > 0))
-    else:
-      numpos = total_num_positives
-
-    if numpos == 0:
-      return 0
-
-    ap = 0.0
-    last_recall = 0
-    current_recall = 0
-    poscount = 0.0
-    taus = [float(i) / inter_points for i in range(inter_points, -1, -1)]
-    pt = 0  # pointer in the taus array
-
-    # calculate the ap predictions have to be [0,1].
-    # make sure the largest prediction score fall in its proper intersection.
-    while predictions[sortidx[0]] < taus[pt]:
-      pt += 1
-
-    for i in range(len(sortidx)):
-      if predictions[sortidx[i]] < taus[pt]:
-        current_recall = poscount / numpos
-        precision = poscount / i
-        ap += precision * (current_recall - last_recall)
-        last_recall = current_recall
-        while predictions[sortidx[i]] < taus[pt]:  # increase pointer
-          pt += 1
-      if actuals[sortidx[i]] > 0:
-        poscount += 1.0
-
-    # collect the precision and recall in the last intersection.
-    current_recall = poscount / numpos
-    ap += poscount / len(sortidx) * (current_recall - last_recall)
     return ap
 
   @staticmethod
