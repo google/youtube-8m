@@ -67,9 +67,9 @@ logistic model trained over the video-level features. Please look at the
 ## Training on Google Cloud Machine Learning Platform
 
 This starter code is compatible with Google's Cloud Machine Learning Platform,
-which is currently in beta..
+which is currently in beta.
 We recommend initially testing your code at a small scale locally, and then
-running your full scale training jobs in the cloud. This way, you avoid having
+running your full scale training jobs in the cloud. That way, you avoid having
 to download and store the full dataset, and you get access to high spec machines
 for training.
 
@@ -77,11 +77,17 @@ After you've configured the Cloud SDK, you can train over frame-level features
 with the following commands:
 ```sh
 JOB_NAME=yt8m_train
-BUCKET_NAME=gs://yt8m_train_bucket
+BUCKET_NAME=gs://${USER}_yt8m_train_bucket
 # (One Time) Create a storage bucket to store training logs and checkpoints.
 gsutil mb -l us-central1 $BUCKET_NAME
 # Submit the training job.
-gcloud --verbosity=debug beta ml jobs submit training $JOB_NAME --package-path=youtube-8m --module-name=youtube-8m.train --staging-bucket=$BUCKET_NAME --region=us-central1 -- --train_data_pattern='gs://youtube8m-ml/0/train/*.tfrecord' --train_dir=$BUCKET_NAME/$JOB_NAME  --frame_features=True --model=FrameLevelLogisticModel --feature_names=inc3 --batch_size=256
+gcloud --verbosity=debug beta ml jobs submit training $JOB_NAME \
+--package-path=youtube-8m --module-name=youtube-8m.train \
+--staging-bucket=$BUCKET_NAME --region=us-central1 \
+-- --train_data_pattern='gs://youtube8m-ml/0/train/*.tfrecord' \
+--train_dir=$BUCKET_NAME/$JOB_NAME \
+--frame_features=True --model=FrameLevelLogisticModel --feature_names=inc3 \
+--batch_size=256
 ```
 In the command above, the "package-path" flag refers to the directory
 containing the "train.py" script and more generally the python package which
