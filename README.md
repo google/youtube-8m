@@ -95,7 +95,7 @@ should be deployed to the cloud worker. The module-name refers to the specific
 python script which should be executed (in this case the train module).
 
 The training data files are hosted in the public "youtube8m-ml" storage bucket
-in the 'us-central1' region. Therefore, we've colocated our job in the same
+in the "us-central1" region. Therefore, we've colocated our job in the same
 region in order to have the fastest access to the data.
 
 ## Notes
