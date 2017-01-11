@@ -73,8 +73,9 @@ running your full scale training jobs in the cloud. That way, you avoid having
 to download and store the full dataset, and you get access to high spec machines
 for training.
 
-After you've configured the Cloud SDK, you can train over frame-level features
-with the following commands:
+After you've
+[configured](https://cloud.google.com/ml/docs/how-tos/getting-set-up) Cloud ML,
+you can train over frame-level features with the following commands:
 ```sh
 JOB_NAME=yt8m_train
 BUCKET_NAME=gs://${USER}_yt8m_train_bucket
