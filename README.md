@@ -10,11 +10,27 @@ video-level features. The code can be extended to train more complex models.
 It is possible to train and evaluate on YouTube-8M in two ways: on your own
 machine, or on Google Cloud. This README provides instructions for both.
 
-[Run on Google's Cloud Machine Learning Platform](#cloud_ml) <br/>
-[Run on your own machine](#own_machine)
 
-<a name="cloud_ml"/>
-## Option 1: Running on Google's Cloud Machine Learning Platform
+## Table of Contents
+* [Running on Google's Cloud Machine Learning Platform](#running-on-googles-cloud-machine-learning-platform)
+   * [Requirements](#requirements)
+   * [Training on Video-Level Features](#training-on-video-level-features)
+   * [Evaluation and Inference](#evaluation-and-inference)
+   * [Using Frame-Level features](#using-frame-level-features)
+   * [Testing Locally](#testing-locally)
+* [Running on your Own Machine](#running-on-your-own-machine)
+   * [Requirements](#requirements-1)
+   * [Training on Video-Level features](#training-on-video-level-features-1)
+   * [Evaluation and Inference](#evaluation-and-inference-1)
+   * [Using Frame-Level Features](#using-frame-level-features-1)
+* [Overview of Files](#overview-of-files)
+   * [Training](#training)
+   * [Evaluation](#evaluation)
+   * [Inference](#inference)
+   * [Misc](#misc)
+* [About this project](#about-this-project)
+
+## Running on Google's Cloud Machine Learning Platform
 
 ### Requirements
 
@@ -24,7 +40,7 @@ Google Cloud Platform account. Since you will be running code and accessing
 data files in the cloud, you do not need to install any libraries or download
 the training data. If you would like to be able to run Tensorboard or test
 your code locally before deploying it to the cloud, see the
-[Testing Locally](#testing_locally) section.
+[Testing Locally](#testing-locally) section.
 
 ### Training on Video-Level Features
 
@@ -104,7 +120,6 @@ The 'FrameLevelLogisticModel' is designed to provide equivalent results to a
 logistic model trained over the video-level features. Please look at the
 'models.py' file to see how to implement your own models.
 
-<a name="testing_locally"/>
 ### Testing Locally
 As you are developing your own models, you might want to be able to test them
 quickly without having to submit them to the cloud. You can use the
@@ -131,9 +146,7 @@ You can have Tensorboard read the data directly from your Cloud ML bucket
 tensorboard --logdir=$BUCKET_NAME
 ```
 
-
-<a name="own_machine"/>
-## Option 2: Running on your Own Machine
+## Running on your Own Machine
 
 ### Requirements
 
