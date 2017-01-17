@@ -90,7 +90,7 @@ is no distinction between our training and inference jobs. The Cloud ML platform
 also offers specialized functionality for prediction with
 Tensorflow models, but discussing that is beyond the scope of this readme.
 
-### Training on Frame-Level features
+### Using Frame-Level features
 
 Just append
 ```sh
@@ -193,7 +193,7 @@ python inference.py --output_file=predictions.csv --input_data_pattern='/path/to
 This will output the top 20 predicted labels from the model for every example to
 'predictions.csv'.
 
-### Training on Frame-Level Features
+### Using Frame-Level Features
 
 Follow the same instructions as above, appending
 `--frame_features=True --model=FrameLevelLogisticModel --feature_names=inc3`
