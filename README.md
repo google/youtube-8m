@@ -89,7 +89,7 @@ gcloud --verbosity=debug beta ml jobs submit training $JOB_NAME \
 Note the confusing use of "training" in the above gcloud commands. Despite the
 name, the 'training' argument really just offers a cloud hosted
 python/tensorflow service. From the point of view of the Cloud Platform, there
-is no distinction between training and inference jobs. The Cloud ML platform
+is no distinction between our training and inference jobs. The Cloud ML platform
 also offers specialized functionality for prediction with
 Tensorflow models, but discussing that is beyond the scope of this readme.
 
