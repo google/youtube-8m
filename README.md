@@ -58,7 +58,7 @@ gcloud --verbosity=debug beta ml jobs submit training $JOB_NAME \
 --package-path=youtube-8m --module-name=youtube-8m.train \
 --staging-bucket=$BUCKET_NAME --region=us-central1 \
 -- --train_data_pattern='gs://youtube8m-ml/0/train/*.tfrecord' \
---train_dir=$BUCKET_NAME/$JOB_NAME \
+--train_dir=$BUCKET_NAME/$JOB_NAME 
 ```
 
 In the gsutil command above, the "package-path" flag refers to the directory
@@ -83,7 +83,7 @@ gcloud --verbosity=debug beta ml jobs submit training $JOB_NAME \
 --package-path=youtube-8m --module-name=youtube-8m.eval \
 --staging-bucket=$BUCKET_NAME --region=us-central1 \
 -- --eval_data_pattern='gs://youtube8m-ml/0/validate/*.tfrecord' \
---train_dir=$BUCKET_NAME/$JOB_TO_EVAL \
+--train_dir=$BUCKET_NAME/$JOB_TO_EVAL 
 ```
 
 And here's how to perform inference with a model:
