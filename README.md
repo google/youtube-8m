@@ -2,27 +2,33 @@
 
 This repo contains starter code for training and evaluating machine learning
 models over the [YouTube-8M](https://research.google.com/youtube8m/) dataset.
-The code gives an end-t-end working example for reading the dataset, training a
+The code gives an end-to-end working example for reading the dataset, training a
 TensorFlow model, and evaluating the performance of the model. Out of the box,
 you can train a logistic classification model over either frame-level or
 video-level features. The code can be extended to train more complex models.
 
 It is possible to train and evaluate on YouTube-8M in two ways: on your own
-Machine, and on Google Cloud. This README provides instructions for both.
+machine, or on Google Cloud. This README provides instructions for both.
 
+[Run on Google's Cloud Machine Learning Platform](#cloud_ml)
+[Run on your own machine](#own_machine)
 
-## Option 1: Running on Google Cloud ML
+<a name="cloud_ml"/>
+## Option 1: Running on Google's Cloud Machine Learning Platform
 
-This starter code is compatible with Google's Cloud Machine Learning Platform,
-which is currently in beta.
-We recommend initially testing your code at a small scale locally, and then
-running your full scale training jobs in the cloud. That way, you avoid having
-to download and store the full dataset, and you get access to high spec machines
-for training.
+### Requirements
 
-After you've
-[configured](https://cloud.google.com/ml/docs/how-tos/getting-set-up) Cloud ML,
-you can train over frame-level features with the following commands:
+This option only requires you to have an
+[appropriately configured](https://cloud.google.com/ml/docs/how-tos/getting-set-up)
+Google Cloud Platform account. Since you will be running code and accessing
+data files in the cloud, you do not need to install any libraries or download
+the training data. If you would like to be able to run Tensorboard or test
+your code locally before deploying it to the cloud, see the
+[Testing Locally](#testing_locally) section.
+
+### Training on Video-Level features
+
+You can train over video-level features with the following commands:
 ```sh
 JOB_NAME=yt8m_train
 BUCKET_NAME=gs://${USER}_yt8m_train_bucket
@@ -34,9 +40,8 @@ gcloud --verbosity=debug beta ml jobs submit training $JOB_NAME \
 --staging-bucket=$BUCKET_NAME --region=us-central1 \
 -- --train_data_pattern='gs://youtube8m-ml/0/train/*.tfrecord' \
 --train_dir=$BUCKET_NAME/$JOB_NAME \
---frame_features=True --model=FrameLevelLogisticModel --feature_names=inc3 \
---batch_size=256
 ```
+
 In the command above, the "package-path" flag refers to the directory
 containing the "train.py" script and more generally the python package which
 should be deployed to the cloud worker. The module-name refers to the specific
@@ -46,11 +51,77 @@ The training data files are hosted in the public "youtube8m-ml" storage bucket
 in the "us-central1" region. Therefore, we've colocated our job in the same
 region in order to have the fastest access to the data.
 
-Please refer to the next section (Option 2: Running on your own Machine) for the
-inference command. The command-line flags for cloud runs are are identical to
-local runs.
+Generally, you should use a different $JOB_NAME for each of your individual
+runs.
+
+### Training on Frame-Level features
+
+Just append
+```sh
+--frame_features=True --model=FrameLevelLogisticModel --feature_names=inc3 \
+--batch_size=256
+```
+
+to the `gcloud beta ml jobs submit` command given above.
+
+### Evaluation and Inference
+Here's how to evaluate a model on the validation dataset:
+
+```sh
+gcloud --verbosity=debug beta ml jobs submit training $JOB_NAME \
+--package-path=youtube-8m --module-name=youtube-8m.eval \
+--staging-bucket=$BUCKET_NAME --region=us-central1 \
+-- --eval_data_pattern='gs://youtube8m-ml/0/validate/*.tfrecord' \
+--train_dir=$BUCKET_NAME/$JOB_NAME \
+```
+
+And here's how to perform inference with a model:
+
+```sh
+gcloud --verbosity=debug beta ml jobs submit training $JOB_NAME \
+--package-path=youtube-8m --module-name=youtube-8m.train \
+--staging-bucket=$BUCKET_NAME --region=us-central1 \
+-- --input_data_pattern='gs://youtube8m-ml/0/validate/*.tfrecord' \
+--train_dir=$BUCKET_NAME/$JOB_NAME \
+--output_file=$BUCKET_NAME/$JOB_NAME/predictions.csv
+```
+
+Note the confusing use of "training" in the above gcloud commands. Despite the
+name, the 'training' argument really just offers a cloud hosted
+python/tensorflow service. From the point of view of the Cloud Platform, there
+is no distinction between training and inference jobs. The Cloud ML platform
+also offers specialized functionality for prediction with
+Tensorflow models, but discussing that is beyond the scope of this readme.
+
+<a name="testing_locally"/>
+### Testing Locally
+As you are developing your own models, you might want to be able to test them
+quickly without having to submit them to the cloud. You can use the
+`gcloud beta ml local` set of commands for that. First, since you are running
+locally you will need to install [Tensorflow]((https://tensorflow.org) and
+download a few of the
+[dataset files](https://research.google.com/youtube8m/download.html). Then,
+simply substitute
+```sh
+gcloud --verbosity=debug beta ml local train
+```
+for
+```sh
+gcloud --verbosity=debug beta ml jobs submit training
+```
+
+in the commands above.
+
+By installing Tensorflow locally, you will also get access to the Tensorboard
+tool, which allows you to view and compare metrics for your various models.
+You can have Tensorboard read the data directly from your Cloud ML bucket
+
+```sh
+tensorboard --logdir=$BUCKET_NAME
+```
 
 
+<a name="own_machine"/>
 ## Option 2: Running on your own Machine
 
 ### Requirements
@@ -64,7 +135,7 @@ You can download the YouTube-8M data files from
 [here](https://research.google.com/youtube8m/download.html). We recommend
 downloading the smaller video-level features dataset first when getting started.
 
-### Quick Start on Video-Level Features
+### Training on Video-Level features
 
 To start training a logistic model on the video-level features, run
 
@@ -75,6 +146,26 @@ python train.py --train_data_pattern='/path/to/features/train*.tfrecord' --train
 
 Since the dataset is sharded into 4096 individual files, we use a wildcard (\*)
 to represent all of those files.
+
+By default, the training code will frequently write _checkpoint_ files (i.e.
+values of all trainable parameters, at the current training iteration). These
+will be written to the `--train_dir`. If you re-use a `--train_dir`, the trainer
+will first restore the latest checkpoint written in that directory. This only
+works if the architecture of the checkpoint matches the graph created by the
+training code. If you are in active development/debugging phase, consider
+adding `--start_new_model` flag to your run configuration.
+
+### Training on Frame-Level features
+
+Follow the same instructions as above, appending
+`--frame_features=True --model=FrameLevelLogisticModel --feature_names=inc3`
+for the train.py, eval.py, and inference.py scripts.
+
+The 'FrameLevelLogisticModel' is designed to provide equivalent results to a
+logistic model trained over the video-level features. Please look at the
+'models.py' file to see how to implement your own models.
+
+### Evaluation and Inference
 
 To evaluate the model, run
 
@@ -100,26 +191,6 @@ python inference.py --output_file=predictions.csv --input_data_pattern='/path/to
 
 This will output the top 20 predicted labels from the model for every example to
 'predictions.csv'.
-
-### Using Frame Level Features
-
-Follow the same instructions as above, appending
-`--frame_features=True --model=FrameLevelLogisticModel --feature_names=inc3`
-for the train.py, eval.py, and inference.py scripts.
-
-The 'FrameLevelLogisticModel' is designed to provide equivalent results to a
-logistic model trained over the video-level features. Please look at the
-'models.py' file to see how to implement your own models.
-
-
-## Notes
-By default, the training code will frequently write _checkpoint_ files (i.e.
-values of all trainable parameters, at the current training iteration). These
-will be written to the `--train_dir`. If you re-use a `--train_dir`, the trainer
-will first restore the latest checkpoint written in that directory. This only
-works if the architecture of the checkpoint matches the graph created by the
-training code. If you are in active development/debugging phase, consider
-adding `--start_new_model` flag to your run configuration.
 
 ## Overview of Files
 
