@@ -26,7 +26,7 @@ the training data. If you would like to be able to run Tensorboard or test
 your code locally before deploying it to the cloud, see the
 [Testing Locally](#testing_locally) section.
 
-### Training on Video-Level features
+### Training on Video-Level Features
 
 You can train over video-level features with a few commands. First, navigate to
 the directory *immediately above* the source code. You should be able to see the
@@ -133,7 +133,7 @@ tensorboard --logdir=$BUCKET_NAME
 
 
 <a name="own_machine"/>
-## Option 2: Running on your own Machine
+## Option 2: Running on your Own Machine
 
 ### Requirements
 
@@ -193,7 +193,7 @@ python inference.py --output_file=predictions.csv --input_data_pattern='/path/to
 This will output the top 20 predicted labels from the model for every example to
 'predictions.csv'.
 
-### Training on Frame-Level features
+### Training on Frame-Level Features
 
 Follow the same instructions as above, appending
 `--frame_features=True --model=FrameLevelLogisticModel --feature_names=inc3`
