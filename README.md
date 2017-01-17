@@ -28,7 +28,10 @@ your code locally before deploying it to the cloud, see the
 
 ### Training on Video-Level features
 
-You can train over video-level features with the following commands:
+You can train over video-level features with a few commands. First, navigate to
+the directory *immediately above* the source code. You should be able to see the
+source code directory if you run 'ls'. Then run the following:
+
 ```sh
 JOB_NAME=yt8m_train
 BUCKET_NAME=gs://${USER}_yt8m_train_bucket
@@ -42,7 +45,7 @@ gcloud --verbosity=debug beta ml jobs submit training $JOB_NAME \
 --train_dir=$BUCKET_NAME/$JOB_NAME \
 ```
 
-In the command above, the "package-path" flag refers to the directory
+In the gsutil command above, the "package-path" flag refers to the directory
 containing the "train.py" script and more generally the python package which
 should be deployed to the cloud worker. The module-name refers to the specific
 python script which should be executed (in this case the train module).
@@ -54,36 +57,30 @@ region in order to have the fastest access to the data.
 Generally, you should use a different $JOB_NAME for each of your individual
 runs.
 
-### Training on Frame-Level features
-
-Just append
-```sh
---frame_features=True --model=FrameLevelLogisticModel --feature_names=inc3 \
---batch_size=256
-```
-
-to the `gcloud beta ml jobs submit` command given above.
-
 ### Evaluation and Inference
 Here's how to evaluate a model on the validation dataset:
 
 ```sh
+JOB_NAME=yt8m_eval
+JOB_TO_EVAL=yt8m_train
 gcloud --verbosity=debug beta ml jobs submit training $JOB_NAME \
 --package-path=youtube-8m --module-name=youtube-8m.eval \
 --staging-bucket=$BUCKET_NAME --region=us-central1 \
 -- --eval_data_pattern='gs://youtube8m-ml/0/validate/*.tfrecord' \
---train_dir=$BUCKET_NAME/$JOB_NAME \
+--train_dir=$BUCKET_NAME/$JOB_TO_EVAL \
 ```
 
 And here's how to perform inference with a model:
 
 ```sh
+JOB_NAME=yt8m_inference
+JOB_TO_EVAL=yt8m_train
 gcloud --verbosity=debug beta ml jobs submit training $JOB_NAME \
---package-path=youtube-8m --module-name=youtube-8m.train \
+--package-path=youtube-8m --module-name=youtube-8m.inference \
 --staging-bucket=$BUCKET_NAME --region=us-central1 \
 -- --input_data_pattern='gs://youtube8m-ml/0/validate/*.tfrecord' \
---train_dir=$BUCKET_NAME/$JOB_NAME \
---output_file=$BUCKET_NAME/$JOB_NAME/predictions.csv
+--train_dir=$BUCKET_NAME/$JOB_TO_EVAL \
+--output_file=$BUCKET_NAME/$JOB_TO_EVAL/predictions.csv
 ```
 
 Note the confusing use of "training" in the above gcloud commands. Despite the
@@ -92,6 +89,20 @@ python/tensorflow service. From the point of view of the Cloud Platform, there
 is no distinction between our training and inference jobs. The Cloud ML platform
 also offers specialized functionality for prediction with
 Tensorflow models, but discussing that is beyond the scope of this readme.
+
+### Training on Frame-Level features
+
+Just append
+```sh
+--frame_features=True --model=FrameLevelLogisticModel --feature_names=inc3 \
+--batch_size=256
+```
+
+to the 'gcloud' commands given above.
+
+The 'FrameLevelLogisticModel' is designed to provide equivalent results to a
+logistic model trained over the video-level features. Please look at the
+'models.py' file to see how to implement your own models.
 
 <a name="testing_locally"/>
 ### Testing Locally
@@ -155,16 +166,6 @@ works if the architecture of the checkpoint matches the graph created by the
 training code. If you are in active development/debugging phase, consider
 adding `--start_new_model` flag to your run configuration.
 
-### Training on Frame-Level features
-
-Follow the same instructions as above, appending
-`--frame_features=True --model=FrameLevelLogisticModel --feature_names=inc3`
-for the train.py, eval.py, and inference.py scripts.
-
-The 'FrameLevelLogisticModel' is designed to provide equivalent results to a
-logistic model trained over the video-level features. Please look at the
-'models.py' file to see how to implement your own models.
-
 ### Evaluation and Inference
 
 To evaluate the model, run
@@ -191,6 +192,16 @@ python inference.py --output_file=predictions.csv --input_data_pattern='/path/to
 
 This will output the top 20 predicted labels from the model for every example to
 'predictions.csv'.
+
+### Training on Frame-Level features
+
+Follow the same instructions as above, appending
+`--frame_features=True --model=FrameLevelLogisticModel --feature_names=inc3`
+for the train.py, eval.py, and inference.py scripts.
+
+The 'FrameLevelLogisticModel' is designed to provide equivalent results to a
+logistic model trained over the video-level features. Please look at the
+'models.py' file to see how to implement your own models.
 
 ## Overview of Files
 

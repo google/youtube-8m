@@ -111,7 +111,7 @@ def get_input_data_tensors(reader, data_pattern, batch_size, num_readers=1):
     return video_id_batch, video_batch, num_frames_batch
 
 def inference(reader, train_dir, data_pattern, out_file_location, batch_size, top_k):
-  with tf.Session() as sess, open(out_file_location, "w+") as out_file:
+  with tf.Session() as sess, gfile.Open(out_file_location, "w+") as out_file:
     video_id_batch, video_batch, num_frames_batch = get_input_data_tensors(reader, data_pattern, batch_size)
     latest_checkpoint = tf.train.latest_checkpoint(train_dir)
     if latest_checkpoint is None:
@@ -143,6 +143,7 @@ def inference(reader, train_dir, data_pattern, out_file_location, batch_size, to
           logging.info("num examples processed: " + str(num_examples_processed) + " elapsed seconds: " + "{0:.2f}".format(now-start_time))
           for line in format_lines(video_id_batch_val, predictions_val, top_k):
             out_file.write(line)
+          out_file.flush()
 
 
     except tf.errors.OutOfRangeError:
