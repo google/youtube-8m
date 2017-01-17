@@ -10,7 +10,7 @@ video-level features. The code can be extended to train more complex models.
 It is possible to train and evaluate on YouTube-8M in two ways: on your own
 machine, or on Google Cloud. This README provides instructions for both.
 
-[Run on Google's Cloud Machine Learning Platform](#cloud_ml)
+[Run on Google's Cloud Machine Learning Platform](#cloud_ml) <br/>
 [Run on your own machine](#own_machine)
 
 <a name="cloud_ml"/>
@@ -98,7 +98,7 @@ Tensorflow models, but discussing that is beyond the scope of this readme.
 As you are developing your own models, you might want to be able to test them
 quickly without having to submit them to the cloud. You can use the
 `gcloud beta ml local` set of commands for that. First, since you are running
-locally you will need to install [Tensorflow]((https://tensorflow.org) and
+locally you will need to install [Tensorflow](https://tensorflow.org) and
 download a few of the
 [dataset files](https://research.google.com/youtube8m/download.html). Then,
 simply substitute
