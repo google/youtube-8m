@@ -57,7 +57,7 @@ gsutil mb -l us-central1 $BUCKET_NAME
 gcloud --verbosity=debug beta ml jobs submit training $JOB_NAME \
 --package-path=youtube-8m --module-name=youtube-8m.train \
 --staging-bucket=$BUCKET_NAME --region=us-central1 \
--- --train_data_pattern='gs://youtube8m-ml/0/train/*.tfrecord' \
+-- --train_data_pattern='gs://youtube8m-ml/0/video_level/train/*.tfrecord' \
 --train_dir=$BUCKET_NAME/$JOB_NAME 
 ```
 
@@ -82,7 +82,7 @@ JOB_TO_EVAL=yt8m_train
 gcloud --verbosity=debug beta ml jobs submit training $JOB_NAME \
 --package-path=youtube-8m --module-name=youtube-8m.eval \
 --staging-bucket=$BUCKET_NAME --region=us-central1 \
--- --eval_data_pattern='gs://youtube8m-ml/0/validate/*.tfrecord' \
+-- --eval_data_pattern='gs://youtube8m-ml/0/video_level/validate/*.tfrecord' \
 --train_dir=$BUCKET_NAME/$JOB_TO_EVAL 
 ```
 
@@ -94,7 +94,7 @@ JOB_TO_EVAL=yt8m_train
 gcloud --verbosity=debug beta ml jobs submit training $JOB_NAME \
 --package-path=youtube-8m --module-name=youtube-8m.inference \
 --staging-bucket=$BUCKET_NAME --region=us-central1 \
--- --input_data_pattern='gs://youtube8m-ml/0/validate/*.tfrecord' \
+-- --input_data_pattern='gs://youtube8m-ml/0/video_level/validate/*.tfrecord' \
 --train_dir=$BUCKET_NAME/$JOB_TO_EVAL \
 --output_file=$BUCKET_NAME/$JOB_TO_EVAL/predictions.csv
 ```
@@ -108,13 +108,14 @@ Tensorflow models, but discussing that is beyond the scope of this readme.
 
 ### Using Frame-Level features
 
-Just append
+Append
 ```sh
 --frame_features=True --model=FrameLevelLogisticModel --feature_names=inc3 \
 --batch_size=256
 ```
 
-to the 'gcloud' commands given above.
+to the 'gcloud' commands given above, and change 'video_level' in paths to
+'frame_level'.
 
 The 'FrameLevelLogisticModel' is designed to provide equivalent results to a
 logistic model trained over the video-level features. Please look at the
