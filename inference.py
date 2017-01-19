@@ -41,7 +41,7 @@ if __name__ == '__main__':
   flags.DEFINE_string(
       "input_data_pattern", "",
       "File glob defining the evaluation dataset in tensorflow.SequenceExample "
-      "format. The SequenceExamples are expected to have an 'INC6' byte array "
+      "format. The SequenceExamples are expected to have an 'rgb' byte array "
       "sequence feature as well as a 'labels' int64 context feature.")
 
   # Model flags.
@@ -54,7 +54,7 @@ if __name__ == '__main__':
   flags.DEFINE_integer(
       "batch_size", 8192,
       "How many examples to process per batch.")
-  flags.DEFINE_string("feature_names", "mean_inc3", "Name of the feature "
+  flags.DEFINE_string("feature_names", "mean_rgb", "Name of the feature "
                       "to use for training.")
   flags.DEFINE_string("feature_sizes", "1024", "Length of the feature vectors.")
 
