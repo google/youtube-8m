@@ -39,8 +39,6 @@ class BaseLoss(object):
 
 class CrossEntropyLoss(BaseLoss):
   """Calculate the cross entropy loss between the predictions and labels.
-
-  More details can be found at go/vesper_tf#more-loss-functions
   """
 
   def calculate_loss(self, predictions, labels, **unused_params):
@@ -58,7 +56,7 @@ class HingeLoss(BaseLoss):
 
   Note the subgradient is used in the backpropagation, and thus the optimization
   may converge slower. The predictions trained by the hinge loss are between -1
-  and +1. More details can be found at go/vesper_tf#more-loss-functions
+  and +1.
   """
 
   def calculate_loss(self, predictions, labels, b=1.0, **unused_params):
@@ -82,7 +80,6 @@ class SoftmaxLoss(BaseLoss):
 
   It is an extension to the one-hot label. It allows for more than one positive
   labels for each sample.
-  More details can be found at go/vesper_tf#more-loss-functions
   """
 
   def calculate_loss(self, predictions, labels, **unused_params):
