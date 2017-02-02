@@ -125,19 +125,30 @@ logistic model trained over the video-level features. Please look at the
 As you are developing your own models, you might want to be able to test them
 quickly without having to submit them to the cloud. You can use the
 `gcloud beta ml local` set of commands for that. First, since you are running
-locally you will need to install [Tensorflow](https://tensorflow.org) and
-download a few of the
-[dataset files](https://research.google.com/youtube8m/download.html). Then,
-simply substitute
+locally you will need to install [Tensorflow](https://tensorflow.org).
+
+Here is an example command line for video-level training:
+
 ```sh
-gcloud --verbosity=debug beta ml local train
-```
-for
-```sh
-gcloud --verbosity=debug beta ml jobs submit training
+gcloud --verbosity=debug beta ml local train \
+--package-path=youtube-8m --module-name=youtube-8m.train -- \
+--train_data_pattern='gs://youtube8m-ml/0/video_level/train/*.tfrecord' \
+--train_dir=/tmp/yt8m_train --start_new_model
 ```
 
-in the commands above.
+You can modify this template using the instructions above to train with
+frame-level features or to do evaluation or inference. You might also want to
+download some training shards locally, to speed things up and allow you to
+work offline. The command below will copy 10 out of the 4096 training data files
+to the current directory.
+
+```sh
+# Downloads 50MB of data.
+gsutil cp gs://us.data.yt8m.org/0/video_level/train/traina[0-9].tfrecord .
+```
+
+Once you download the files, you can point the job to them using the
+'train_data_pattern' argument.
 
 By installing Tensorflow locally, you will also get access to the Tensorboard
 tool, which allows you to view and compare metrics for your various models.
