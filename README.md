@@ -49,12 +49,12 @@ the directory *immediately above* the source code. You should be able to see the
 source code directory if you run 'ls'. Then run the following:
 
 ```sh
-JOB_NAME=yt8m_train_`date +%s`
 BUCKET_NAME=gs://${USER}_yt8m_train_bucket
 # (One Time) Create a storage bucket to store training logs and checkpoints.
 gsutil mb -l us-central1 $BUCKET_NAME
 # Submit the training job.
-gcloud --verbosity=debug beta ml jobs submit training $JOB_NAME \
+JOB_NAME=yt8m_train_`date +%s`; gcloud --verbosity=debug beta ml jobs \
+submit training $JOB_NAME \
 --package-path=youtube-8m --module-name=youtube-8m.train \
 --staging-bucket=$BUCKET_NAME --region=us-central1 \
 -- --train_data_pattern='gs://youtube8m-ml/0/video_level/train/*.tfrecord' \
@@ -77,9 +77,9 @@ runs.
 Here's how to evaluate a model on the validation dataset:
 
 ```sh
-JOB_NAME=yt8m_eval_`date +%s`
 JOB_TO_EVAL=yt8m_train
-gcloud --verbosity=debug beta ml jobs submit training $JOB_NAME \
+JOB_NAME=yt8m_eval_`date +%s`; gcloud --verbosity=debug beta ml jobs \
+submit training $JOB_NAME \
 --package-path=youtube-8m --module-name=youtube-8m.eval \
 --staging-bucket=$BUCKET_NAME --region=us-central1 \
 -- --eval_data_pattern='gs://youtube8m-ml/0/video_level/validate/*.tfrecord' \
@@ -89,9 +89,9 @@ gcloud --verbosity=debug beta ml jobs submit training $JOB_NAME \
 And here's how to perform inference with a model:
 
 ```sh
-JOB_NAME=yt8m_inference_`date +%s`
 JOB_TO_EVAL=yt8m_train
-gcloud --verbosity=debug beta ml jobs submit training $JOB_NAME \
+JOB_NAME=yt8m_inference_`date +%s`; gcloud --verbosity=debug beta ml jobs \
+submit training $JOB_NAME \
 --package-path=youtube-8m --module-name=youtube-8m.inference \
 --staging-bucket=$BUCKET_NAME --region=us-central1 \
 -- --input_data_pattern='gs://youtube8m-ml/0/video_level/validate/*.tfrecord' \
