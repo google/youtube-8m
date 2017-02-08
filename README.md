@@ -79,7 +79,6 @@ runs.
 Here's how to evaluate a model on the validation dataset:
 
 ```sh
-JOB_NAME=yt8m_eval
 JOB_TO_EVAL=yt8m_train
 JOB_NAME=yt8m_eval_`date +%s`; gcloud --verbosity=debug beta ml jobs \
 submit training $JOB_NAME \
