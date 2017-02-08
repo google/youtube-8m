@@ -85,8 +85,8 @@ class YT8MAggregatedFeatureReader(BaseReader):
     """
 
     assert len(feature_names) == len(feature_sizes), \
-    "length of feature_names (=%r) != length of feature_sizes (=%r)" \
-    % len(feature_names) % len(feature_sizes)
+    "length of feature_names (={}) != length of feature_sizes (={})".format( \
+    len(feature_names), len(feature_sizes))
 
     self.num_classes = num_classes
     self.feature_sizes = feature_sizes
@@ -108,8 +108,8 @@ class YT8MAggregatedFeatureReader(BaseReader):
     num_features = len(self.feature_names)
     assert num_features > 0, "self.feature_names is empty!"
     assert len(self.feature_names) == len(self.feature_sizes), \
-    "length of feature_names (=%r) != length of feature_sizes (=%r)" \
-    % len(self.feature_names) % len(self.feature_sizes)
+    "length of feature_names (={}) != length of feature_sizes (={})".format( \
+    len(self.feature_names), len(self.feature_sizes))
 
     feature_map = {"video_id": tf.FixedLenFeature([], tf.string),
                    "labels": tf.VarLenFeature(tf.int64)}
@@ -157,8 +157,8 @@ class YT8MFrameFeatureReader(BaseReader):
     """
 
     assert len(feature_names) == len(feature_sizes), \
-    "length of feature_names (=%r) != length of feature_sizes (=%r)" \
-    % len(feature_names) % len(feature_sizes)
+    "length of feature_names (={}) != length of feature_sizes (={})".format( \
+    len(feature_names), len(feature_sizes))
 
     self.num_classes = num_classes
     self.feature_sizes = feature_sizes
@@ -232,8 +232,8 @@ class YT8MFrameFeatureReader(BaseReader):
     assert num_features > 0, "No feature selected: feature_names is empty!"
 
     assert len(self.feature_names) == len(self.feature_sizes), \
-    "length of feature_names (=%r) != length of feature_sizes (=%r)" \
-    % len(self.feature_names) % len(self.feature_sizes)
+    "length of feature_names (={}) != length of feature_sizes (={})".format( \
+    len(self.feature_names), len(self.feature_sizes))
 
     num_frames = -1  # the number of frames in the video
     feature_matrices = [None] * num_features  # an array of different features

@@ -17,12 +17,14 @@ machine, or on Google Cloud. This README provides instructions for both.
    * [Training on Video-Level Features](#training-on-video-level-features)
    * [Evaluation and Inference](#evaluation-and-inference)
    * [Using Frame-Level features](#using-frame-level-features)
+   * [Using audio features](#using-audio-features)
    * [Testing Locally](#testing-locally)
 * [Running on your Own Machine](#running-on-your-own-machine)
    * [Requirements](#requirements-1)
    * [Training on Video-Level features](#training-on-video-level-features-1)
    * [Evaluation and Inference](#evaluation-and-inference-1)
    * [Using Frame-Level Features](#using-frame-level-features-1)
+   * [Using audio features](#using-audio-features-1)
 * [Overview of Files](#overview-of-files)
    * [Training](#training)
    * [Evaluation](#evaluation)
@@ -57,7 +59,7 @@ JOB_NAME=yt8m_train_`date +%s`; gcloud --verbosity=debug beta ml jobs \
 submit training $JOB_NAME \
 --package-path=youtube-8m --module-name=youtube-8m.train \
 --staging-bucket=$BUCKET_NAME --region=us-central1 \
--- --train_data_pattern='gs://youtube8m-ml/0/video_level/train/*.tfrecord' \
+-- --train_data_pattern='gs://youtube8m-ml/2/video_level/train/*.tfrecord' \
 --train_dir=$BUCKET_NAME/$JOB_NAME
 ```
 
@@ -77,12 +79,13 @@ runs.
 Here's how to evaluate a model on the validation dataset:
 
 ```sh
+JOB_NAME=yt8m_eval
 JOB_TO_EVAL=yt8m_train
 JOB_NAME=yt8m_eval_`date +%s`; gcloud --verbosity=debug beta ml jobs \
 submit training $JOB_NAME \
 --package-path=youtube-8m --module-name=youtube-8m.eval \
 --staging-bucket=$BUCKET_NAME --region=us-central1 \
--- --eval_data_pattern='gs://youtube8m-ml/0/video_level/validate/*.tfrecord' \
+-- --eval_data_pattern='gs://youtube8m-ml/2/video_level/validate/*.tfrecord' \
 --train_dir=$BUCKET_NAME/$JOB_TO_EVAL
 ```
 
@@ -94,7 +97,7 @@ JOB_NAME=yt8m_inference_`date +%s`; gcloud --verbosity=debug beta ml jobs \
 submit training $JOB_NAME \
 --package-path=youtube-8m --module-name=youtube-8m.inference \
 --staging-bucket=$BUCKET_NAME --region=us-central1 \
--- --input_data_pattern='gs://youtube8m-ml/0/video_level/validate/*.tfrecord' \
+-- --input_data_pattern='gs://youtube8m-ml/2/video_level/validate/*.tfrecord' \
 --train_dir=$BUCKET_NAME/$JOB_TO_EVAL \
 --output_file=$BUCKET_NAME/$JOB_TO_EVAL/predictions.csv
 ```
@@ -110,8 +113,8 @@ Tensorflow models, but discussing that is beyond the scope of this readme.
 
 Append
 ```sh
---frame_features=True --model=FrameLevelLogisticModel --feature_names=inc3 \
---batch_size=256
+--frame_features=True --model=FrameLevelLogisticModel --feature_names="rgb" \
+--feature_sizes="1024" --batch_size=256
 ```
 
 to the 'gcloud' commands given above, and change 'video_level' in paths to
@@ -120,6 +123,32 @@ to the 'gcloud' commands given above, and change 'video_level' in paths to
 The 'FrameLevelLogisticModel' is designed to provide equivalent results to a
 logistic model trained over the video-level features. Please look at the
 'models.py' file to see how to implement your own models.
+
+
+### Using audio features
+
+The feature files (both Frame-Level and Video-Level) contain two sets of
+features: 1) visual and 2) audio. The code defaults to using the visual
+features only, but it is possible to use audio features instead of (or besides)
+visual features. To specify the (combination of) features to use you must set
+`--feature_names` and `feature_sizes` flags. The visual and audio features are
+called `rgb` and `audio` and have `1024` and `128` dimensions, respectively.
+The two flags take a comma-separated list of values in string. For example, to
+use audio-visual Video-Level features the flags must be set as follows:
+
+```
+--feature_names="mean_rgb, mean_audio" --feature_sizes="1024, 128"
+```
+
+Similarly, to use audio-visual Frame-Level features use:
+
+```
+--feature_names="rgb, audio" --feature_sizes="1024, 128"
+```
+
+NOTE: make sure the set of features and the order in which the appear in the
+lists provided to the two flags above match. Also, the order must match when
+running training, evaluation, or inference.
 
 ### Testing Locally
 As you are developing your own models, you might want to be able to test them
@@ -132,7 +161,7 @@ Here is an example command line for video-level training:
 ```sh
 gcloud --verbosity=debug beta ml local train \
 --package-path=youtube-8m --module-name=youtube-8m.train -- \
---train_data_pattern='gs://youtube8m-ml/0/video_level/train/*.tfrecord' \
+--train_data_pattern='gs://youtube8m-ml/2/video_level/train/*.tfrecord' \
 --train_dir=/tmp/yt8m_train --start_new_model
 ```
 
@@ -144,7 +173,7 @@ to the current directory.
 
 ```sh
 # Downloads 50MB of data.
-gsutil cp gs://us.data.yt8m.org/0/video_level/train/traina[0-9].tfrecord .
+gsutil cp gs://us.data.yt8m.org/2/video_level/train/traina[0-9].tfrecord .
 ```
 
 Once you download the files, you can point the job to them using the
@@ -221,12 +250,17 @@ This will output the top 20 predicted labels from the model for every example to
 ### Using Frame-Level Features
 
 Follow the same instructions as above, appending
-`--frame_features=True --model=FrameLevelLogisticModel --feature_names=inc3`
+`--frame_features=True --model=FrameLevelLogisticModel --feature_names="rbg"
+--feature_sizes="1024"`
 for the train.py, eval.py, and inference.py scripts.
 
 The 'FrameLevelLogisticModel' is designed to provide equivalent results to a
 logistic model trained over the video-level features. Please look at the
 'models.py' file to see how to implement your own models.
+
+### Using audio features
+
+See [Using audio features](#using-audio-features) section above.
 
 ## Overview of Files
 
