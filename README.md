@@ -249,7 +249,7 @@ This will output the top 20 predicted labels from the model for every example to
 ### Using Frame-Level Features
 
 Follow the same instructions as above, appending
-`--frame_features=True --model=FrameLevelLogisticModel --feature_names="rbg"
+`--frame_features=True --model=FrameLevelLogisticModel --feature_names="rgb"
 --feature_sizes="1024"`
 for the train.py, eval.py, and inference.py scripts.
 
