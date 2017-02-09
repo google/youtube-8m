@@ -17,12 +17,14 @@ machine, or on Google Cloud. This README provides instructions for both.
    * [Training on Video-Level Features](#training-on-video-level-features)
    * [Evaluation and Inference](#evaluation-and-inference)
    * [Using Frame-Level features](#using-frame-level-features)
+   * [Using audio features](#using-audio-features)
    * [Testing Locally](#testing-locally)
 * [Running on your Own Machine](#running-on-your-own-machine)
    * [Requirements](#requirements-1)
    * [Training on Video-Level features](#training-on-video-level-features-1)
    * [Evaluation and Inference](#evaluation-and-inference-1)
    * [Using Frame-Level Features](#using-frame-level-features-1)
+   * [Using audio features](#using-audio-features-1)
 * [Overview of Files](#overview-of-files)
    * [Training](#training)
    * [Evaluation](#evaluation)
@@ -110,7 +112,7 @@ Tensorflow models, but discussing that is beyond the scope of this readme.
 
 Append
 ```sh
---frame_features=True --model=FrameLevelLogisticModel --feature_names=inc3 \
+--frame_features=True --model=FrameLevelLogisticModel --feature_names=rgb \
 --batch_size=256
 ```
 
@@ -120,6 +122,32 @@ to the 'gcloud' commands given above, and change 'video_level' in paths to
 The 'FrameLevelLogisticModel' is designed to provide equivalent results to a
 logistic model trained over the video-level features. Please look at the
 'models.py' file to see how to implement your own models.
+
+
+### Using audio features
+
+The feature files (both Frame-Level and Video-Level) contain two sets of
+features: 1) visual and 2) audio. The code defaults to using the visual
+features only, but it is possible to use audio features instead of (or besides)
+visual features. To specify the (combination of) features to use you must set
+`--feature_names` and `feature_sizes` flags, which take a comma-separated list
+of feature names and feature sizes, respectively. The visual and audio features
+are named `rgb` and `audio` and have `1024` and `128` dimensions, respectively.
+For example, to use audio-visual Video-Level features the following flags must
+be set:
+```
+--feature_names="mean_rgb, mean_audio" --feature_sizes="1024, 128"
+```
+
+Similarly, to audio-visual Frame-Level features the following flags must be
+set:
+```
+--feature_names="rgb, audio" --feature_sizes="1024, 128"
+```
+
+NOTE: make sure the set of features and the order in which the appear in the
+lists provided to the two flags above match when running training, evaluation,
+or inference.
 
 ### Testing Locally
 As you are developing your own models, you might want to be able to test them
@@ -221,12 +249,16 @@ This will output the top 20 predicted labels from the model for every example to
 ### Using Frame-Level Features
 
 Follow the same instructions as above, appending
-`--frame_features=True --model=FrameLevelLogisticModel --feature_names=inc3`
+`--frame_features=True --model=FrameLevelLogisticModel --feature_names=rgb`
 for the train.py, eval.py, and inference.py scripts.
 
 The 'FrameLevelLogisticModel' is designed to provide equivalent results to a
 logistic model trained over the video-level features. Please look at the
 'models.py' file to see how to implement your own models.
+
+### Using audio features
+
+See [Using audio features](#using-audio-features) section above.
 
 ## Overview of Files
 
