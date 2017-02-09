@@ -1,0 +1,4 @@
+trainingInput:
+  scaleTier: CUSTOM
+  # standard_gpu provides 1 GPU. Change to complex_model_m_gpu for 4 GPUs
+  masterType: standard_gpu
