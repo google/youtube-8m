@@ -47,8 +47,9 @@ your code locally before deploying it to the cloud, see the
 ### Training on Video-Level Features
 
 You can train over video-level features with a few commands. First, navigate to
-the directory *immediately above* the source code. You should be able to see the
-source code directory if you run 'ls'. Then run the following:
+the directory containing the 'setup.py' file. You should be able to see the
+'youtube-8m' directory containing this readme if you run 'ls'. Then run the
+following:
 
 ```sh
 BUCKET_NAME=gs://${USER}_yt8m_train_bucket
