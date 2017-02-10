@@ -261,7 +261,7 @@ logistic model trained over the video-level features. Please look at the
 
 See [Using Audio Features](#using-audio-features) section above.
 
-### [Ground-Truth Label Files]
+### Ground-Truth Label Files
 
 We also provide CSV files containing the ground-truth label information of the
 `train` and `validation` partitions of the dataset. These files can be
