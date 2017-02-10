@@ -25,6 +25,7 @@ machine, or on Google Cloud. This README provides instructions for both.
    * [Evaluation and Inference](#evaluation-and-inference-1)
    * [Using Frame-Level Features](#using-frame-level-features-1)
    * [Using audio features](#using-audio-features-1)
+   * [Ground-truth label files](#ground-truth-label-files)
 * [Overview of Files](#overview-of-files)
    * [Training](#training)
    * [Evaluation](#evaluation)
@@ -61,7 +62,7 @@ submit training $JOB_NAME \
 --package-path=youtube-8m --module-name=youtube-8m.train \
 --staging-bucket=$BUCKET_NAME --region=us-central1 \
 --config=youtube-8m/cloudml-gpu.yaml \
--- --train_data_pattern='gs://youtube8m-ml/1/video_level/train/*.tfrecord' \
+-- --train_data_pattern='gs://youtube8m-ml/1/video_level/train/train*.tfrecord' \
 --train_dir=$BUCKET_NAME/$JOB_NAME
 ```
 
@@ -83,7 +84,7 @@ JOB_NAME=yt8m_eval_$(date +%Y%m%d_%H%M%S); gcloud --verbosity=debug beta ml jobs
 submit training $JOB_NAME \
 --package-path=youtube-8m --module-name=youtube-8m.eval \
 --staging-bucket=$BUCKET_NAME --region=us-central1 \
--- --eval_data_pattern='gs://youtube8m-ml/1/video_level/validate/*.tfrecord' \
+-- --eval_data_pattern='gs://youtube8m-ml/1/video_level/validate/validate*.tfrecord' \
 --train_dir=$BUCKET_NAME/$JOB_TO_EVAL
 ```
 
@@ -95,7 +96,7 @@ JOB_NAME=yt8m_inference_$(date +%Y%m%d_%H%M%S); gcloud --verbosity=debug beta ml
 submit training $JOB_NAME \
 --package-path=youtube-8m --module-name=youtube-8m.inference \
 --staging-bucket=$BUCKET_NAME --region=us-central1 \
--- --input_data_pattern='gs://youtube8m-ml/1/video_level/validate/*.tfrecord' \
+-- --input_data_pattern='gs://youtube8m-ml/1/video_level/validate/validate*.tfrecord' \
 --train_dir=$BUCKET_NAME/$JOB_TO_EVAL \
 --output_file=$BUCKET_NAME/$JOB_TO_EVAL/predictions.csv
 ```
@@ -159,7 +160,7 @@ Here is an example command line for video-level training:
 ```sh
 gcloud --verbosity=debug beta ml local train \
 --package-path=youtube-8m --module-name=youtube-8m.train -- \
---train_data_pattern='gs://youtube8m-ml/1/video_level/train/*.tfrecord' \
+--train_data_pattern='gs://youtube8m-ml/1/video_level/train/train*.tfrecord' \
 --train_dir=/tmp/yt8m_train --start_new_model
 ```
 
@@ -259,6 +260,30 @@ logistic model trained over the video-level features. Please look at the
 ### Using Audio Features
 
 See [Using audio features](#using-audio-features) section above.
+
+### [Ground-truth label files](#ground-truth-label-files)
+
+We also provide CSV files containing the ground-truth label information of the
+`train` and `validation` partitions of the dataset. These files can be
+downloaded using `gsutil` command:
+
+```
+gsutil gs://us.data.yt8m.org/1/ground_truth_labels/train_labels.csv
+gsutil gs://us.data.yt8m.org/1/ground_truth_labels/validate_labels.csv
+```
+
+or directly using the following links:
+
+*   [http://us.data.yt8m.org/1/ground_truth_labels/train_labels.csv](http://us.data.yt8m.org/1/ground_truth_labels/train_labels.csv)
+*   [http://us.data.yt8m.org/1/ground_truth_labels/validate_labels.csv](http://us.data.yt8m.org/1/ground_truth_labels/validate_labels.csv)
+
+Each line in the files starts with the video id and is followed by the list of
+ground-truth labels corresponding to that video. For example, for a video with
+id `VIDEO_ID` and two lables `LABLE1` and `LABEL2` we store the following line:
+
+```
+VIDEO_ID,LABEL1 LABEL2
+```
 
 ## Overview of Files
 
