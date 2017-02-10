@@ -40,7 +40,7 @@ This option only requires you to have an
 [appropriately configured](https://cloud.google.com/ml/docs/how-tos/getting-set-up)
 Google Cloud Platform account. Since you will be running code and accessing
 data files in the cloud, you do not need to install any libraries or download
-the training data. If you would like to be able to run Tensorboard or test
+the training data. If you would like to test
 your code locally before deploying it to the cloud, see the
 [Testing Locally](#testing-locally) section.
 
@@ -55,10 +55,11 @@ BUCKET_NAME=gs://${USER}_yt8m_train_bucket
 # (One Time) Create a storage bucket to store training logs and checkpoints.
 gsutil mb -l us-central1 $BUCKET_NAME
 # Submit the training job.
-JOB_NAME=yt8m_train_`date +%s`; gcloud --verbosity=debug beta ml jobs \
+JOB_NAME=yt8m_train_$(date +%Y%m%d_%H%M%S); gcloud --verbosity=debug beta ml jobs \
 submit training $JOB_NAME \
 --package-path=youtube-8m --module-name=youtube-8m.train \
 --staging-bucket=$BUCKET_NAME --region=us-central1 \
+--config=youtube-8m/cloudml-gpu.yaml \
 -- --train_data_pattern='gs://youtube8m-ml/2/video_level/train/*.tfrecord' \
 --train_dir=$BUCKET_NAME/$JOB_NAME
 ```
@@ -72,15 +73,12 @@ The training data files are hosted in the public "youtube8m-ml" storage bucket
 in the "us-central1" region. Therefore, we've colocated our job in the same
 region in order to have the fastest access to the data.
 
-Generally, you should use a different $JOB_NAME for each of your individual
-runs.
-
 ### Evaluation and Inference
 Here's how to evaluate a model on the validation dataset:
 
 ```sh
 JOB_TO_EVAL=yt8m_train
-JOB_NAME=yt8m_eval_`date +%s`; gcloud --verbosity=debug beta ml jobs \
+JOB_NAME=yt8m_eval_$(date +%Y%m%d_%H%M%S); gcloud --verbosity=debug beta ml jobs \
 submit training $JOB_NAME \
 --package-path=youtube-8m --module-name=youtube-8m.eval \
 --staging-bucket=$BUCKET_NAME --region=us-central1 \
@@ -92,7 +90,7 @@ And here's how to perform inference with a model:
 
 ```sh
 JOB_TO_EVAL=yt8m_train
-JOB_NAME=yt8m_inference_`date +%s`; gcloud --verbosity=debug beta ml jobs \
+JOB_NAME=yt8m_inference_$(date +%Y%m%d_%H%M%S); gcloud --verbosity=debug beta ml jobs \
 submit training $JOB_NAME \
 --package-path=youtube-8m --module-name=youtube-8m.inference \
 --staging-bucket=$BUCKET_NAME --region=us-central1 \
