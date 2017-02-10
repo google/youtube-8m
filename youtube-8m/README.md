@@ -61,7 +61,7 @@ submit training $JOB_NAME \
 --package-path=youtube-8m --module-name=youtube-8m.train \
 --staging-bucket=$BUCKET_NAME --region=us-central1 \
 --config=youtube-8m/cloudml-gpu.yaml \
--- --train_data_pattern='gs://youtube8m-ml/2/video_level/train/*.tfrecord' \
+-- --train_data_pattern='gs://youtube8m-ml/1/video_level/train/*.tfrecord' \
 --train_dir=$BUCKET_NAME/$JOB_NAME
 ```
 
@@ -83,7 +83,7 @@ JOB_NAME=yt8m_eval_$(date +%Y%m%d_%H%M%S); gcloud --verbosity=debug beta ml jobs
 submit training $JOB_NAME \
 --package-path=youtube-8m --module-name=youtube-8m.eval \
 --staging-bucket=$BUCKET_NAME --region=us-central1 \
--- --eval_data_pattern='gs://youtube8m-ml/2/video_level/validate/*.tfrecord' \
+-- --eval_data_pattern='gs://youtube8m-ml/1/video_level/validate/*.tfrecord' \
 --train_dir=$BUCKET_NAME/$JOB_TO_EVAL
 ```
 
@@ -95,7 +95,7 @@ JOB_NAME=yt8m_inference_$(date +%Y%m%d_%H%M%S); gcloud --verbosity=debug beta ml
 submit training $JOB_NAME \
 --package-path=youtube-8m --module-name=youtube-8m.inference \
 --staging-bucket=$BUCKET_NAME --region=us-central1 \
--- --input_data_pattern='gs://youtube8m-ml/2/video_level/validate/*.tfrecord' \
+-- --input_data_pattern='gs://youtube8m-ml/1/video_level/validate/*.tfrecord' \
 --train_dir=$BUCKET_NAME/$JOB_TO_EVAL \
 --output_file=$BUCKET_NAME/$JOB_TO_EVAL/predictions.csv
 ```
@@ -159,7 +159,7 @@ Here is an example command line for video-level training:
 ```sh
 gcloud --verbosity=debug beta ml local train \
 --package-path=youtube-8m --module-name=youtube-8m.train -- \
---train_data_pattern='gs://youtube8m-ml/2/video_level/train/*.tfrecord' \
+--train_data_pattern='gs://youtube8m-ml/1/video_level/train/*.tfrecord' \
 --train_dir=/tmp/yt8m_train --start_new_model
 ```
 
@@ -171,7 +171,7 @@ to the current directory.
 
 ```sh
 # Downloads 50MB of data.
-gsutil cp gs://us.data.yt8m.org/2/video_level/train/traina[0-9].tfrecord .
+gsutil cp gs://us.data.yt8m.org/1/video_level/train/traina[0-9].tfrecord .
 ```
 
 Once you download the files, you can point the job to them using the
