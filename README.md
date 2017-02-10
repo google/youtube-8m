@@ -57,6 +57,7 @@ JOB_NAME=yt8m_train_$(date +%Y%m%d_%H%M%S); gcloud --verbosity=debug beta ml job
 submit training $JOB_NAME \
 --package-path=youtube-8m --module-name=youtube-8m.train \
 --staging-bucket=$BUCKET_NAME --region=us-central1 \
+--config=youtube-8m/cloudml-gpu.yaml \
 -- --train_data_pattern='gs://youtube8m-ml/0/video_level/train/*.tfrecord' \
 --train_dir=$BUCKET_NAME/$JOB_NAME
 ```
@@ -69,24 +70,6 @@ python script which should be executed (in this case the train module).
 The training data files are hosted in the public "youtube8m-ml" storage bucket
 in the "us-central1" region. Therefore, we've colocated our job in the same
 region in order to have the fastest access to the data.
-
-### Training using GPUs
-
-By default, you will get a single node with CPUs.  To use GPUs, just run:
-
-```sh
-JOB_NAME=yt8m_train_gpu_$(date +%Y%m%d_%H%M%S); gcloud beta ml jobs \
-submit training $JOB_NAME \
---package-path=youtube-8m --module-name=youtube-8m.train \
---staging-bucket=gs://$BUCKET_NAME --region=us-central1 \
---config=youtube-8m/cloudml-gpu.yaml \
--- --train_data_pattern='gs://youtube8m-ml/0/video_level/train/*.tfrecord' \
---train_dir=$BUCKET_NAME/$JOB_NAME
-```
-
-The only difference in this command is the specification of the --config flag
-which points to a yaml file specifying a GPU enabled machine type.  For more
-info, see the [Cloud ML GPU How-to](https://cloud.google.com/ml/docs/how-tos/using-gpus).
 
 ### Evaluation and Inference
 Here's how to evaluate a model on the validation dataset:
