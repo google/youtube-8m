@@ -116,12 +116,13 @@ class YT8MAggregatedFeatureReader(BaseReader):
     for feature_index in range(num_features):
       feature_map[self.feature_names[feature_index]] = tf.FixedLenFeature(
           [self.feature_sizes[feature_index]], tf.float32)
-    
+
     features = tf.parse_single_example(serialized_example,
                                        features=feature_map)
 
     labels = (tf.cast(
-        tf.sparse_to_dense(features["labels"].values, (self.num_classes,), 1),
+        tf.sparse_to_dense(features["labels"].values, (self.num_classes,), 1,
+            validate_indices=False),
         tf.bool))
     concatenated_features = tf.concat(0, [
         features[feature_name] for feature_name in self.feature_names])
@@ -172,7 +173,7 @@ class YT8MFrameFeatureReader(BaseReader):
                        max_quantized_value,
                        min_quantized_value):
     """Decodes features from an input string and quantizes it.
-  
+
     Args:
       features: raw feature values
       feature_size: length of each frame feature vector
@@ -224,7 +225,8 @@ class YT8MFrameFeatureReader(BaseReader):
 
     # read ground truth labels
     labels = (tf.cast(
-        tf.sparse_to_dense(contexts["labels"].values, (self.num_classes,), 1),
+        tf.sparse_to_dense(contexts["labels"].values, (self.num_classes,), 1,
+            validate_indices=False),
         tf.bool))
 
     # loads (potentially) different types of features and concatenates them
@@ -253,7 +255,7 @@ class YT8MFrameFeatureReader(BaseReader):
 
     # cap the number of frames at self.max_frames
     num_frames = tf.minimum(num_frames, self.max_frames)
-    
+
     # concatenate different features
     video_matrix = tf.concat(1, feature_matrices)
     return contexts["video_id"], video_matrix, labels, num_frames
