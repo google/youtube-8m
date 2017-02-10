@@ -128,9 +128,9 @@ class YT8MAggregatedFeatureReader(BaseReader):
         features[feature_name] for feature_name in self.feature_names])
     fdim = concatenated_features.get_shape()[0].value
     assert fdim == sum(self.feature_sizes), \
-        "dimensionality of the concatenated feature (=%r) != sum of " \
-        "dimensionalities of groups of features (=%r)" % fdim % \
-        sum(self.feature_sizes)
+        "dimensionality of the concatenated feature (={}) != sum of " \
+        "dimensionalities of groups of features (={})".format( \
+            fdim, sum(self.feature_sizes))
 
     return features["video_id"], concatenated_features, labels, tf.constant(1)
 
