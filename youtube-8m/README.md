@@ -195,9 +195,31 @@ the instructions on [tensorflow.org](https://tensorflow.org). This code has been
 tested with Tensorflow version 0.12.0-rc1. Going forward, we will continue to
 target the latest released version of Tensorflow.
 
-You can download the YouTube-8M data files from
-[here](https://research.google.com/youtube8m/download.html). We recommend
-downloading the smaller video-level features dataset first when getting started.
+To get the YouTube-8M data files create a new directory, go to it, and use
+the python script from `data.yt8m.org/download.py` to download the files.
+We recommend downloading the smaller video-level features dataset first when
+getting started.
+use the following commands:
+
+```
+mkdir -p ~/data/yt8m; cd ~/data/yt8m
+curl data.yt8m.org/download.py | shard=1,100 partition=1/video_level/train mirror=us python
+```
+
+Change `train` to `validate` and `test` and re-run the command to download the
+other splits of the dataset, if necessary.
+
+Change `video_level` to `frame_level` to download the frame-level features. The
+frame-level features take about 1.71TB of space. You can set the environment
+variable `shard=m,n` to download only m/n-th of the data. For example, to
+download 1/100-th of the frame-level feature files from the training set run:
+
+```
+curl data.yt8m.org/download.py | shard=1,100 partition=1/frame_level/train mirror=us python
+```
+
+<!-- TODO(sobhan): uncomment this: See [here](https://research.google.com/youtube8m/download.html) for more details.-->
+
 
 ### Training on Video-Level Features
 
