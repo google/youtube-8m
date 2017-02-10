@@ -16,22 +16,22 @@ machine, or on Google Cloud. This README provides instructions for both.
    * [Requirements](#requirements)
    * [Training on Video-Level Features](#training-on-video-level-features)
    * [Evaluation and Inference](#evaluation-and-inference)
-   * [Using Frame-Level features](#using-frame-level-features)
-   * [Using audio features](#using-audio-features)
+   * [Using Frame-Level Features](#using-frame-level-features)
+   * [Using Audio Features](#using-audio-features)
    * [Testing Locally](#testing-locally)
 * [Running on your Own Machine](#running-on-your-own-machine)
    * [Requirements](#requirements-1)
-   * [Training on Video-Level features](#training-on-video-level-features-1)
+   * [Training on Video-Level Features](#training-on-video-level-features-1)
    * [Evaluation and Inference](#evaluation-and-inference-1)
    * [Using Frame-Level Features](#using-frame-level-features-1)
-   * [Using audio features](#using-audio-features-1)
-   * [Ground-truth label files](#ground-truth-label-files)
+   * [Using Audio Features](#using-audio-features-1)
+   * [Ground-Truth Label Files](#ground-truth-label-files)
 * [Overview of Files](#overview-of-files)
    * [Training](#training)
    * [Evaluation](#evaluation)
    * [Inference](#inference)
    * [Misc](#misc)
-* [About this project](#about-this-project)
+* [About This Project](#about-this-project)
 
 ## Running on Google's Cloud Machine Learning Platform
 
@@ -199,7 +199,7 @@ You can download the YouTube-8M data files from
 [here](https://research.google.com/youtube8m/download.html). We recommend
 downloading the smaller video-level features dataset first when getting started.
 
-### Training on Video-Level features
+### Training on Video-Level Features
 
 To start training a logistic model on the video-level features, run
 
@@ -259,9 +259,9 @@ logistic model trained over the video-level features. Please look at the
 
 ### Using Audio Features
 
-See [Using audio features](#using-audio-features) section above.
+See [Using Audio Features](#using-audio-features) section above.
 
-### [Ground-truth label files](#ground-truth-label-files)
+### [Ground-Truth Label Files]
 
 We also provide CSV files containing the ground-truth label information of the
 `train` and `validation` partitions of the dataset. These files can be
@@ -310,7 +310,7 @@ VIDEO_ID,LABEL1 LABEL2
 *   `README.md`: This documentation.
 *   `utils.py`: Common functions.
 
-## About this project
+## About This Project
 This project is meant help people quickly get started working with the
 [YouTube-8M](https://research.google.com/youtube8m/) dataset.
 This is not an official Google product.
