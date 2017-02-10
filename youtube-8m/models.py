@@ -57,7 +57,7 @@ class FrameLevelLogisticModel(models.BaseModel):
     denominators = tf.reshape(
         tf.tile(num_frames, [1, feature_size]), [-1, feature_size])
     avg_pooled = tf.reduce_sum(model_input,
-                               reduction_indices=[1]) / denominators
+                               axis=[1]) / denominators
 
     output = slim.fully_connected(
         avg_pooled, vocab_size, activation_fn=tf.nn.sigmoid,

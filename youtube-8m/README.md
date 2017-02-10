@@ -107,7 +107,7 @@ is no distinction between our training and inference jobs. The Cloud ML platform
 also offers specialized functionality for prediction with
 Tensorflow models, but discussing that is beyond the scope of this readme.
 
-### Using Frame-Level features
+### Using Frame-Level Features
 
 Append
 ```sh
@@ -123,7 +123,7 @@ logistic model trained over the video-level features. Please look at the
 'models.py' file to see how to implement your own models.
 
 
-### Using audio features
+### Using Audio Features
 
 The feature files (both Frame-Level and Video-Level) contain two sets of
 features: 1) visual and 2) audio. The code defaults to using the visual
@@ -256,7 +256,7 @@ The 'FrameLevelLogisticModel' is designed to provide equivalent results to a
 logistic model trained over the video-level features. Please look at the
 'models.py' file to see how to implement your own models.
 
-### Using audio features
+### Using Audio Features
 
 See [Using audio features](#using-audio-features) section above.
 

@@ -335,6 +335,7 @@ def train_loop(train_dir=None,
 
 def main(unused_argv):
   logging.set_verbosity(tf.logging.INFO)
+  print("tensorflow version: %s" % tf.__version__)
   is_chief = (FLAGS.task == 0)
 
   # Recover session

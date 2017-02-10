@@ -37,17 +37,17 @@ def resize_axis(tensor, axis, new_size, fill_value=0):
     The resized tensor.
   """
   tensor = tf.convert_to_tensor(tensor)
-  shape = tf.unpack(tf.shape(tensor))
+  shape = tf.unstack(tf.shape(tensor))
 
   pad_shape = shape[:]
   pad_shape[axis] = tf.maximum(0, new_size - shape[axis])
 
   shape[axis] = tf.minimum(shape[axis], new_size)
-  shape = tf.pack(shape)
+  shape = tf.stack(shape)
 
-  resized = tf.concat(axis, [
+  resized = tf.concat(axis=axis, values=[
       tf.slice(tensor, tf.zeros_like(shape), shape),
-      tf.fill(tf.pack(pad_shape), tf.cast(fill_value, tensor.dtype))
+      tf.fill(tf.stack(pad_shape), tf.cast(fill_value, tensor.dtype))
   ])
 
   # Update shape.
@@ -124,7 +124,7 @@ class YT8MAggregatedFeatureReader(BaseReader):
         tf.sparse_to_dense(features["labels"].values, (self.num_classes,), 1,
             validate_indices=False),
         tf.bool))
-    concatenated_features = tf.concat(0, [
+    concatenated_features = tf.concat(axis=0, values=[
         features[feature_name] for feature_name in self.feature_names])
     fdim = concatenated_features.get_shape()[0].value
     assert fdim == sum(self.feature_sizes), \
@@ -257,6 +257,6 @@ class YT8MFrameFeatureReader(BaseReader):
     num_frames = tf.minimum(num_frames, self.max_frames)
 
     # concatenate different features
-    video_matrix = tf.concat(1, feature_matrices)
+    video_matrix = tf.concat(axis=1, values=feature_matrices)
     return contexts["video_id"], video_matrix, labels, num_frames
 
