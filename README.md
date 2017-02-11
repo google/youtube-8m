@@ -78,26 +78,26 @@ region in order to have the fastest access to the data.
 Here's how to evaluate a model on the validation dataset:
 
 ```sh
-JOB_TO_EVAL=yt8m_train
+JOB_TO_EVAL=yt8m_train_video_level_logistic_model
 JOB_NAME=yt8m_eval_$(date +%Y%m%d_%H%M%S); gcloud --verbosity=debug beta ml jobs \
 submit training $JOB_NAME \
 --package-path=youtube-8m --module-name=youtube-8m.eval \
 --staging-bucket=$BUCKET_NAME --region=us-central1 \
 -- --eval_data_pattern='gs://youtube8m-ml/1/video_level/validate/validate*.tfrecord' \
---train_dir=$BUCKET_NAME/yt8m_train_video_level_logistic_model
+--train_dir=$BUCKET_NAME/${JOB_TO_EVAL}
 ```
 
 And here's how to perform inference with a model:
 
 ```sh
-JOB_TO_EVAL=yt8m_train
+JOB_TO_EVAL=yt8m_train_video_level_logistic_model
 JOB_NAME=yt8m_inference_$(date +%Y%m%d_%H%M%S); gcloud --verbosity=debug beta ml jobs \
 submit training $JOB_NAME \
 --package-path=youtube-8m --module-name=youtube-8m.inference \
 --staging-bucket=$BUCKET_NAME --region=us-central1 \
 -- --input_data_pattern='gs://youtube8m-ml/1/video_level/validate/validate*.tfrecord' \
---train_dir=$BUCKET_NAME/yt8m_train_video_level_logistic_model \
---output_file=$BUCKET_NAME/$JOB_TO_EVAL/predictions.csv
+--train_dir=$BUCKET_NAME/${JOB_TO_EVAL} \
+--output_file=$BUCKET_NAME/${JOB_TO_EVAL}/predictions.csv
 ```
 
 Note the confusing use of "training" in the above gcloud commands. Despite the
