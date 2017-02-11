@@ -62,7 +62,7 @@ submit training $JOB_NAME \
 --staging-bucket=$BUCKET_NAME --region=us-central1 \
 --config=youtube-8m/cloudml-gpu.yaml \
 -- --train_data_pattern='gs://youtube8m-ml/1/video_level/train/train*.tfrecord' \
---train_dir=$BUCKET_NAME/$JOB_NAME
+--train_dir=$BUCKET_NAME/yt8m_train_video_level_logistic_model
 ```
 
 In the gsutil command above, the "package-path" flag refers to the directory
@@ -84,7 +84,7 @@ submit training $JOB_NAME \
 --package-path=youtube-8m --module-name=youtube-8m.eval \
 --staging-bucket=$BUCKET_NAME --region=us-central1 \
 -- --eval_data_pattern='gs://youtube8m-ml/1/video_level/validate/validate*.tfrecord' \
---train_dir=$BUCKET_NAME/$JOB_TO_EVAL
+--train_dir=$BUCKET_NAME/yt8m_train_video_level_logistic_model
 ```
 
 And here's how to perform inference with a model:
@@ -96,7 +96,7 @@ submit training $JOB_NAME \
 --package-path=youtube-8m --module-name=youtube-8m.inference \
 --staging-bucket=$BUCKET_NAME --region=us-central1 \
 -- --input_data_pattern='gs://youtube8m-ml/1/video_level/validate/validate*.tfrecord' \
---train_dir=$BUCKET_NAME/$JOB_TO_EVAL \
+--train_dir=$BUCKET_NAME/yt8m_train_video_level_logistic_model \
 --output_file=$BUCKET_NAME/$JOB_TO_EVAL/predictions.csv
 ```
 
@@ -113,6 +113,7 @@ Append
 ```sh
 --frame_features=True --model=FrameLevelLogisticModel --feature_names="rgb" \
 --feature_sizes="1024" --batch_size=256
+--train_dir=$BUCKET_NAME/yt8m_train_frame_level_logistic_model
 ```
 
 to the 'gcloud' commands given above, and change 'video_level' in paths to
@@ -225,7 +226,7 @@ To start training a logistic model on the video-level features, run
 
 ```sh
 MODEL_DIR=/tmp/yt8m
-python train.py --train_data_pattern='/path/to/features/train*.tfrecord' --train_dir=$MODEL_DIR/logistic_model
+python train.py --train_data_pattern='/path/to/features/train*.tfrecord' --train_dir=$MODEL_DIR/video_level_logistic_model
 ```
 
 Since the dataset is sharded into 4096 individual files, we use a wildcard (\*)
@@ -244,7 +245,7 @@ adding `--start_new_model` flag to your run configuration.
 To evaluate the model, run
 
 ```sh
-python eval.py --eval_data_pattern='/path/to/features/validate*.tfrecord' --train_dir=$MODEL_DIR/logistic_model
+python eval.py --eval_data_pattern='/path/to/features/validate*.tfrecord' --train_dir=$MODEL_DIR/video_level_logistic_model
 ```
 
 As the model is training or evaluating, you can view the results on tensorboard
@@ -260,7 +261,7 @@ When you are happy with your model, you can generate a csv file of predictions
 from it by running
 
 ```sh
-python inference.py --output_file=predictions.csv --input_data_pattern='/path/to/features/validate*.tfrecord' --train_dir=$MODEL_DIR/logistic_model
+python inference.py --output_file=predictions.csv --input_data_pattern='/path/to/features/validate*.tfrecord' --train_dir=$MODEL_DIR/video_level_logistic_model
 ```
 
 This will output the top 20 predicted labels from the model for every example to
@@ -270,7 +271,7 @@ This will output the top 20 predicted labels from the model for every example to
 
 Follow the same instructions as above, appending
 `--frame_features=True --model=FrameLevelLogisticModel --feature_names="rgb"
---feature_sizes="1024"`
+--feature_sizes="1024" --train_dir=$MODEL_DIR/frame_level_logistic_model`
 for the train.py, eval.py, and inference.py scripts.
 
 The 'FrameLevelLogisticModel' is designed to provide equivalent results to a
