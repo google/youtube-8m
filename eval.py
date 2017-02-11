@@ -321,6 +321,7 @@ def evaluate():
 
 def main(unused_argv):
   logging.set_verbosity(tf.logging.INFO)
+  print("tensorflow version: %s" % tf.__version__)
   evaluate()
 
 
