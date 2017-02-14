@@ -19,7 +19,7 @@ machine, or on Google Cloud. This README provides instructions for both.
    * [Using Frame-Level Features](#using-frame-level-features)
    * [Using Audio Features](#using-audio-features)
    * [Testing Locally](#testing-locally)
-* [Running on your Own Machine](#running-on-your-own-machine)
+* [Running on Your Own Machine](#running-on-your-own-machine)
    * [Requirements](#requirements-1)
    * [Training on Video-Level Features](#training-on-video-level-features-1)
    * [Evaluation and Inference](#evaluation-and-inference-1)
@@ -186,7 +186,7 @@ You can have Tensorboard read the data directly from your Cloud ML bucket
 tensorboard --logdir=$BUCKET_NAME
 ```
 
-## Running on your Own Machine
+## Running on Your Own Machine
 
 ### Requirements
 
@@ -202,23 +202,27 @@ getting started. To do that, run:
 
 ```
 mkdir -p /path/to/features; cd /path/to/features
-curl data.yt8m.org/download.py | shard=1,100 partition=1/video_level/train mirror=us python
+curl data.yt8m.org/download.py | partition=1/video_level/train mirror=us python
 ```
+
+If you are located outside of the US you should change the flag `mirror` to
+`eu` for Europe and `asia` for Asia to speedup the transfer of the files.
 
 Change `train` to `validate`/`test` and re-run the command to download the
 other splits of the dataset, if necessary.
 
 Change `video_level` to `frame_level` to download the frame-level features. The
 frame-level features take about 1.71TB of space. You can set the environment
-variable `shard=m,n` to download only m/n-th of the data. For example, to
-download 1/100-th of the frame-level feature from the training set run:
+variable `shard` to `m,n` to download only m/n-th of the data. For example, to
+download 1/100-th of the frame-level features from the training set, assuming
+you are located in the US, run:
 
 ```
 curl data.yt8m.org/download.py | shard=1,100 partition=1/frame_level/train mirror=us python
 ```
 
-<!-- TODO(sobhan): uncomment this: See [here](https://research.google.com/youtube8m/download.html) for more details.-->
-
+See [here](https://research.google.com/youtube8m/download.html) for more
+details on downloading the datasets.
 
 ### Training on Video-Level Features
 
@@ -289,8 +293,10 @@ We also provide CSV files containing the ground-truth label information of the
 downloaded using `gsutil` command:
 
 ```
-gsutil gs://us.data.yt8m.org/1/ground_truth_labels/train_labels.csv
-gsutil gs://us.data.yt8m.org/1/ground_truth_labels/validate_labels.csv
+gsutil cp gs://us.data.yt8m.org/1/ground_truth_labels/train_labels.csv
+/destination/folder/
+gsutil cp gs://us.data.yt8m.org/1/ground_truth_labels/validate_labels.csv
+/destination/folder/
 ```
 
 or directly using the following links:
