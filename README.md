@@ -207,15 +207,15 @@ mkdir -p /path/to/features; cd /path/to/features
 curl data.yt8m.org/download.py | partition=1/video_level/train mirror=us python
 ```
 
-If you are located outside of the US you should change the flag `mirror` to
-`eu` for Europe and `asia` for Asia to speedup the transfer of the files.
+If you are located outside of the US you should change the flag 'mirror' to
+'eu' for Europe and 'asia' for Asia to speedup the transfer of the files.
 
-Change `train` to `validate`/`test` and re-run the command to download the
+Change 'train' to 'validate'/'test' and re-run the command to download the
 other splits of the dataset, if necessary.
 
-Change `video_level` to `frame_level` to download the frame-level features. The
+Change 'video_level' to 'frame_level' to download the frame-level features. The
 frame-level features take about 1.71TB of space. You can set the environment
-variable `shard` to `m,n` to download only m/n-th of the data. For example, to
+variable 'shard' to 'm,n' to download only m/n-th of the data. For example, to
 download 1/100-th of the frame-level features from the training set, assuming
 you are located in the US, run:
 
@@ -278,7 +278,7 @@ This will output the top 20 predicted labels from the model for every example to
 Follow the same instructions as above, appending
 `--frame_features=True --model=FrameLevelLogisticModel --feature_names="rgb"
 --feature_sizes="1024" --train_dir=$MODEL_DIR/frame_level_logistic_model`
-for the train.py, eval.py, and inference.py scripts.
+for the 'train.py', 'eval.py', and 'inference.py' scripts.
 
 The 'FrameLevelLogisticModel' is designed to provide equivalent results to a
 logistic model trained over the video-level features. Please look at the
@@ -291,7 +291,7 @@ See [Using Audio Features](#using-audio-features) section above.
 ### Ground-Truth Label Files
 
 We also provide CSV files containing the ground-truth label information of the
-`train` and `validation` partitions of the dataset. These files can be
+'train' and 'validation' partitions of the dataset. These files can be
 downloaded using `gsutil` command:
 
 ```
