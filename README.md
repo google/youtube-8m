@@ -71,14 +71,30 @@ submit training $JOB_NAME \
 --train_dir=$BUCKET_NAME/yt8m_train_video_level_logistic_model
 ```
 
-In the gsutil command above, the 'package-path' flag refers to the directory
+In the 'gsutil' command above, the 'package-path' flag refers to the directory
 containing the 'train.py' script and more generally the python package which
 should be deployed to the cloud worker. The module-name refers to the specific
 python script which should be executed (in this case the train module).
 
+It may take several minutes before the job starts running on Google Cloud
+depending on the status of the resource allocation queue. Once the training job
+is started you should expect to see outputs like the following:
+
+```
+training step 269| Hit@1: 0.71 PERR: 0.53 Loss: 638.079
+```
+
 The training data files are hosted in the public 'youtube8m-ml' storage bucket
 in the 'us-central1' region. Therefore, we've colocated our job in the same
 region in order to have the fastest access to the data.
+
+**NOTE:** The training loop continues indefinitely. To stop the training
+porcess or to see the output of the code, open the console at the Google Cloud
+Platform webpage by logging in at
+[https://cloud.google.com/](https://cloud.google.com/) and clicking on
+'Console' on the top-right corner of the page, then click on 'Machine Learning'
+at the bottom of the list of options on the left side, then select 'Jobs'. This
+will show the history of all of your jobs on Google Cloud.
 
 ### Evaluation and Inference
 Here's how to evaluate a model on the validation dataset:
@@ -153,7 +169,7 @@ Similarly, to use audio-visual Frame-Level features use:
 --feature_names="rgb, audio" --feature_sizes="1024, 128"
 ```
 
-NOTE: make sure the set of features and the order in which the appear in the
+**NOTE:** Make sure the set of features and the order in which the appear in the
 lists provided to the two flags above match. Also, the order must match when
 running training, evaluation, or inference.
 
