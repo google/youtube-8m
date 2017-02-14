@@ -196,7 +196,8 @@ tested with Tensorflow version 0.12.0-rc1. Going forward, we will continue to
 target the latest released version of Tensorflow.
 
 To get the YouTube-8M data files create a new directory, go to it, and use
-the python script from "http://data.yt8m.org/download.py" to download the
+the python script from
+[data.yt8m.org/download.py](http://data.yt8m.org/download.py) to download the
 files.
 We recommend downloading the smaller video-level features dataset first when
 getting started. To do that, run:
