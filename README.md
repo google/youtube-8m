@@ -71,13 +71,13 @@ submit training $JOB_NAME \
 --train_dir=$BUCKET_NAME/yt8m_train_video_level_logistic_model
 ```
 
-In the gsutil command above, the "package-path" flag refers to the directory
-containing the "train.py" script and more generally the python package which
+In the gsutil command above, the 'package-path' flag refers to the directory
+containing the 'train.py' script and more generally the python package which
 should be deployed to the cloud worker. The module-name refers to the specific
 python script which should be executed (in this case the train module).
 
-The training data files are hosted in the public "youtube8m-ml" storage bucket
-in the "us-central1" region. Therefore, we've colocated our job in the same
+The training data files are hosted in the public 'youtube8m-ml' storage bucket
+in the 'us-central1' region. Therefore, we've colocated our job in the same
 region in order to have the fastest access to the data.
 
 ### Evaluation and Inference
@@ -108,7 +108,7 @@ submit training $JOB_NAME \
 --output_file=$BUCKET_NAME/${JOB_TO_EVAL}/predictions.csv
 ```
 
-Note the confusing use of "training" in the above gcloud commands. Despite the
+Note the confusing use of 'training' in the above gcloud commands. Despite the
 name, the 'training' argument really just offers a cloud hosted
 python/tensorflow service. From the point of view of the Cloud Platform, there
 is no distinction between our training and inference jobs. The Cloud ML platform
