@@ -306,7 +306,7 @@ or directly using the following links:
 
 Each line in the files starts with the video id and is followed by the list of
 ground-truth labels corresponding to that video. For example, for a video with
-id `VIDEO_ID` and two lables `LABLE1` and `LABEL2` we store the following line:
+id 'VIDEO_ID' and two lables 'LABLE1' and 'LABEL2' we store the following line:
 
 ```
 VIDEO_ID,LABEL1 LABEL2
