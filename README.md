@@ -38,7 +38,9 @@ machine, or on Google Cloud. This README provides instructions for both.
 
 This option requires you to have an appropriately configured Google Cloud
 Platform account. To create and configure your account, please make sure you
-follow the instructions in [this tutorial](https://www.kaggle.com/c/youtube8m#getting-started-with-google-cloud).
+follow the instructions in [this tutorial](https://www.kaggle.com/c/youtube8m#getting-started-with-google-cloud)
+(recommended) or directly from [Google Cloud
+website](https://cloud.google.com/ml/docs/how-tos/getting-set-up).
 
 Since you will be running code and accessing data files in the cloud, you do
 not need to install any libraries or download the training data. If you would
