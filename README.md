@@ -171,7 +171,7 @@ work offline. The command below will copy 10 out of the 4096 training data files
 to the current directory.
 
 ```sh
-# Downloads 50MB of data.
+# Downloads 55MB of data.
 gsutil cp gs://us.data.yt8m.org/1/video_level/train/traina[0-9].tfrecord .
 ```
 
@@ -293,10 +293,8 @@ We also provide CSV files containing the ground-truth label information of the
 downloaded using `gsutil` command:
 
 ```
-gsutil cp gs://us.data.yt8m.org/1/ground_truth_labels/train_labels.csv
-/destination/folder/
-gsutil cp gs://us.data.yt8m.org/1/ground_truth_labels/validate_labels.csv
-/destination/folder/
+gsutil cp gs://us.data.yt8m.org/1/ground_truth_labels/train_labels.csv /destination/folder/
+gsutil cp gs://us.data.yt8m.org/1/ground_truth_labels/validate_labels.csv /destination/folder/
 ```
 
 or directly using the following links:
