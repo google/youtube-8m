@@ -17,7 +17,8 @@ import time
 
 import eval_util
 import losses
-import models
+import frame_level_models
+import video_level_models
 import readers
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
@@ -222,7 +223,6 @@ def build_graph(reader,
         tf.summary.histogram(variable.op.name, variable)
 
       predictions = result["predictions"]
-      tf.summary.histogram("model_activations", predictions)
       if "loss" in result.keys():
         label_loss = result["loss"]
       else:
@@ -244,7 +244,8 @@ def build_graph(reader,
     if update_ops:
       with tf.control_dependencies(update_ops):
         barrier = tf.no_op(name="gradient_barrier")
-        label_loss = tf.with_dependencies([barrier], label_loss)
+        with tf.control_dependencies([barrier]):
+          label_loss = tf.identity(label_loss)
 
     # Incorporate the L2 weight penalties etc.
     final_loss = regularization_penalty * reg_loss + label_loss
@@ -374,7 +375,8 @@ def main(unused_argv):
           feature_names=feature_names,
           feature_sizes=feature_sizes)
 
-    model = find_class_by_name(FLAGS.model, [models])()
+    model = find_class_by_name(FLAGS.model,
+        [frame_level_models, video_level_models])()
     label_loss_fn = find_class_by_name(FLAGS.label_loss, [losses])()
     optimizer_class = find_class_by_name(FLAGS.optimizer, [tf.train])
     build_graph(reader=reader,

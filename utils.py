@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Contains a collection of util functions for model construction.
+"""Contains a collection of util functions for training and evaluating.
 """
 
 import numpy
@@ -113,6 +113,7 @@ def AddEpochSummary(summary_writer,
   avg_loss = epoch_info_dict["avg_loss"]
   aps = epoch_info_dict["aps"]
   gap = epoch_info_dict["gap"]
+  mean_ap = numpy.mean(aps)
 
   summary_writer.add_summary(
       MakeSummary("Epoch/" + summary_scope + "_Avg_Hit@1", avg_hit_at_one),
@@ -124,7 +125,7 @@ def AddEpochSummary(summary_writer,
       MakeSummary("Epoch/" + summary_scope + "_Avg_Loss", avg_loss),
       global_step_val)
   summary_writer.add_summary(
-      MakeSummary("Epoch/" + summary_scope + "_MAP", numpy.mean(aps)),
+      MakeSummary("Epoch/" + summary_scope + "_MAP", mean_ap),
           global_step_val)
   summary_writer.add_summary(
       MakeSummary("Epoch/" + summary_scope + "_GAP", gap),
@@ -132,8 +133,8 @@ def AddEpochSummary(summary_writer,
   summary_writer.flush()
 
   info = ("epoch/eval number {0} | Avg_Hit@1: {1:.3f} | Avg_PERR: {2:.3f} "
-          "| MAP: {3:.3f} | GAP: {3:.3f} | Avg_Loss: {4:3f}").format(
-          epoch_id, avg_hit_at_one, avg_perr, numpy.mean(aps), gap, avg_loss)
+          "| MAP: {3:.3f} | GAP: {4:.3f} | Avg_Loss: {5:3f}").format(
+          epoch_id, avg_hit_at_one, avg_perr, mean_ap, gap, avg_loss)
   return info
 
 def GetListOfFeatureNamesAndSizes(feature_names, feature_sizes):

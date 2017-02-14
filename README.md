@@ -4,8 +4,9 @@ This repo contains starter code for training and evaluating machine learning
 models over the [YouTube-8M](https://research.google.com/youtube8m/) dataset.
 The code gives an end-to-end working example for reading the dataset, training a
 TensorFlow model, and evaluating the performance of the model. Out of the box,
-you can train a logistic classification model over either frame-level or
-video-level features. The code can be extended to train more complex models.
+you can train several [model architectures](#overview-of-models) over either
+frame-level or video-level features. The code can easily be extended to train
+your own custom-defined models.
 
 It is possible to train and evaluate on YouTube-8M in two ways: on your own
 machine, or on Google Cloud. This README provides instructions for both.
@@ -25,6 +26,9 @@ machine, or on Google Cloud. This README provides instructions for both.
    * [Using Frame-Level Features](#using-frame-level-features-1)
    * [Using Audio Features](#using-audio-features-1)
    * [Ground-Truth Label Files](#ground-truth-label-files)
+* [Overview of Models](#overview-of-models)
+   * [Video-Level Models](#video-level-models)
+   * [Frame-Level Models](#frame-level-models)
 * [Overview of Files](#overview-of-files)
    * [Training](#training)
    * [Evaluation](#evaluation)
@@ -85,6 +89,7 @@ JOB_NAME=yt8m_eval_$(date +%Y%m%d_%H%M%S); gcloud --verbosity=debug beta ml jobs
 submit training $JOB_NAME \
 --package-path=youtube-8m --module-name=youtube-8m.eval \
 --staging-bucket=$BUCKET_NAME --region=us-central1 \
+--config=youtube-8m/cloudml-gpu.yaml \
 -- --eval_data_pattern='gs://youtube8m-ml/1/video_level/validate/validate*.tfrecord' \
 --train_dir=$BUCKET_NAME/${JOB_TO_EVAL}
 ```
@@ -97,6 +102,7 @@ JOB_NAME=yt8m_inference_$(date +%Y%m%d_%H%M%S); gcloud --verbosity=debug beta ml
 submit training $JOB_NAME \
 --package-path=youtube-8m --module-name=youtube-8m.inference \
 --staging-bucket=$BUCKET_NAME --region=us-central1 \
+--config=youtube-8m/cloudml-gpu.yaml \
 -- --input_data_pattern='gs://youtube8m-ml/1/video_level/test/test*.tfrecord' \
 --train_dir=$BUCKET_NAME/${JOB_TO_EVAL} \
 --output_file=$BUCKET_NAME/${JOB_TO_EVAL}/predictions.csv
@@ -314,12 +320,39 @@ id 'VIDEO_ID' and two lables 'LABLE1' and 'LABEL2' we store the following line:
 VIDEO_ID,LABEL1 LABEL2
 ```
 
+## Overview of Models
+
+This sample code contains implementations of three of the models given in the
+[YouTube-8M technical report](https://arxiv.org/abs/1609.08675).
+
+### Video-Level Models
+*   `LogisticModel`: Linear projection of the output features into the label
+                     space, followed by a sigmoid function to convert logit
+                     values to probabilities.
+*   `MoeModel`: A per-class softmax distribution over a configurable number of
+                logistic classifiers. One of the classifiers in the mixture
+                is not trained, and always predicts 0.
+
+### Frame-Level Models
+* `DBoFModel`: Projects the features for each frame into a higher dimensional
+               'clustering' space, pools across frames in that space, and then
+               uses a video-level model to classify the now aggregated features.
+* `FrameLevelLogisticModel`: Equivalent to 'LogisticModel', but performs
+                             average-pooling on the fly over frame-level
+                             features rather than using pre-aggregated features.
+
 ## Overview of Files
 
 ### Training
 *   `train.py`: The primary script for training models.
 *   `losses.py`: Contains definitions for loss functions.
-*   `models.py`: Contains definitions for models.
+*   `models.py`: Contains the base class for defining a model.
+*   `video_level_models.py`: Contains definitions for models that take
+                             aggregated features as input.
+*   `frame_level_models.py`: Contains definitions for models that take frame-
+                             level features as input.
+*   `model_util.py`: Contains functions that are of general utility for
+                     implementing models.
 *   `readers.py`: Contains definitions for the Video dataset and Frame
                   dataset readers.
 

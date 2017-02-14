@@ -17,7 +17,8 @@ import time
 
 import eval_util
 import losses
-import models
+import frame_level_models
+import video_level_models
 import readers
 import tensorflow as tf
 from tensorflow import app
@@ -282,7 +283,8 @@ def evaluate():
       reader = readers.YT8MAggregatedFeatureReader(feature_names=feature_names,
                                                    feature_sizes=feature_sizes)
 
-    model = find_class_by_name(FLAGS.model, [models])()
+    model = find_class_by_name(FLAGS.model,
+        [frame_level_models, video_level_models])()
     label_loss_fn = find_class_by_name(FLAGS.label_loss, [losses])()
 
     if FLAGS.eval_data_pattern is "":

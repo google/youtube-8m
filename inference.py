@@ -29,7 +29,6 @@ import eval_util
 import losses
 import readers
 import utils
-import models
 
 FLAGS = flags.FLAGS
 
