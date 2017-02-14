@@ -87,7 +87,7 @@ submit training $JOB_NAME \
 --train_dir=$BUCKET_NAME/${JOB_TO_EVAL}
 ```
 
-And here's how to perform inference with a model:
+And here's how to perform inference with a model on the test set:
 
 ```sh
 JOB_TO_EVAL=yt8m_train_video_level_logistic_model
@@ -95,7 +95,7 @@ JOB_NAME=yt8m_inference_$(date +%Y%m%d_%H%M%S); gcloud --verbosity=debug beta ml
 submit training $JOB_NAME \
 --package-path=youtube-8m --module-name=youtube-8m.inference \
 --staging-bucket=$BUCKET_NAME --region=us-central1 \
--- --input_data_pattern='gs://youtube8m-ml/1/video_level/validate/validate*.tfrecord' \
+-- --input_data_pattern='gs://youtube8m-ml/1/video_level/test/test*.tfrecord' \
 --train_dir=$BUCKET_NAME/${JOB_TO_EVAL} \
 --output_file=$BUCKET_NAME/${JOB_TO_EVAL}/predictions.csv
 ```
