@@ -130,8 +130,8 @@ The feature files (both Frame-Level and Video-Level) contain two sets of
 features: 1) visual and 2) audio. The code defaults to using the visual
 features only, but it is possible to use audio features instead of (or besides)
 visual features. To specify the (combination of) features to use you must set
-`--feature_names` and `feature_sizes` flags. The visual and audio features are
-called `rgb` and `audio` and have `1024` and `128` dimensions, respectively.
+`--feature_names` and `--feature_sizes` flags. The visual and audio features are
+called 'rgb' and 'audio' and have 1024 and 128 dimensions, respectively.
 The two flags take a comma-separated list of values in string. For example, to
 use audio-visual Video-Level features the flags must be set as follows:
 
@@ -292,7 +292,7 @@ See [Using Audio Features](#using-audio-features) section above.
 
 We also provide CSV files containing the ground-truth label information of the
 'train' and 'validation' partitions of the dataset. These files can be
-downloaded using `gsutil` command:
+downloaded using 'gsutil' command:
 
 ```
 gsutil cp gs://us.data.yt8m.org/1/ground_truth_labels/train_labels.csv /destination/folder/
