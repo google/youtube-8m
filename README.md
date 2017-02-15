@@ -8,8 +8,8 @@ you can train several [model architectures](#overview-of-models) over either
 frame-level or video-level features. The code can easily be extended to train
 your own custom-defined models.
 
-It is possible to train and evaluate on YouTube-8M in two ways: on your own
-machine, or on Google Cloud. This README provides instructions for both.
+It is possible to train and evaluate on YouTube-8M in two ways: on Google Cloud
+or on your own machine. This README provides instructions for both.
 
 ## Table of Contents
 * [Running on Google's Cloud Machine Learning Platform](#running-on-googles-cloud-machine-learning-platform)
@@ -42,18 +42,42 @@ machine, or on Google Cloud. This README provides instructions for both.
 
 This option requires you to have an appropriately configured Google Cloud
 Platform account. To create and configure your account, please make sure you
-follow the instructions in [this tutorial](https://www.kaggle.com/c/youtube8m#getting-started-with-google-cloud)
-(recommended) or directly from [Google Cloud
-website](https://cloud.google.com/ml/docs/how-tos/getting-set-up).
+follow the instructions in [this tutorial](https://www.kaggle.com/c/youtube8m#getting-started-with-google-cloud).
 
-Since you will be running code and accessing data files in the cloud, you do
-not need to install any libraries or download the training data. If you would
-like to test your code locally before deploying it to the cloud, see the
-[Testing Locally](#testing-locally) section.
+### Testing Locally
+As you are developing your own models, you will want to test them
+quickly to flush out simple problems without having to submit them to the cloud.
+You can use the `gcloud beta ml local` set of commands for that.
 
-### Training on Video-Level Features
+Here is an example command line for video-level training:
 
-You can train over video-level features with a few commands. First, navigate to
+```sh
+gcloud beta ml local train \
+--package-path=youtube-8m --module-name=youtube-8m.train -- \
+--train_data_pattern='gs://youtube8m-ml/1/video_level/train/train*.tfrecord' \
+--train_dir=/tmp/yt8m_train --start_new_model
+```
+
+You can modify this template using the instructions below to train with
+frame-level features or to do evaluation or inference. You might also want to
+download some training shards locally, to speed things up and allow you to
+work offline. The command below will copy 10 out of the 4096 training data files
+to the current directory.
+
+```sh
+# Downloads 55MB of data.
+gsutil cp gs://us.data.yt8m.org/1/video_level/train/traina[0-9].tfrecord .
+```
+
+Once you download the files, you can point the job to them using the
+'train_data_pattern' argument (i.e. instead of pointing to the "gs://..."
+files, you point to the local files).
+
+Once your model is working locally, you can scale up on the Cloud which is described below.
+
+### Training on the Cloud over Video-Level Features
+
+You can train on Google Cloud over video-level features with a few commands. First, navigate to
 the directory *immediately above* the source code. You should be able to see the
 source code directory if you run 'ls'. Then run the following:
 
@@ -91,12 +115,20 @@ in the 'us-central1' region. Therefore, we've colocated our job in the same
 region in order to have the fastest access to the data.
 
 **NOTE:** The training loop continues indefinitely. To stop the training
-porcess or to see the output of the code, open the console at the Google Cloud
-Platform webpage by logging in at
-[https://cloud.google.com/](https://cloud.google.com) and clicking on 'Console'
-on the top-right corner of the page, then click on 'Machine Learning' at the
-bottom of the list of options on the left side, then select 'Jobs'. This will
-show the history of all of your jobs on Google Cloud.
+process or to see the output of the code, go to the
+[Google Cloud ML Jobs console](https://console.cloud.google.com/ml/jobs).
+
+You can kick of many jobs at once (barring enough quota) and run tensorboard to see
+nice graphs of how they are doing.
+
+```sh
+tensorboard --logdir=$BUCKET_NAME --port=8080
+```
+
+Once that is running (assuming tensorboard was run on Cloud Shell), you can click the Web Preview button
+on the upper left corner of the Cloud Shell window and select "Preview on port 8080".
+This will bring up a new browser tab with Tensorboard and you can click on "global_step" and "model"
+to see nice graphs of progress.
 
 ### Evaluation and Inference
 Here's how to evaluate a model on the validation dataset:
@@ -188,42 +220,6 @@ Similarly, to use audio-visual Frame-Level features use:
 lists provided to the two flags above match. Also, the order must match when
 running training, evaluation, or inference.
 
-### Testing Locally
-As you are developing your own models, you might want to be able to test them
-quickly without having to submit them to the cloud. You can use the
-`gcloud beta ml local` set of commands for that. First, since you are running
-locally you will need to install [Tensorflow](https://www.tensorflow.org/get_started/os_setup).
-
-Here is an example command line for video-level training:
-
-```sh
-gcloud --verbosity=debug beta ml local train \
---package-path=youtube-8m --module-name=youtube-8m.train -- \
---train_data_pattern='gs://youtube8m-ml/1/video_level/train/train*.tfrecord' \
---train_dir=/tmp/yt8m_train --start_new_model
-```
-
-You can modify this template using the instructions above to train with
-frame-level features or to do evaluation or inference. You might also want to
-download some training shards locally, to speed things up and allow you to
-work offline. The command below will copy 10 out of the 4096 training data files
-to the current directory.
-
-```sh
-# Downloads 55MB of data.
-gsutil cp gs://us.data.yt8m.org/1/video_level/train/traina[0-9].tfrecord .
-```
-
-Once you download the files, you can point the job to them using the
-'train_data_pattern' argument.
-
-By installing Tensorflow locally, you will also get access to the Tensorboard
-tool, which allows you to view and compare metrics for your various models.
-You can have Tensorboard read the data directly from your Cloud ML bucket
-
-```sh
-tensorboard --logdir=$BUCKET_NAME
-```
 
 ## Running on Your Own Machine
 
