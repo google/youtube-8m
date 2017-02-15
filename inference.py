@@ -67,7 +67,7 @@ if __name__ == '__main__':
 def format_lines(video_ids, predictions, top_k):
   batch_size = len(video_ids)
   for video_index in xrange(batch_size):
-    top_indices = numpy.argpartition(predictions[video_index], top_k)[-top_k:]
+    top_indices = numpy.argpartition(predictions[video_index], -top_k)[-top_k:]
     line = [(class_index, predictions[video_index][class_index])
             for class_index in top_indices]
     line = sorted(line, key=lambda p: -p[1])
