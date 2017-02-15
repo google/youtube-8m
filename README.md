@@ -14,11 +14,11 @@ or on your own machine. This README provides instructions for both.
 ## Table of Contents
 * [Running on Google's Cloud Machine Learning Platform](#running-on-googles-cloud-machine-learning-platform)
    * [Requirements](#requirements)
-   * [Training on Video-Level Features](#training-on-video-level-features)
+   * [Testing Locally](#testing-locally)
+   * [Training on the Cloud over Video-Level Features](#training-on-video-level-features)
    * [Evaluation and Inference](#evaluation-and-inference)
    * [Using Frame-Level Features](#using-frame-level-features)
    * [Using Audio Features](#using-audio-features)
-   * [Testing Locally](#testing-locally)
 * [Running on Your Own Machine](#running-on-your-own-machine)
    * [Requirements](#requirements-1)
    * [Training on Video-Level Features](#training-on-video-level-features-1)
