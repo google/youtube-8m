@@ -62,7 +62,7 @@ gcloud beta ml local train \
 --train_dir=/tmp/yt8m_train --start_new_model
 ```
 
-You might want to download some training shards locally, to speed things up and
+You might want to download some training shards locally to speed things up and
 allow you to work offline. The command below will copy 10 out of the 4096
 training data files to the current directory.
 
@@ -70,7 +70,6 @@ training data files to the current directory.
 # Downloads 55MB of data.
 gsutil cp gs://us.data.yt8m.org/1/video_level/train/traina[0-9].tfrecord .
 ```
-
 Once you download the files, you can point the job to them using the
 'train_data_pattern' argument (i.e. instead of pointing to the "gs://..."
 files, you point to the local files).
@@ -100,7 +99,10 @@ submit training $JOB_NAME \
 In the 'gsutil' command above, the 'package-path' flag refers to the directory
 containing the 'train.py' script and more generally the python package which
 should be deployed to the cloud worker. The module-name refers to the specific
-python script which should be executed (in this case the train module).
+python script which should be executed (in this case the train module). Since
+the training data files are hosted in the public 'youtube8m-ml' storage bucket
+in the 'us-central1' region, we've colocated our job in the same
+region in order to have the fastest access to the data.
 
 It may take several minutes before the job starts running on Google Cloud.
 When it starts you will see outputs like the following:
@@ -111,15 +113,13 @@ training step 271| Hit@1: 0.66 PERR: 0.49 Loss: 635.537
 training step 272| Hit@1: 0.70 PERR: 0.52 Loss: 637.564
 ```
 
-The training data files are hosted in the public 'youtube8m-ml' storage bucket
-in the 'us-central1' region. Therefore, we've colocated our job in the same
-region in order to have the fastest access to the data.
-
-**NOTE:** The training loop continues indefinitely. To stop the training
-process or to see the output of the code, go to the
+At this point you can disconnect your console by pressing "ctrl-c". The
+model will continue to train indefinitely in the Cloud. Later, you can check
+on its progress or halt the job by visiting the
 [Google Cloud ML Jobs console](https://console.cloud.google.com/ml/jobs).
 
 You can train many jobs at once and use tensorboard to compare their performance
+visually.
 
 ```sh
 tensorboard --logdir=$BUCKET_NAME --port=8080
