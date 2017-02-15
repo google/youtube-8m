@@ -71,14 +71,32 @@ submit training $JOB_NAME \
 --train_dir=$BUCKET_NAME/yt8m_train_video_level_logistic_model
 ```
 
-In the gsutil command above, the "package-path" flag refers to the directory
-containing the "train.py" script and more generally the python package which
+In the 'gsutil' command above, the 'package-path' flag refers to the directory
+containing the 'train.py' script and more generally the python package which
 should be deployed to the cloud worker. The module-name refers to the specific
 python script which should be executed (in this case the train module).
 
-The training data files are hosted in the public "youtube8m-ml" storage bucket
-in the "us-central1" region. Therefore, we've colocated our job in the same
+It may take several minutes before the job starts running on Google Cloud
+depending on the status of the resource allocation queue. Once the training job
+is started you should expect to see outputs like the following:
+
+```
+training step 270| Hit@1: 0.68 PERR: 0.52 Loss: 638.453
+training step 271| Hit@1: 0.66 PERR: 0.49 Loss: 635.537
+training step 272| Hit@1: 0.70 PERR: 0.52 Loss: 637.564
+```
+
+The training data files are hosted in the public 'youtube8m-ml' storage bucket
+in the 'us-central1' region. Therefore, we've colocated our job in the same
 region in order to have the fastest access to the data.
+
+**NOTE:** The training loop continues indefinitely. To stop the training
+porcess or to see the output of the code, open the console at the Google Cloud
+Platform webpage by logging in at
+[https://cloud.google.com/](https://cloud.google.com) and clicking on 'Console'
+on the top-right corner of the page, then click on 'Machine Learning' at the
+bottom of the list of options on the left side, then select 'Jobs'. This will
+show the history of all of your jobs on Google Cloud.
 
 ### Evaluation and Inference
 Here's how to evaluate a model on the validation dataset:
@@ -108,12 +126,25 @@ submit training $JOB_NAME \
 --output_file=$BUCKET_NAME/${JOB_TO_EVAL}/predictions.csv
 ```
 
-Note the confusing use of "training" in the above gcloud commands. Despite the
+Note the confusing use of 'training' in the above gcloud commands. Despite the
 name, the 'training' argument really just offers a cloud hosted
 python/tensorflow service. From the point of view of the Cloud Platform, there
 is no distinction between our training and inference jobs. The Cloud ML platform
 also offers specialized functionality for prediction with
 Tensorflow models, but discussing that is beyond the scope of this readme.
+
+Once these job starts executing you should expect outputs similar to the
+following for the evaluation code:
+
+```
+examples_processed: 1024 | global_step 447044 | Batch Hit@1: 0.782 | Batch PERR: 0.637 | Batch Loss: 7.821 | Examples_per_sec: 834.658
+```
+
+and the following for the inference code:
+
+```
+num examples processed: 8192 elapsed seconds: 14.85
+```
 
 ### Using Frame-Level Features
 
@@ -153,7 +184,7 @@ Similarly, to use audio-visual Frame-Level features use:
 --feature_names="rgb, audio" --feature_sizes="1024, 128"
 ```
 
-NOTE: make sure the set of features and the order in which the appear in the
+**NOTE:** Make sure the set of features and the order in which the appear in the
 lists provided to the two flags above match. Also, the order must match when
 running training, evaluation, or inference.
 
