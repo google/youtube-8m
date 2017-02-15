@@ -91,7 +91,7 @@ submit training $JOB_NAME \
 --staging-bucket=$BUCKET_NAME --region=us-central1 \
 --config=youtube-8m/cloudml-gpu.yaml \
 -- --eval_data_pattern='gs://youtube8m-ml/1/video_level/validate/validate*.tfrecord' \
---train_dir=$BUCKET_NAME/${JOB_TO_EVAL}
+--train_dir=$BUCKET_NAME/${JOB_TO_EVAL} --run_once=True
 ```
 
 And here's how to perform inference with a model on the test set:
@@ -259,7 +259,7 @@ adding `--start_new_model` flag to your run configuration.
 To evaluate the model, run
 
 ```sh
-python eval.py --eval_data_pattern='/path/to/features/validate*.tfrecord' --train_dir=$MODEL_DIR/video_level_logistic_model
+python eval.py --eval_data_pattern='/path/to/features/validate*.tfrecord' --train_dir=$MODEL_DIR/video_level_logistic_model --run_once=True
 ```
 
 As the model is training or evaluating, you can view the results on tensorboard
