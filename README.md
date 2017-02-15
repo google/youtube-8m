@@ -231,10 +231,8 @@ the instructions on [tensorflow.org](https://www.tensorflow.org/install/).
 This code has been tested with Tensorflow 1.0.0. Going forward, we will continue
 to target the latest released version of Tensorflow.
 
-To get the YouTube-8M data files create a new directory, go to it, and use
-the python script from
-[data.yt8m.org/download.py](http://data.yt8m.org/download.py) to download the
-files.
+You can find complete instructions for downloading the dataset on the
+[YouTube-8M website](https://research.google.com/youtube8m/download.html).
 We recommend downloading the smaller video-level features dataset first when
 getting started. To do that, run:
 
@@ -243,24 +241,23 @@ mkdir -p features; cd features
 curl data.yt8m.org/download.py | partition=1/video_level/train mirror=us python
 ```
 
-If you are located outside of the US you should change the flag 'mirror' to
-'eu' for Europe and 'asia' for Asia to speedup the transfer of the files.
+This will download the full set of video level features, which takes up 31GB
+of space.
+If you are located outside of North America, you should change the flag 'mirror'
+to 'eu' for Europe or 'asia' for Asia to speed up the transfer of the files.
 
 Change 'train' to 'validate'/'test' and re-run the command to download the
-other splits of the dataset, if necessary.
+other splits of the dataset.
 
 Change 'video_level' to 'frame_level' to download the frame-level features. The
-frame-level features take about 1.71TB of space. You can set the environment
-variable 'shard' to 'm,n' to download only m/n-th of the data. For example, to
-download 1/100-th of the frame-level features from the training set, assuming
-you are located in the US, run:
+complete frame-level features take about 1.71TB of space. You can set the
+environment variable 'shard' to 'm,n' to download only m/n-th of the data. For
+example, to download 1/100-th of the frame-level features from the training set,
+run:
 
 ```
 curl data.yt8m.org/download.py | shard=1,100 partition=1/frame_level/train mirror=us python
 ```
-
-See [here](https://research.google.com/youtube8m/download.html) for more
-details on downloading the datasets.
 
 ### Training on Video-Level Features
 
