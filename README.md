@@ -192,7 +192,7 @@ running training, evaluation, or inference.
 As you are developing your own models, you might want to be able to test them
 quickly without having to submit them to the cloud. You can use the
 `gcloud beta ml local` set of commands for that. First, since you are running
-locally you will need to install [Tensorflow](https://tensorflow.org).
+locally you will need to install [Tensorflow](https://www.tensorflow.org/get_started/os_setup).
 
 Here is an example command line for video-level training:
 
@@ -230,9 +230,9 @@ tensorboard --logdir=$BUCKET_NAME
 ### Requirements
 
 The starter code requires Tensorflow. If you haven't installed it yet, follow
-the instructions on [tensorflow.org](https://tensorflow.org). This code has been
-tested with Tensorflow version 0.12.0-rc1. Going forward, we will continue to
-target the latest released version of Tensorflow.
+the instructions on [tensorflow.org](https://www.tensorflow.org/get_started/os_setup).
+This code has been tested with Tensorflow version 1.0.0rc2. Going forward, we
+will continue to target the latest released version of Tensorflow.
 
 To get the YouTube-8M data files create a new directory, go to it, and use
 the python script from
@@ -242,7 +242,7 @@ We recommend downloading the smaller video-level features dataset first when
 getting started. To do that, run:
 
 ```
-mkdir -p /path/to/features; cd /path/to/features
+mkdir -p features; cd features
 curl data.yt8m.org/download.py | partition=1/video_level/train mirror=us python
 ```
 
