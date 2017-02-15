@@ -227,10 +227,9 @@ running training, evaluation, or inference.
 ### Requirements
 
 The starter code requires Tensorflow. If you haven't installed it yet, follow
-the instructions on [tensorflow.org](https://www.tensorflow.org/get_started/os_setup).
-This code has been tested with [Tensorflow version 1.0.0rc2](http://ci.tensorflow.org/view/Nightly/job/nightly-matrix-cpu/TF_BUILD_IS_OPT=OPT,TF_BUILD_IS_PIP=PIP,TF_BUILD_PYTHON_VERSION=PYTHON2,label=cpu-slave/392/).
-Going forward, we will continue to target the latest released
-version of Tensorflow.
+the instructions on [tensorflow.org](hhttps://www.tensorflow.org/install/).
+This code has been tested with Tensorflow 1.0.0. Going forward, we will continue
+to target the latest released version of Tensorflow.
 
 To get the YouTube-8M data files create a new directory, go to it, and use
 the python script from
