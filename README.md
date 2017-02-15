@@ -42,9 +42,13 @@ or on your own machine. This README provides instructions for both.
 
 This option requires you to have an appropriately configured Google Cloud
 Platform account. To create and configure your account, please make sure you
-follow the instructions in [this tutorial](https://www.kaggle.com/c/youtube8m#getting-started-with-google-cloud).
+follow the instructions [here](https://cloud.google.com/ml/docs/how-tos/getting-set-up).
 
 ### Testing Locally
+All gcloud commands should be done from the directory *immediately above* the
+source code. You should be able to see the source code directory if you
+run 'ls'.
+
 As you are developing your own models, you will want to test them
 quickly to flush out simple problems without having to submit them to the cloud.
 You can use the `gcloud beta ml local` set of commands for that.
@@ -58,11 +62,9 @@ gcloud beta ml local train \
 --train_dir=/tmp/yt8m_train --start_new_model
 ```
 
-You can modify this template using the instructions below to train with
-frame-level features or to do evaluation or inference. You might also want to
-download some training shards locally, to speed things up and allow you to
-work offline. The command below will copy 10 out of the 4096 training data files
-to the current directory.
+You might want to download some training shards locally, to speed things up and
+allow you to work offline. The command below will copy 10 out of the 4096
+training data files to the current directory.
 
 ```sh
 # Downloads 55MB of data.
@@ -73,13 +75,13 @@ Once you download the files, you can point the job to them using the
 'train_data_pattern' argument (i.e. instead of pointing to the "gs://..."
 files, you point to the local files).
 
-Once your model is working locally, you can scale up on the Cloud which is described below.
+Once your model is working locally, you can scale up on the Cloud
+which is described below.
 
 ### Training on the Cloud over Video-Level Features
 
-You can train on Google Cloud over video-level features with a few commands. First, navigate to
-the directory *immediately above* the source code. You should be able to see the
-source code directory if you run 'ls'. Then run the following:
+The following commands will train a model on Google Cloud
+over video-level features.
 
 ```sh
 BUCKET_NAME=gs://${USER}_yt8m_train_bucket
@@ -100,9 +102,8 @@ containing the 'train.py' script and more generally the python package which
 should be deployed to the cloud worker. The module-name refers to the specific
 python script which should be executed (in this case the train module).
 
-It may take several minutes before the job starts running on Google Cloud
-depending on the status of the resource allocation queue. Once the training job
-is started you should expect to see outputs like the following:
+It may take several minutes before the job starts running on Google Cloud.
+When it starts you will see outputs like the following:
 
 ```
 training step 270| Hit@1: 0.68 PERR: 0.52 Loss: 638.453
@@ -118,17 +119,17 @@ region in order to have the fastest access to the data.
 process or to see the output of the code, go to the
 [Google Cloud ML Jobs console](https://console.cloud.google.com/ml/jobs).
 
-You can kick of many jobs at once (barring enough quota) and run tensorboard to see
-nice graphs of how they are doing.
+You can train many jobs at once and use tensorboard to compare their performance
 
 ```sh
 tensorboard --logdir=$BUCKET_NAME --port=8080
 ```
 
-Once that is running (assuming tensorboard was run on Cloud Shell), you can click the Web Preview button
+Once tensorboard is running, you can access it at the following url:
+[http://localhost:8080](http://localhost:8080).
+If you are using Google Cloud Shell, you can instead click the Web Preview button
 on the upper left corner of the Cloud Shell window and select "Preview on port 8080".
-This will bring up a new browser tab with Tensorboard and you can click on "global_step" and "model"
-to see nice graphs of progress.
+This will bring up a new browser tab with the Tensorboard view.
 
 ### Evaluation and Inference
 Here's how to evaluate a model on the validation dataset:
@@ -165,7 +166,7 @@ is no distinction between our training and inference jobs. The Cloud ML platform
 also offers specialized functionality for prediction with
 Tensorflow models, but discussing that is beyond the scope of this readme.
 
-Once these job starts executing you should expect outputs similar to the
+Once these job starts executing you will see outputs similar to the
 following for the evaluation code:
 
 ```
@@ -227,8 +228,9 @@ running training, evaluation, or inference.
 
 The starter code requires Tensorflow. If you haven't installed it yet, follow
 the instructions on [tensorflow.org](https://www.tensorflow.org/get_started/os_setup).
-This code has been tested with Tensorflow version 1.0.0rc2. Going forward, we
-will continue to target the latest released version of Tensorflow.
+This code has been tested with [Tensorflow version 1.0.0rc2](http://ci.tensorflow.org/view/Nightly/job/nightly-matrix-cpu/TF_BUILD_IS_OPT=OPT,TF_BUILD_IS_PIP=PIP,TF_BUILD_PYTHON_VERSION=PYTHON2,label=cpu-slave/392/).
+Going forward, we will continue to target the latest released
+version of Tensorflow.
 
 To get the YouTube-8M data files create a new directory, go to it, and use
 the python script from
