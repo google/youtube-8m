@@ -227,7 +227,7 @@ running training, evaluation, or inference.
 ### Requirements
 
 The starter code requires Tensorflow. If you haven't installed it yet, follow
-the instructions on [tensorflow.org](hhttps://www.tensorflow.org/install/).
+the instructions on [tensorflow.org](https://www.tensorflow.org/install/).
 This code has been tested with Tensorflow 1.0.0. Going forward, we will continue
 to target the latest released version of Tensorflow.
 
