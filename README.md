@@ -46,6 +46,13 @@ follow the instructions [here](https://cloud.google.com/ml/docs/how-tos/getting-
 If you are participating in the Google Cloud & YouTube-8M Video Understanding
 Challenge hosted on kaggle.com, see [these instructions](https://www.kaggle.com/c/youtube8m#getting-started-with-google-cloud) instead.
 
+Please also verify that you have Tensorflow 1.0.0 or higher installed by
+running the following command:
+
+```sh
+python -c 'import tensorflow as tf; print(tf.__version__)'
+```
+
 ### Testing Locally
 All gcloud commands should be done from the directory *immediately above* the
 source code. You should be able to see the source code directory if you
