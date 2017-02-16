@@ -80,6 +80,8 @@ if __name__ == "__main__":
   flags.DEFINE_string("master", "", "TensorFlow master to use.")
   flags.DEFINE_integer("task", 0, "Task id of the replica running the training."
                        " 0 implies chief Supervisor.""")
+  flags.DEFINE_integer("num_gpus", 0,
+                     "How many GPUs are allocated to each worker.")
   flags.DEFINE_integer("ps_tasks", 0, """Number of tasks in the ps job.
                        If 0 no ps job is used.""")
   flags.DEFINE_string("optimizer", "AdamOptimizer",
@@ -163,6 +165,46 @@ def find_class_by_name(name, modules):
   modules = [getattr(module, name, None) for module in modules]
   return next(a for a in modules if a)
 
+def average_gradients(tower_grads):
+  """Calculate the average gradient for each shared variable across all towers.
+
+  Note that this function provides a synchronization point across all towers.
+
+  Args:
+    tower_grads: List of lists of (gradient, variable) tuples. The outer list
+      is over individual gradients. The inner list is over the gradient
+      calculation for each tower.
+  Returns:
+     List of pairs of (gradient, variable) where the gradient has been averaged
+     across all towers.
+  """
+  logging.info(tower_grads)
+  average_grads = []
+  for grad_and_vars in zip(*tower_grads):
+    logging.info(grad_and_vars)
+    # Note that each grad_and_vars looks like the following:
+    #   ((grad0_gpu0, var0_gpu0), ... , (grad0_gpuN, var0_gpuN))
+    grads = []
+    for g, _ in grad_and_vars:
+      logging.info(g)
+      if g is not None:
+        # Add 0 dimension to the gradients to represent the tower.
+        expanded_g = tf.expand_dims(g, 0)
+
+        # Append on a 'tower' dimension which we will average over below.
+        grads.append(expanded_g)
+
+    # Average over the 'tower' dimension.
+    grad = tf.concat_v2(grads, 0)
+    grad = tf.reduce_mean(grad, 0)
+
+    # Keep in mind that the Variables are redundant because they are shared
+    # across towers. So .. we will just return the first tower's pointer to
+    # the Variable.
+    v = grad_and_vars[0][1]
+    grad_and_var = (grad, v)
+    average_grads.append(grad_and_var)
+  return average_grads
 
 def build_graph(reader,
                 model,
@@ -213,14 +255,22 @@ def build_graph(reader,
 
     model_input = tf.nn.l2_normalize(model_input_raw, feature_dim)
 
-    with tf.name_scope("model"):
-      result = model.create_model(model_input,
-                                  num_frames=num_frames,
-                                  vocab_size=reader.num_classes,
-                                  labels=labels_batch)
-
-      for variable in slim.get_model_variables():
-        tf.summary.histogram(variable.op.name, variable)
+    if FLAGS.num_gpus > 0:
+      num_towers = FLAGS.num_gpus
+      device_string = '/gpu:%d'
+    else:
+      num_towers = 2
+      device_string = '/cpu:%d'
+    tower_gradients = []
+    for i in xrange(num_towers):
+      with tf.device(device_string % i):
+        with tf.variable_scope("tower_shared") and tf.name_scope("tower%d" % i):
+          result = model.create_model(
+              model_input,
+              num_frames=num_frames,
+              vocab_size=reader.num_classes,
+              labels=labels_batch,
+              l2_penalty=FLAGS.regularization_penalty)
 
       predictions = result["predictions"]
       if "loss" in result.keys():
@@ -295,7 +345,7 @@ def train_loop(train_dir=None,
   sess = sv.prepare_or_wait_for_session(
       master,
       start_standard_services=start_supervisor_services,
-      config=tf.ConfigProto(log_device_placement=False))
+      config=tf.ConfigProto(log_device_placement=True,allow_soft_placement=True))
 
   logging.info("prepared session")
   sv.start_queue_runners(sess)
