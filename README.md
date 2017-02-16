@@ -189,11 +189,13 @@ and the following for the inference code:
 num examples processed: 8192 elapsed seconds: 14.85
 ```
 
+
 ### Accessing Files on Google Cloud
 
 You can browse the storage buckets you created on Google Cloud, for example, to
 access the trained models, prediction CSV files, etc. by visiting
-[Google Cloud ML Jobs console](https://console.cloud.google.com/storage/browser).
+[Google Cloud storage browser](https://console.cloud.google.com/storage/browser).
+
 
 ### Using Frame-Level Features
 
