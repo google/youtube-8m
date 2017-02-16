@@ -17,7 +17,7 @@ or on your own machine. This README provides instructions for both.
    * [Testing Locally](#testing-locally)
    * [Training on the Cloud over Video-Level Features](#training-on-video-level-features)
    * [Evaluation and Inference](#evaluation-and-inference)
-   * [Accessing Files on Google Cloud](#acessing-files-on-google-cloud)
+   * [Accessing Files on Google Cloud](#accessing-files-on-google-cloud)
    * [Using Frame-Level Features](#using-frame-level-features)
    * [Using Audio Features](#using-audio-features)
 * [Running on Your Own Machine](#running-on-your-own-machine)
