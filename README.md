@@ -197,8 +197,8 @@ access the trained models, prediction CSV files, etc. by visiting the
 [Google Cloud storage browser](https://console.cloud.google.com/storage/browser).
 
 Alternatively, you can use the 'gsutil' command to download the files directly.
-For example, to download output of the inference code from the previous section
-to your local machine, run:
+For example, to download the output of the inference code from the previous
+section to your local machine, run:
 
 
 ```
