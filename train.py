@@ -309,12 +309,15 @@ def train_loop(train_dir=None,
           [train_op, global_step, loss, predictions, labels])
       seconds_per_batch = time.time() - batch_start_time
       examples_per_second = labels_val.shape[0] / seconds_per_batch
+
       hit_at_one = eval_util.calculate_hit_at_one(predictions_val, labels_val)
       perr = eval_util.calculate_precision_at_equal_recall_rate(predictions_val,
                                                                 labels_val)
+      gap = eval_util.calculate_gap(predictions_val, labels_val)
+
       logging.info("training step " + str(global_step_val) + "| Hit@1: " + (
-          "%.2f" % hit_at_one) + " PERR: " + ("%.2f" % perr) + " Loss: " + str(
-              loss_val))
+          "%.2f" % hit_at_one) + " PERR: " + ("%.2f" % perr) +
+          " GAP: " + ("%.2f" % gap) + " Loss: " + str(loss_val))
       if is_chief and global_step_val % 10 == 0 and train_dir:
         sv.summary_writer.add_summary(
             utils.MakeSummary("model/Training_Hit@1",
