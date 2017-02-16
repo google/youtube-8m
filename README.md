@@ -193,9 +193,17 @@ num examples processed: 8192 elapsed seconds: 14.85
 ### Accessing Files on Google Cloud
 
 You can browse the storage buckets you created on Google Cloud, for example, to
-access the trained models, prediction CSV files, etc. by visiting
+access the trained models, prediction CSV files, etc. by visiting the
 [Google Cloud storage browser](https://console.cloud.google.com/storage/browser).
 
+Alternatively, you can use the 'gsutil' command to download the files directly.
+For example, to download output of the inference code from the previous section
+to your local machine, run:
+
+
+```
+gsutil cp $BUCKET_NAME/${JOB_TO_EVAL}/predictions.csv .
+```
 
 ### Using Frame-Level Features
 
