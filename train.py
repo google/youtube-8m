@@ -185,17 +185,12 @@ def average_gradients(tower_grads):
     grads = [filtered_grads[t][i] for t in xrange(len(filtered_grads))]
     grad = tf.stack(grads, 0)
     grad = tf.reduce_mean(grad, 0)
-    final_grads.append(grad)
+    final_grads.append((grad, filtered_grads[0][i][1],))
 
+  print grads[1][1].name
+  print grads[0][1].name
   import pdb; pdb.set_trace()
-
-  # Keep in mind that the Variables are redundant because they are shared
-  # across towers. So .. we will just return the first tower's pointer to
-  # the Variable.
-  v = grad_and_vars[0][1]
-  grad_and_var = (grad, v)
-  average_grads.append(grad_and_var)
-  return average_grads
+  return final_grads
 
 def build_graph(reader,
                 model,

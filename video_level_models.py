@@ -43,7 +43,7 @@ class LogisticModel(models.BaseModel):
       batch_size x num_classes."""
     output = slim.fully_connected(
         model_input, vocab_size, activation_fn=tf.nn.sigmoid,
-        weights_regularizer=slim.l2_regularizer(0.01))
+        weights_regularizer=slim.l2_regularizer(0.01), scope="logistic")
     return {"predictions": output}
 
 class MoeModel(models.BaseModel):
@@ -79,12 +79,14 @@ class MoeModel(models.BaseModel):
         model_input,
         vocab_size * (num_mixtures + 1),
         activation_fn=None,
-        weights_regularizer=slim.l2_regularizer(l2_penalty))
+        weights_regularizer=slim.l2_regularizer(l2_penalty),
+        scope="gates")
     expert_activations = slim.fully_connected(
         model_input,
         vocab_size * num_mixtures,
         activation_fn=None,
-        weights_regularizer=slim.l2_regularizer(l2_penalty))
+        weights_regularizer=slim.l2_regularizer(l2_penalty),
+        scope="experts")
 
     gating_distribution = tf.nn.softmax(tf.reshape(
         gate_activations,
