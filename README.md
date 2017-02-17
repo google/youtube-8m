@@ -17,6 +17,7 @@ or on your own machine. This README provides instructions for both.
    * [Testing Locally](#testing-locally)
    * [Training on the Cloud over Video-Level Features](#training-on-video-level-features)
    * [Evaluation and Inference](#evaluation-and-inference)
+   * [Accessing Files on Google Cloud](#accessing-files-on-google-cloud)
    * [Using Frame-Level Features](#using-frame-level-features)
    * [Using Audio Features](#using-audio-features)
 * [Running on Your Own Machine](#running-on-your-own-machine)
@@ -186,6 +187,22 @@ and the following for the inference code:
 
 ```
 num examples processed: 8192 elapsed seconds: 14.85
+```
+
+
+### Accessing Files on Google Cloud
+
+You can browse the storage buckets you created on Google Cloud, for example, to
+access the trained models, prediction CSV files, etc. by visiting the
+[Google Cloud storage browser](https://console.cloud.google.com/storage/browser).
+
+Alternatively, you can use the 'gsutil' command to download the files directly.
+For example, to download the output of the inference code from the previous
+section to your local machine, run:
+
+
+```
+gsutil cp $BUCKET_NAME/${JOB_TO_EVAL}/predictions.csv .
 ```
 
 ### Using Frame-Level Features
