@@ -178,32 +178,23 @@ def average_gradients(tower_grads):
      List of pairs of (gradient, variable) where the gradient has been averaged
      across all towers.
   """
-  logging.info(tower_grads)
-  average_grads = []
-  for grad_and_vars in zip(*tower_grads):
-    logging.info(grad_and_vars)
-    # Note that each grad_and_vars looks like the following:
-    #   ((grad0_gpu0, var0_gpu0), ... , (grad0_gpuN, var0_gpuN))
-    grads = []
-    for g, _ in grad_and_vars:
-      logging.info(g)
-      if g is not None:
-        # Add 0 dimension to the gradients to represent the tower.
-        expanded_g = tf.expand_dims(g, 0)
-
-        # Append on a 'tower' dimension which we will average over below.
-        grads.append(expanded_g)
-
-    # Average over the 'tower' dimension.
-    grad = tf.concat_v2(grads, 0)
+  print "tower grad len: " + str(len(tower_grads))
+  filtered_grads = [[x for x in grad_list if x[0] is not None] for grad_list in tower_grads]
+  final_grads = []
+  for i in xrange(len(filtered_grads[0])):
+    grads = [filtered_grads[t][i] for t in xrange(len(filtered_grads))]
+    grad = tf.stack(grads, 0)
     grad = tf.reduce_mean(grad, 0)
+    final_grads.append(grad)
 
-    # Keep in mind that the Variables are redundant because they are shared
-    # across towers. So .. we will just return the first tower's pointer to
-    # the Variable.
-    v = grad_and_vars[0][1]
-    grad_and_var = (grad, v)
-    average_grads.append(grad_and_var)
+  import pdb; pdb.set_trace()
+
+  # Keep in mind that the Variables are redundant because they are shared
+  # across towers. So .. we will just return the first tower's pointer to
+  # the Variable.
+  v = grad_and_vars[0][1]
+  grad_and_var = (grad, v)
+  average_grads.append(grad_and_var)
   return average_grads
 
 def build_graph(reader,
@@ -264,7 +255,7 @@ def build_graph(reader,
     tower_gradients = []
     for i in xrange(num_towers):
       with tf.device(device_string % i):
-        with tf.variable_scope("tower_shared") and tf.name_scope("tower%d" % i):
+        with tf.variable_scope(tf.get_variable_scope(), reuse=True if i > 0 else None) and tf.name_scope("tower%d" % i):
           result = model.create_model(
               model_input,
               num_frames=num_frames,
@@ -272,34 +263,41 @@ def build_graph(reader,
               labels=labels_batch,
               l2_penalty=FLAGS.regularization_penalty)
 
-      predictions = result["predictions"]
-      if "loss" in result.keys():
-        label_loss = result["loss"]
-      else:
-        label_loss = label_loss_fn.calculate_loss(predictions, labels_batch)
-      tf.summary.scalar("label_loss", label_loss)
+          predictions = result["predictions"]
+          if "loss" in result.keys():
+            label_loss = result["loss"]
+          else:
+            label_loss = label_loss_fn.calculate_loss(predictions, labels_batch)
+          tf.summary.scalar("label_loss", label_loss)
 
-      if "regularization_loss" in result.keys():
-        reg_loss = result["regularization_loss"]
-      else:
-        reg_loss = tf.constant(0.0)
-      if regularization_penalty != 0:
-        tf.summary.scalar("reg_loss", reg_loss)
+          if "regularization_loss" in result.keys():
+            reg_loss = result["regularization_loss"]
+          else:
+            reg_loss = tf.constant(0.0)
+          if regularization_penalty != 0:
+            tf.summary.scalar("reg_loss", reg_loss)
 
-    # Adds update_ops (e.g., moving average updates in batch normalization) as
-    # a dependency to the train_op.
-    update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
-    if "update_ops" in result.keys():
-      update_ops += result["update_ops"]
-    if update_ops:
-      with tf.control_dependencies(update_ops):
-        barrier = tf.no_op(name="gradient_barrier")
-        with tf.control_dependencies([barrier]):
-          label_loss = tf.identity(label_loss)
+          # Adds update_ops (e.g., moving average updates in batch normalization) as
+          # a dependency to the train_op.
+          update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+          if "update_ops" in result.keys():
+            update_ops += result["update_ops"]
+          if update_ops:
+            with tf.control_dependencies(update_ops):
+              barrier = tf.no_op(name="gradient_barrier")
+              with tf.control_dependencies([barrier]):
+                label_loss = tf.identity(label_loss)
 
-    # Incorporate the L2 weight penalties etc.
-    final_loss = regularization_penalty * reg_loss + label_loss
-    train_op = optimizer.minimize(final_loss, global_step=global_step)
+          # Incorporate the L2 weight penalties etc.
+          final_loss = regularization_penalty * reg_loss + label_loss
+          gradients = optimizer.compute_gradients(final_loss,
+              colocate_gradients_with_ops=True)
+          tower_gradients.append(gradients)
+
+
+    merged_gradients = average_gradients(tower_gradients)
+    print "merged_gradients: " + str(merged_gradients)
+    train_op = optimizer.apply_gradients(merged_gradients, global_step=global_step)
 
     tf.add_to_collection("global_step", global_step)
     tf.add_to_collection("loss", label_loss)
@@ -345,7 +343,7 @@ def train_loop(train_dir=None,
   sess = sv.prepare_or_wait_for_session(
       master,
       start_standard_services=start_supervisor_services,
-      config=tf.ConfigProto(log_device_placement=True,allow_soft_placement=True))
+      config=tf.ConfigProto(log_device_placement=False,allow_soft_placement=True))
 
   logging.info("prepared session")
   sv.start_queue_runners(sess)
@@ -389,7 +387,7 @@ def train_loop(train_dir=None,
 
 def main(unused_argv):
   logging.set_verbosity(tf.logging.INFO)
-  print("tensorflow version: %s" % tf.__version__)
+  logging.info("tensorflow version: %s" % tf.__version__)
   is_chief = (FLAGS.task == 0)
 
   # Recover session
