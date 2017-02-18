@@ -241,12 +241,14 @@ def build_graph(reader,
       num_towers = FLAGS.num_gpus
       device_string = '/gpu:%d'
     else:
-      num_towers = 10
+      num_towers = 1
       device_string = '/cpu:%d'
     tower_gradients = []
     for i in xrange(num_towers):
       with tf.device(device_string % i):
-        with tf.variable_scope(tf.get_variable_scope(), reuse=True if i > 0 else None) and tf.name_scope("tower%d" % i):
+        with (tf.variable_scope(tf.get_variable_scope(), reuse=True if i > 0 else None) and
+              tf.name_scope("tower%d" % i) and
+              slim.arg_scope([slim.model_variable, slim.variable], device="/cpu:0")):
           result = model.create_model(
               model_input,
               num_frames=num_frames,
