@@ -178,18 +178,14 @@ def average_gradients(tower_grads):
      List of pairs of (gradient, variable) where the gradient has been averaged
      across all towers.
   """
-  print "tower grad len: " + str(len(tower_grads))
   filtered_grads = [[x for x in grad_list if x[0] is not None] for grad_list in tower_grads]
   final_grads = []
   for i in xrange(len(filtered_grads[0])):
     grads = [filtered_grads[t][i] for t in xrange(len(filtered_grads))]
-    grad = tf.stack(grads, 0)
-    grad = tf.reduce_mean(grad, 0)
+    grad = tf.stack([x[0] for x in grads], 0)
+    grad = tf.reduce_sum(grad, 0)
     final_grads.append((grad, filtered_grads[0][i][1],))
 
-  print grads[1][1].name
-  print grads[0][1].name
-  import pdb; pdb.set_trace()
   return final_grads
 
 def build_graph(reader,
@@ -245,7 +241,7 @@ def build_graph(reader,
       num_towers = FLAGS.num_gpus
       device_string = '/gpu:%d'
     else:
-      num_towers = 2
+      num_towers = 10
       device_string = '/cpu:%d'
     tower_gradients = []
     for i in xrange(num_towers):
@@ -286,7 +282,7 @@ def build_graph(reader,
           # Incorporate the L2 weight penalties etc.
           final_loss = regularization_penalty * reg_loss + label_loss
           gradients = optimizer.compute_gradients(final_loss,
-              colocate_gradients_with_ops=True)
+              colocate_gradients_with_ops=False)
           tower_gradients.append(gradients)
 
 
