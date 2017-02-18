@@ -92,7 +92,7 @@ class YT8MAggregatedFeatureReader(BaseReader):
     self.feature_sizes = feature_sizes
     self.feature_names = feature_names
 
-  def prepare_reader(self, filename_queue,):
+  def prepare_reader(self, filename_queue, batch_size=1024):
     """Creates a single reader thread for pre-aggregated YouTube 8M Examples.
 
     Args:
@@ -102,7 +102,7 @@ class YT8MAggregatedFeatureReader(BaseReader):
       A tuple of video indexes, features, labels, and padding data.
     """
     reader = tf.TFRecordReader()
-    _, serialized_example = reader.read(filename_queue)
+    _, serialized_examples = reader.read_up_to(filename_queue, batch_size)
 
     # set the mapping from the fields to data types in the proto
     num_features = len(self.feature_names)
@@ -117,22 +117,14 @@ class YT8MAggregatedFeatureReader(BaseReader):
       feature_map[self.feature_names[feature_index]] = tf.FixedLenFeature(
           [self.feature_sizes[feature_index]], tf.float32)
 
-    features = tf.parse_single_example(serialized_example,
-                                       features=feature_map)
-
-    labels = (tf.cast(
-        tf.sparse_to_dense(features["labels"].values, (self.num_classes,), 1,
-            validate_indices=False),
-        tf.bool))
+    features = tf.parse_example(serialized_examples, features=feature_map)
+    labels = tf.sparse_to_indicator(features["labels"], self.num_classes)
+    labels.set_shape([None, self.num_classes])
     concatenated_features = tf.concat([
         features[feature_name] for feature_name in self.feature_names], 0)
-    fdim = concatenated_features.get_shape()[0].value
-    assert fdim == sum(self.feature_sizes), \
-        "dimensionality of the concatenated feature (={}) != sum of " \
-        "dimensionalities of groups of features (={})".format( \
-            fdim, sum(self.feature_sizes))
 
-    return features["video_id"], concatenated_features, labels, tf.constant(1)
+    #import pdb; pdb.set_trace()
+    return features["video_id"], concatenated_features, labels, tf.ones([tf.shape(serialized_examples)[0]])
 
 class YT8MFrameFeatureReader(BaseReader):
   """Reads TFRecords of SequenceExamples.
