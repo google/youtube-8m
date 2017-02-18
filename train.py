@@ -73,7 +73,12 @@ if __name__ == "__main__":
       "a weight of 1).")
   flags.DEFINE_float("base_learning_rate", 0.01,
                      "Which learning rate to start with.")
-
+  flags.DEFINE_float("learning_rate_decay", 0.95,
+                     "Learning rate decay factor to be applied every "
+                     "learning_rate_decay_examples.")
+  flags.DEFINE_float("learning_rate_decay_examples", 1000000,
+                     "Multiply current learning rate by learning_rate_decay "
+                     "every learning_rate_decay_examples.")
   # Other flags.
   flags.DEFINE_integer("num_readers", 8,
                        "How many threads to use for reading input files.")
@@ -170,6 +175,8 @@ def build_graph(reader,
                 label_loss_fn=losses.CrossEntropyLoss(),
                 batch_size=1000,
                 base_learning_rate=0.01,
+                learning_rate_decay_examples=1000000,
+                learning_rate_decay=0.95,
                 optimizer_class=tf.train.AdamOptimizer,
                 regularization_penalty=1e-3,
                 num_readers=1,
@@ -199,7 +206,15 @@ def build_graph(reader,
   with tf.device(tf.train.replica_device_setter(
       FLAGS.ps_tasks, merge_devices=True)):
     global_step = tf.Variable(0, trainable=False, name="global_step")
-    optimizer = optimizer_class(base_learning_rate)
+    learning_rate = tf.train.exponential_decay(
+        base_learning_rate,
+        global_step * batch_size,
+        learning_rate_decay_examples,
+        learning_rate_decay,
+        staircase=True)
+    tf.summary.scalar('learning_rate', learning_rate)
+
+    optimizer = optimizer_class(learning_rate)
     unused_video_id, model_input_raw, labels_batch, num_frames = (
         get_input_data_tensors(
             reader,
@@ -391,6 +406,8 @@ def main(unused_argv):
                 train_data_pattern=FLAGS.train_data_pattern,
                 label_loss_fn=label_loss_fn,
                 base_learning_rate=FLAGS.base_learning_rate,
+                learning_rate_decay=FLAGS.learning_rate_decay,
+                learning_rate_decay_examples=FLAGS.learning_rate_decay_examples,
                 regularization_penalty=FLAGS.regularization_penalty,
                 num_readers=FLAGS.num_readers,
                 batch_size=FLAGS.batch_size)
