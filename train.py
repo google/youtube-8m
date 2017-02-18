@@ -282,7 +282,7 @@ def build_graph(reader,
               with tf.control_dependencies([barrier]):
                 label_loss = tf.identity(label_loss)
 
-          losses.append(label_loss)
+          label_losses.append(label_loss)
 
           # Incorporate the L2 weight penalties etc.
           final_loss = regularization_penalty * reg_loss + label_loss
