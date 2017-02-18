@@ -210,12 +210,24 @@ gsutil cp $BUCKET_NAME/${JOB_TO_EVAL}/predictions.csv .
 Append
 ```sh
 --frame_features=True --model=FrameLevelLogisticModel --feature_names="rgb" \
---feature_sizes="1024" --batch_size=256
+--feature_sizes="1024" --batch_size=256 \
 --train_dir=$BUCKET_NAME/yt8m_train_frame_level_logistic_model
 ```
 
 to the 'gcloud' commands given above, and change 'video_level' in paths to
-'frame_level'.
+'frame_level'. Here is a sample command to kick-off a frame-level job:
+
+```sh
+JOB_NAME=yt8m_train_$(date +%Y%m%d_%H%M%S); gcloud --verbosity=debug beta ml jobs \
+submit training $JOB_NAME \
+--package-path=youtube-8m --module-name=youtube-8m.train \
+--staging-bucket=$BUCKET_NAME --region=us-central1 \
+--config=youtube-8m/cloudml-gpu.yaml \
+-- --train_data_pattern='gs://youtube8m-ml/1/frame_level/train/train*.tfrecord' \
+--frame_features=True --model=FrameLevelLogisticModel --feature_names="rgb" \
+--feature_sizes="1024" --batch_size=256 \
+--train_dir=$BUCKET_NAME/yt8m_train_frame_level_logistic_model
+```
 
 The 'FrameLevelLogisticModel' is designed to provide equivalent results to a
 logistic model trained over the video-level features. Please look at the
