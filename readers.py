@@ -121,9 +121,8 @@ class YT8MAggregatedFeatureReader(BaseReader):
     labels = tf.sparse_to_indicator(features["labels"], self.num_classes)
     labels.set_shape([None, self.num_classes])
     concatenated_features = tf.concat([
-        features[feature_name] for feature_name in self.feature_names], 0)
+        features[feature_name] for feature_name in self.feature_names], 1)
 
-    #import pdb; pdb.set_trace()
     return features["video_id"], concatenated_features, labels, tf.ones([tf.shape(serialized_examples)[0]])
 
 class YT8MFrameFeatureReader(BaseReader):
