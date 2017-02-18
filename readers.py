@@ -73,7 +73,7 @@ class YT8MAggregatedFeatureReader(BaseReader):
   """
 
   def __init__(self,
-               num_classes=4800,
+               num_classes=4716,
                feature_sizes=[1024],
                feature_names=["mean_inc3"]):
     """Construct a YT8MAggregatedFeatureReader.
@@ -144,7 +144,7 @@ class YT8MFrameFeatureReader(BaseReader):
   """
 
   def __init__(self,
-               num_classes=4800,
+               num_classes=4716,
                feature_sizes=[1024],
                feature_names=["inc3"],
                max_frames=300):
