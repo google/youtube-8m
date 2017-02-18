@@ -155,7 +155,8 @@ def get_input_data_tensors(reader,
         batch_size=batch_size,
         capacity=FLAGS.batch_size * 5,
         min_after_dequeue=FLAGS.batch_size,
-        allow_smaller_final_batch=True)
+        allow_smaller_final_batch=True,
+        enqueue_many=True)
 
 
 def find_class_by_name(name, modules):
