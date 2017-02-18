@@ -244,6 +244,8 @@ def build_graph(reader,
       num_towers = 1
       device_string = '/cpu:%d'
     tower_gradients = []
+    label_losses = []
+    reg_losses = []
     for i in xrange(num_towers):
       with tf.device(device_string % i):
         with (tf.variable_scope(tf.get_variable_scope(), reuse=True if i > 0 else None) and
@@ -261,14 +263,13 @@ def build_graph(reader,
             label_loss = result["loss"]
           else:
             label_loss = label_loss_fn.calculate_loss(predictions, labels_batch)
-          tf.summary.scalar("label_loss", label_loss)
 
           if "regularization_loss" in result.keys():
             reg_loss = result["regularization_loss"]
           else:
             reg_loss = tf.constant(0.0)
-          if regularization_penalty != 0:
-            tf.summary.scalar("reg_loss", reg_loss)
+
+          reg_losses.append(reg_loss)
 
           # Adds update_ops (e.g., moving average updates in batch normalization) as
           # a dependency to the train_op.
@@ -281,13 +282,18 @@ def build_graph(reader,
               with tf.control_dependencies([barrier]):
                 label_loss = tf.identity(label_loss)
 
+          losses.append(label_loss)
+
           # Incorporate the L2 weight penalties etc.
           final_loss = regularization_penalty * reg_loss + label_loss
           gradients = optimizer.compute_gradients(final_loss,
               colocate_gradients_with_ops=False)
           tower_gradients.append(gradients)
-
-
+    label_loss = tf.reduce_mean(tf.stack(label_losses))
+    tf.summary.scalar("label_loss", label_loss)
+    if regularization_penalty != 0:
+      reg_loss = tf.reduce_mean(tf.stack(reg_losses))
+      tf.summary.scalar("reg_loss", reg_loss)
     merged_gradients = average_gradients(tower_gradients)
     print "merged_gradients: " + str(merged_gradients)
     train_op = optimizer.apply_gradients(merged_gradients, global_step=global_step)
