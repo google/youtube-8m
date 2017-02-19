@@ -232,7 +232,8 @@ submit training $JOB_NAME \
 
 The 'FrameLevelLogisticModel' is designed to provide equivalent results to a
 logistic model trained over the video-level features. Please look at the
-'models.py' file to see how to implement your own models.
+'video_level_models.py' or 'frame_level_models.py' files to see how to implement
+your own models.
 
 
 ### Using Audio Features
