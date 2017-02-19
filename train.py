@@ -409,6 +409,7 @@ def main(unused_argv):
     build_graph(reader=reader,
                 model=model,
                 optimizer_class=optimizer_class,
+                clip_gradient_norm=FLAGS.clip_gradient_norm,
                 train_data_pattern=FLAGS.train_data_pattern,
                 label_loss_fn=label_loss_fn,
                 base_learning_rate=FLAGS.base_learning_rate,
