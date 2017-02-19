@@ -89,7 +89,7 @@ if __name__ == "__main__":
                        If 0 no ps job is used.""")
   flags.DEFINE_string("optimizer", "AdamOptimizer",
                       "What optimizer class to use.")
-
+  flags.DEFINE_float("clip_gradient_norm", 1.0, "Norm to clip gradients to.")
 
 def validate_class_name(flag_value, category, modules, expected_superclass):
   """Checks that the given string matches a class of the expected type.
@@ -178,6 +178,7 @@ def build_graph(reader,
                 learning_rate_decay_examples=1000000,
                 learning_rate_decay=0.95,
                 optimizer_class=tf.train.AdamOptimizer,
+                clip_gradient_norm=1.0,
                 regularization_penalty=1e-3,
                 num_readers=1,
                 num_epochs=None):
@@ -197,6 +198,7 @@ def build_graph(reader,
     batch_size: How many examples to process at a time.
     base_learning_rate: What learning rate to initialize the optimizer with.
     optimizer_class: Which optimization algorithm to use.
+    clip_gradient_norm: Magnitude of the gradient to clip to.
     regularization_penalty: How much weight to give the regularization loss
                             compared to the label loss.
     num_readers: How many threads to use for I/O operations.
@@ -264,7 +266,11 @@ def build_graph(reader,
 
     # Incorporate the L2 weight penalties etc.
     final_loss = regularization_penalty * reg_loss + label_loss
-    train_op = optimizer.minimize(final_loss, global_step=global_step)
+    train_op = slim.learning.create_train_op(
+        final_loss,
+        optimizer,
+        global_step=global_step,
+        clip_gradient_norm=clip_gradient_norm)
 
     tf.add_to_collection("global_step", global_step)
     tf.add_to_collection("loss", label_loss)
