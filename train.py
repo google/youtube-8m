@@ -326,6 +326,9 @@ def train_loop(train_dir=None,
             utils.MakeSummary("model/Training_Perr", perr),
             global_step_val)
         sv.summary_writer.add_summary(
+            utils.MakeSummary("model/Training_GAP", gap),
+            global_step_val)
+        sv.summary_writer.add_summary(
             utils.MakeSummary("global_step/Examples/Second",
                               examples_per_second),
             global_step_val)
