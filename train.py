@@ -295,7 +295,7 @@ def train_loop(train_dir=None,
   sess = sv.prepare_or_wait_for_session(
       master,
       start_standard_services=start_supervisor_services,
-      config=tf.ConfigProto(log_device_placement=False))
+      config=tf.ConfigProto(log_device_placement=True,allow_soft_placement=True))
 
   logging.info("prepared session")
   sv.start_queue_runners(sess)
@@ -395,7 +395,7 @@ def main(unused_argv):
                 num_readers=FLAGS.num_readers,
                 batch_size=FLAGS.batch_size)
     logging.info("built graph")
-    saver = tf.train.Saver()
+    saver = tf.train.Saver(keep_checkpoint_every_n_hours=0.5)
 
   train_loop(is_chief=is_chief,
              train_dir=FLAGS.train_dir,
