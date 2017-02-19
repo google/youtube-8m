@@ -273,6 +273,9 @@ def build_graph(reader,
         reg_loss = result["regularization_loss"]
       else:
         reg_loss = tf.constant(0.0)
+      reg_loss_list = tf.losses.get_regularization_losses()
+      if reg_loss_list:
+        reg_loss += tf.add_n(reg_loss_list)
 
       reg_losses.append(reg_loss)
 
