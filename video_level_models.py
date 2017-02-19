@@ -30,7 +30,7 @@ flags.DEFINE_integer(
 class LogisticModel(models.BaseModel):
   """Logistic model with L2 regularization."""
 
-  def create_model(self, model_input, vocab_size, l2_penalty=1e-2, **unused_params):
+  def create_model(self, model_input, vocab_size, l2_penalty=1e-5, **unused_params):
     """Creates a logistic model.
 
     Args:
@@ -53,7 +53,7 @@ class MoeModel(models.BaseModel):
                    model_input,
                    vocab_size,
                    num_mixtures=None,
-                   l2_penalty=1e-2,
+                   l2_penalty=1e-5,
                    **unused_params):
     """Creates a Mixture of (Logistic) Experts model.
 
