@@ -347,7 +347,7 @@ def train_loop(train_dir=None,
   sess = sv.prepare_or_wait_for_session(
       master,
       start_standard_services=start_supervisor_services,
-      config=tf.ConfigProto(log_device_placement=True,allow_soft_placement=True))
+      config=tf.ConfigProto(log_device_placement=True,allow_soft_placement=False))
 
   logging.info("prepared session")
   sv.start_queue_runners(sess)
