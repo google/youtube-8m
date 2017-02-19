@@ -155,8 +155,8 @@ def get_input_data_tensors(reader,
     return tf.train.shuffle_batch_join(
         training_data,
         batch_size=batch_size,
-        capacity=FLAGS.batch_size * 5,
-        min_after_dequeue=FLAGS.batch_size,
+        capacity=batch_size * 5,
+        min_after_dequeue=batch_size,
         allow_smaller_final_batch=True,
         enqueue_many=True)
 
