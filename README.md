@@ -47,10 +47,11 @@ follow the instructions [here](https://cloud.google.com/ml/docs/how-tos/getting-
 If you are participating in the Google Cloud & YouTube-8M Video Understanding
 Challenge hosted on kaggle.com, see [these instructions](https://www.kaggle.com/c/youtube8m#getting-started-with-google-cloud) instead.
 
-Please also verify that you have Tensorflow 1.0.0 or higher installed by
-running the following command:
+Please also verify that you have Python 2.7.x and Tensorflow 1.0.0 or higher
+installed by running the following commands:
 
 ```sh
+python --version
 python -c 'import tensorflow as tf; print(tf.__version__)'
 ```
 
@@ -268,6 +269,14 @@ The starter code requires Tensorflow. If you haven't installed it yet, follow
 the instructions on [tensorflow.org](https://www.tensorflow.org/install/).
 This code has been tested with Tensorflow 1.0.0. Going forward, we will continue
 to target the latest released version of Tensorflow.
+
+Please verify that you have Python 2.7.x and Tensorflow 1.0.0 or higher
+installed by running the following commands:
+
+```sh
+python --version
+python -c 'import tensorflow as tf; print(tf.__version__)'
+```
 
 You can find complete instructions for downloading the dataset on the
 [YouTube-8M website](https://research.google.com/youtube8m/download.html).
