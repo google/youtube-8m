@@ -289,8 +289,8 @@ def train_loop(train_dir=None,
   sv = tf.train.Supervisor(logdir=train_dir,
                            is_chief=is_chief,
                            global_step=global_step,
-                           save_model_secs=60,
-                           save_summaries_secs=60,
+                           save_model_secs=15 * 60,
+                           save_summaries_secs=120,
                            saver=saver)
   sess = sv.prepare_or_wait_for_session(
       master,
