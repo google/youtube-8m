@@ -59,6 +59,11 @@ if __name__ == "__main__":
       "start_new_model", False,
       "If set, this will not resume from a checkpoint and will instead create a"
       " new model instance.")
+      
+  flags.DEFINE_bool(
+      "mean_var_max", False,
+      "If set, this will compute variance and maximum of frame level features"
+      " before feeding to video-level model.")
 
   # Training flags.
   flags.DEFINE_integer(
@@ -209,9 +214,25 @@ def build_graph(reader,
             num_epochs=num_epochs))
     tf.summary.histogram("model/input_raw", model_input_raw)
 
-    feature_dim = len(model_input_raw.get_shape()) - 1
+    if FLAGS.mean_var_max:
+        num_frames = tf.cast(tf.expand_dims(num_frames, 1), tf.float32)
+        feature_size = model_input_raw.get_shape().as_list()[2]
+        max_frames = model_input_raw.get_shape().as_list()[1]
+        denominators = tf.reshape(
+            tf.tile(num_frames, [1, feature_size]), [-1, feature_size])
+        
+        avg_pooled = tf.reduce_sum(model_input_raw,axis=[1]) / denominators
+        var_pooled = tf.reduce_sum(tf.square(model_input_raw-tf.expand_dims(avg_pooled,1)),axis=[1]) - \
+                            (max_frames-denominators)*tf.square(avg_pooled)
+        var_pooled = tf.sqrt(var_pooled)
+        tf.summary.histogram("model/var_pooled",var_pooled)
+        max_pooled = tf.reduce_max(model_input_raw,axis=[1])
+        tf.summary.histogram("model/max_pooled",max_pooled)
+        total_pooled = tf.concat([avg_pooled,var_pooled,max_pooled],1)
 
-    model_input = tf.nn.l2_normalize(model_input_raw, feature_dim)
+    feature_dim = len(total_pooled.get_shape()) - 1
+
+    model_input = tf.nn.l2_normalize(total_pooled, feature_dim)
 
     with tf.name_scope("model"):
       result = model.create_model(model_input,
