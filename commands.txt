@@ -1,0 +1,128 @@
+BUCKET_NAME=gs://${USER}_yt8m_train_bucket
+
+# Submit the training job.
+JOB_NAME=yt8m_train_$(date +%Y%m%d_%H%M%S); gcloud --verbosity=debug beta ml jobs \
+submit training $JOB_NAME \
+--package-path=youtube-8m --module-name=youtube-8m.train \
+--staging-bucket=$BUCKET_NAME --region=us-central1 \
+--config=youtube-8m/cloudml-gpu.yaml \
+-- --train_data_pattern='gs://youtube8m-ml/1/video_level/train/train*.tfrecord' \
+--train_dir=$BUCKET_NAME/yt8m_train_video_level_logistic_model
+
+# Submit the training job.
+JOB_NAME=yt8m_train_$(date +%Y%m%d_%H%M%S); gcloud --verbosity=debug beta ml jobs \
+submit training $JOB_NAME \
+--package-path=youtube-8m --module-name=youtube-8m.train \
+--staging-bucket=$BUCKET_NAME --region=us-central1 \
+--config=youtube-8m/cloudml-gpu.yaml \
+-- --train_data_pattern='gs://youtube8m-ml/1/video_level/train/train*.tfrecord' \
+--train_dir=$BUCKET_NAME/yt8m_train_video_and_audio_level_moe_model_good \
+--feature_names="mean_rgb, mean_audio" --feature_sizes="1024, 128" \
+--model="MoeModel" \
+--batch_size="512"
+
+
+
+# Submit the training job.
+JOB_NAME=yt8m_train_$(date +%Y%m%d_%H%M%S); gcloud --verbosity=debug beta ml jobs \
+submit training $JOB_NAME \
+--package-path=youtube-8m --module-name=youtube-8m.train \
+--staging-bucket=$BUCKET_NAME --region=us-central1 \
+--config=youtube-8m/cloudml-gpu.yaml \
+-- --train_data_pattern='gs://youtube8m-ml/1/video_level/train/train*.tfrecord' \
+--train_dir=$BUCKET_NAME/yt8m_train_video_and_audio_level_moe_model_2_good \
+--feature_names="mean_rgb, mean_audio" --feature_sizes="1024, 128" \
+--model="MoeModel" \
+--batch_size="32" \
+--base_learning_rate="1"
+
+# Submit the training job.
+JOB_NAME=yt8m_train_$(date +%Y%m%d_%H%M%S); gcloud --verbosity=debug beta ml jobs \
+submit training $JOB_NAME \
+--package-path=youtube-8m --module-name=youtube-8m.train \
+--staging-bucket=$BUCKET_NAME --region=us-central1 \
+--config=youtube-8m/cloudml-gpu.yaml \
+-- --train_data_pattern='gs://youtube8m-ml/1/video_level/train/train*.tfrecord' \
+--train_dir=$BUCKET_NAME/yt8m_train_video_and_audio_level_logistic_model_good \
+--feature_names="mean_rgb, mean_audio" --feature_sizes="1024, 128"
+
+JOB_NAME=yt8m_train_$(date +%Y%m%d_%H%M%S); gcloud --verbosity=debug beta ml jobs \
+submit training $JOB_NAME \
+--package-path=youtube-8m --module-name=youtube-8m.train \
+--staging-bucket=$BUCKET_NAME --region=us-central1 \
+--config=youtube-8m/cloudml-gpu.yaml \
+-- --train_data_pattern='gs://youtube8m-ml/1/frame_level/train/train*.tfrecord' \
+--frame_features=True --model=FrameLevelLogisticModel  \
+--feature_names="rgb, audio" --feature_sizes="1024, 128" \
+--batch_size=256 \
+--train_dir=$BUCKET_NAME/yt8m_train_frame_level_logistic_model
+
+JOB_NAME=yt8m_train_$(date +%Y%m%d_%H%M%S); gcloud --verbosity=debug beta ml jobs \
+submit training $JOB_NAME \
+--package-path=youtube-8m --module-name=youtube-8m.train \
+--staging-bucket=$BUCKET_NAME --region=us-central1 \
+--config=youtube-8m/cloudml-gpu.yaml \
+-- --train_data_pattern='gs://youtube8m-ml/1/frame_level/train/train*.tfrecord' \
+--frame_features=True --model=DBoFModel  \
+--feature_names="rgb, audio" --feature_sizes="1024, 128" \
+--batch_size=256 \
+--train_dir=$BUCKET_NAME/yt8m_train_DBoF
+
+
+JOB_TO_EVAL=yt8m_train_video_and_audio_level_moe_model_good
+JOB_NAME=yt8m_inference_$(date +%Y%m%d_%H%M%S); gcloud --verbosity=debug beta ml jobs \
+submit training $JOB_NAME \
+--package-path=youtube-8m --module-name=youtube-8m.inference \
+--staging-bucket=$BUCKET_NAME --region=us-central1 \
+--config=youtube-8m/cloudml-gpu.yaml \
+-- --input_data_pattern='gs://youtube8m-ml/1/video_level/test/test*.tfrecord' \
+--train_dir=$BUCKET_NAME/${JOB_TO_EVAL} \
+--feature_names="mean_rgb, mean_audio" --feature_sizes="1024, 128" \
+--output_file=$BUCKET_NAME/${JOB_TO_EVAL}/predictions2-19.csv
+
+
+gcloud --verbosity=debug beta ml local train \
+--package-path=youtube-8m --module-name=youtube-8m.train -- \
+--train_data_pattern='gs://youtube8m-ml/1/frame_level/train/train*.tfrecord' \
+--frame_features=True --model=FrameLevelMeanVarModel  \
+--feature_names="rgb, audio" --feature_sizes="1024, 128" \
+--batch_size=2 --base_learning_rate=1e-6 \
+--train_dir=/tmp/yt8m_train --start_new_model
+
+gcloud beta ml local train \
+--package-path=youtube-8m --module-name=youtube-8m.train -- \
+--train_data_pattern='./train*.tfrecord' \
+--frame_features=True --model=FrameLevelMeanVarModel \
+--feature_names="rgb, audio" --feature_sizes="1024, 128" \
+--train_dir=/tmp/yt8m_train --output_file=/tmp/yt8m_train/predictions.csv
+
+JOB_NAME=yt8m_train_$(date +%Y%m%d_%H%M%S); gcloud --verbosity=debug beta ml jobs \
+submit training $JOB_NAME \
+--package-path=youtube-8m --module-name=youtube-8m.train \
+--staging-bucket=$BUCKET_NAME --region=us-central1 \
+--config=youtube-8m/cloudml-gpu.yaml \
+-- --train_data_pattern='gs://youtube8m-ml/1/frame_level/train/train*.tfrecord' \
+--frame_features=True --model=FrameLevelMeanVarModel  \
+--feature_names="rgb, audio" --feature_sizes="1024, 128" \
+--batch_size=256 --base_learning_rate=1e-3 \
+--train_dir=$BUCKET_NAME/yt8m_train_frame_level_mean_var_model_1e-3 
+
+gcloud --verbosity=debug beta ml local train \
+--package-path=youtube-8m --module-name=youtube-8m.train -- \
+--train_data_pattern='gs://youtube8m-ml/1/frame_level/train/train*.tfrecord' \
+--frame_features=True --mean_var_max=True --model=MoeModel  \
+--feature_names="rgb, audio" --feature_sizes="1024, 128" \
+--batch_size=2 --base_learning_rate=1e-6 \
+--train_dir=/tmp/yt8m_train --start_new_model
+
+
+JOB_NAME=yt8m_train_$(date +%Y%m%d_%H%M%S); gcloud --verbosity=debug beta ml jobs \
+submit training $JOB_NAME \
+--package-path=youtube-8m --module-name=youtube-8m.train \
+--staging-bucket=$BUCKET_NAME --region=us-central1 \
+--config=youtube-8m/cloudml-gpu.yaml \
+-- --train_data_pattern='gs://youtube8m-ml/1/frame_level/train/train*.tfrecord' \
+--frame_features=True --mean_var_max=True --model=MoeModel  \
+--feature_names="rgb, audio" --feature_sizes="1024, 128" \
+--train_dir=$BUCKET_NAME/video_audio_var_max_moe_train_1e-3 \
+--batch_size="512" --base_learning_rate=1e-3
