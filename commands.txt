@@ -110,7 +110,7 @@ submit training $JOB_NAME \
 gcloud --verbosity=debug beta ml local train \
 --package-path=youtube-8m --module-name=youtube-8m.train -- \
 --train_data_pattern='gs://youtube8m-ml/1/frame_level/train/train*.tfrecord' \
---frame_features=True --mean_var_max=True --model=MoeModel  \
+--frame_features=True --var=True --max=True --arg_max=True --model=MoeModel  \
 --feature_names="rgb, audio" --feature_sizes="1024, 128" \
 --batch_size=2 --base_learning_rate=1e-6 \
 --train_dir=/tmp/yt8m_train --start_new_model
@@ -122,7 +122,29 @@ submit training $JOB_NAME \
 --staging-bucket=$BUCKET_NAME --region=us-central1 \
 --config=youtube-8m/cloudml-gpu.yaml \
 -- --train_data_pattern='gs://youtube8m-ml/1/frame_level/train/train*.tfrecord' \
---frame_features=True --mean_var_max=True --model=MoeModel  \
+--frame_features=True --var=True --arg_max=True --model=MoeModel  \
+--feature_names="rgb, audio" --feature_sizes="1024, 128" \
+--train_dir=$BUCKET_NAME/video_audio_var_arg_max_moe_train_1e-3 \
+--batch_size="512" --base_learning_rate=1e-3
+
+JOB_NAME=yt8m_train_$(date +%Y%m%d_%H%M%S); gcloud --verbosity=debug beta ml jobs \
+submit training $JOB_NAME \
+--package-path=youtube-8m --module-name=youtube-8m.train \
+--staging-bucket=$BUCKET_NAME --region=us-central1 \
+--config=youtube-8m/cloudml-gpu.yaml \
+-- --train_data_pattern='gs://youtube8m-ml/1/frame_level/train/train*.tfrecord' \
+--frame_features=True --var=True --max=True --model=MoeModel  \
 --feature_names="rgb, audio" --feature_sizes="1024, 128" \
 --train_dir=$BUCKET_NAME/video_audio_var_max_moe_train_1e-3 \
+--batch_size="512" --base_learning_rate=1e-3
+
+JOB_NAME=yt8m_train_$(date +%Y%m%d_%H%M%S); gcloud --verbosity=debug beta ml jobs \
+submit training $JOB_NAME \
+--package-path=youtube-8m --module-name=youtube-8m.train \
+--staging-bucket=$BUCKET_NAME --region=us-central1 \
+--config=youtube-8m/cloudml-gpu.yaml \
+-- --train_data_pattern='gs://youtube8m-ml/1/frame_level/train/train*.tfrecord' \
+--frame_features=True --var=True --max=True --arg_max=True --model=MoeModel  \
+--feature_names="rgb, audio" --feature_sizes="1024, 128" \
+--train_dir=$BUCKET_NAME/video_audio_var_max_arg_max_moe_train_1e-3 \
 --batch_size="512" --base_learning_rate=1e-3
