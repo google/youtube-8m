@@ -24,6 +24,7 @@ from tensorflow import app
 from tensorflow import flags
 from tensorflow import gfile
 from tensorflow import logging
+from builtins import range
 
 import eval_util
 import losses
@@ -66,12 +67,15 @@ if __name__ == '__main__':
 
 def format_lines(video_ids, predictions, top_k):
   batch_size = len(video_ids)
-  for video_index in xrange(batch_size):
+  for video_index in range(batch_size):
     top_indices = numpy.argpartition(predictions[video_index], -top_k)[-top_k:]
     line = [(class_index, predictions[video_index][class_index])
             for class_index in top_indices]
+  #  print("Type - Test :")
+  #  print(type(video_ids[video_index]))
+  #  print(video_ids[video_index].decode('utf-8'))
     line = sorted(line, key=lambda p: -p[1])
-    yield video_ids[video_index] + "," + " ".join("%i %f" % pair
+    yield video_ids[video_index].decode('utf-8') + "," + " ".join("%i %f" % pair
                                                   for pair in line) + "\n"
 
 
@@ -101,7 +105,7 @@ def get_input_data_tensors(reader, data_pattern, batch_size, num_readers=1):
     filename_queue = tf.train.string_input_producer(
         files, num_epochs=1, shuffle=False)
     examples_and_labels = [reader.prepare_reader(filename_queue)
-                           for _ in xrange(num_readers)]
+                           for _ in range(num_readers)]
 
     video_id_batch, video_batch, unused_labels, num_frames_batch = (
         tf.train.batch_join(examples_and_labels,

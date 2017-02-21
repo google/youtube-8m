@@ -17,6 +17,7 @@ import datetime
 import numpy
 
 from tensorflow.python.platform import gfile
+from builtins import range
 
 import mean_average_precision_calculator as map_calculator
 import average_precision_calculator as ap_calculator
@@ -117,12 +118,12 @@ def top_k_by_class(predictions, labels, k=20):
   prediction_triplets= []
   for video_index in range(predictions.shape[0]):
     prediction_triplets.extend(top_k_triplets(predictions[video_index],labels[video_index], k))
-  out_predictions = [[] for v in xrange(num_classes)]
-  out_labels = [[] for v in xrange(num_classes)]
+  out_predictions = [[] for v in range(num_classes)]
+  out_labels = [[] for v in range(num_classes)]
   for triplet in prediction_triplets:
     out_predictions[triplet[0]].append(triplet[1])
     out_labels[triplet[0]].append(triplet[2])
-  out_true_positives = [numpy.sum(labels[:,i]) for i in xrange(num_classes)]
+  out_true_positives = [numpy.sum(labels[:,i]) for i in range(num_classes)]
 
   return out_predictions, out_labels, out_true_positives
 
