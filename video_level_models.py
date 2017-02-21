@@ -20,7 +20,6 @@ import tensorflow as tf
 import utils
 
 from tensorflow import flags
-from builtins import range
 import tensorflow.contrib.slim as slim
 
 FLAGS = flags.FLAGS

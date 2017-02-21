@@ -56,7 +56,6 @@ import random
 import numbers
 
 import numpy
-from builtins import range
 
 
 class AveragePrecisionCalculator(object):
