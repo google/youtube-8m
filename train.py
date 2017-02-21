@@ -13,6 +13,8 @@
 # limitations under the License.
 """Binary for training Tensorflow models on the YouTube-8M dataset."""
 
+import json
+import os
 import time
 
 import eval_util
@@ -27,6 +29,9 @@ from tensorflow import flags
 from tensorflow import gfile
 from tensorflow import logging
 import utils
+
+_SAVE_INTERVAL_SECONDS = 60
+_LOG_INTERVAL_SECONDS = 5
 
 FLAGS = flags.FLAGS
 
@@ -61,12 +66,10 @@ if __name__ == "__main__":
       " new model instance.")
 
   # Training flags.
-  flags.DEFINE_integer(
-      "batch_size", 1024,
-      "How many examples to process per batch for training.")
-  flags.DEFINE_string(
-      "label_loss", "CrossEntropyLoss",
-      "Which loss function to use for training the model.")
+  flags.DEFINE_integer("batch_size", 1024,
+                       "How many examples to process per batch for training.")
+  flags.DEFINE_string("label_loss", "CrossEntropyLoss",
+                      "Which loss function to use for training the model.")
   flags.DEFINE_float(
       "regularization_penalty", 1e-3,
       "How much weight to give to the regularization loss (the label loss has "
@@ -77,13 +80,10 @@ if __name__ == "__main__":
   # Other flags.
   flags.DEFINE_integer("num_readers", 8,
                        "How many threads to use for reading input files.")
-  flags.DEFINE_string("master", "", "TensorFlow master to use.")
-  flags.DEFINE_integer("task", 0, "Task id of the replica running the training."
-                       " 0 implies chief Supervisor.""")
-  flags.DEFINE_integer("ps_tasks", 0, """Number of tasks in the ps job.
-                       If 0 no ps job is used.""")
   flags.DEFINE_string("optimizer", "AdamOptimizer",
                       "What optimizer class to use.")
+  flags.DEFINE_bool("log_device_placement", False,
+                    "Whether device placement should be logged.")
 
 
 def validate_class_name(flag_value, category, modules, expected_superclass):
@@ -108,9 +108,8 @@ def validate_class_name(flag_value, category, modules, expected_superclass):
     if not candidate:
       continue
     if not issubclass(candidate, expected_superclass):
-      raise flags.FlagsError("%s '%s' doesn't inherit from %s." %
-                             (category, flag_value,
-                              expected_superclass.__name__))
+      raise flags.FlagsError("%s '%s' doesn't inherit from %s." % (
+          category, flag_value, expected_superclass.__name__))
     return True
   raise flags.FlagsError("Unable to find %s '%s'." % (category, flag_value))
 
@@ -143,12 +142,13 @@ def get_input_data_tensors(reader,
     files = gfile.Glob(data_pattern)
     if not files:
       raise IOError("Unable to find training files. data_pattern='" +
-                    data_pattern + "'")
-    logging.info("number of training files: " + str(len(files)))
-    filename_queue = tf.train.string_input_producer(files,
-                                                    num_epochs=num_epochs)
+                    data_pattern + "'.")
+    logging.info("Number of training files: %s.", str(len(files)))
+    filename_queue = tf.train.string_input_producer(
+        files, num_epochs=num_epochs)
     training_data = [
-        reader.prepare_reader(filename_queue) for _ in xrange(num_readers)]
+        reader.prepare_reader(filename_queue) for _ in xrange(num_readers)
+    ]
 
     return tf.train.shuffle_batch_join(
         training_data,
@@ -166,6 +166,7 @@ def find_class_by_name(name, modules):
 
 def build_graph(reader,
                 model,
+                device_fn,
                 train_data_pattern,
                 label_loss_fn=losses.CrossEntropyLoss(),
                 batch_size=1000,
@@ -184,6 +185,8 @@ def build_graph(reader,
     reader: The data file reader. It should inherit from BaseReader.
     model: The core model (e.g. logistic or neural net). It should inherit
            from BaseModel.
+    device_fn: A function to pass to tf.device() created using
+                tf.train.replica_device_setter.
     train_data_pattern: glob path to the training data files.
     label_loss_fn: What kind of loss to apply to the model. It should inherit
                 from BaseLoss.
@@ -196,8 +199,7 @@ def build_graph(reader,
     num_epochs: How many passes to make over the data. 'None' means an
                 unlimited number of passes.
   """
-  with tf.device(tf.train.replica_device_setter(
-      FLAGS.ps_tasks, merge_devices=True)):
+  with tf.device(device_fn):
     global_step = tf.Variable(0, trainable=False, name="global_step")
     optimizer = optimizer_class(base_learning_rate)
     unused_video_id, model_input_raw, labels_batch, num_frames = (
@@ -214,10 +216,11 @@ def build_graph(reader,
     model_input = tf.nn.l2_normalize(model_input_raw, feature_dim)
 
     with tf.name_scope("model"):
-      result = model.create_model(model_input,
-                                  num_frames=num_frames,
-                                  vocab_size=reader.num_classes,
-                                  labels=labels_batch)
+      result = model.create_model(
+          model_input,
+          num_frames=num_frames,
+          vocab_size=reader.num_classes,
+          labels=labels_batch)
 
       for variable in slim.get_model_variables():
         tf.summary.histogram(variable.op.name, variable)
@@ -261,148 +264,299 @@ def build_graph(reader,
     tf.add_to_collection("train_op", train_op)
 
 
-def train_loop(train_dir=None,
-               saver=None,
-               is_chief=True,
-               master="",
-               start_supervisor_services=True):
-  """Performs training on the currently defined tensorflow graph.
+class Trainer(object):
+  """A Trainer to train a Tensorflow graph."""
 
-  Args:
-    train_dir: Where to save the model checkpoints.
-    saver: The class to use for serializing the graph variables.
-    is_chief: Whether this worker is the primary worker (which is responsible
-    for writing checkpoints and summaries), or an anonymous member of the flock.
-    master: Which Tensorflow master to listen to.
-    start_supervisor_services: Whether to start threads for writing summaries
-      and checkpoints.
+  def __init__(self, cluster, task):
+    """"Creates a Trainer.
 
-  Returns:
-  A tuple of the training Hit@1 and the training PERR.
-  """
-  global_step = tf.get_collection("global_step")[0]
-  loss = tf.get_collection("loss")[0]
-  predictions = tf.get_collection("predictions")[0]
-  labels = tf.get_collection("labels")[0]
-  train_op = tf.get_collection("train_op")[0]
+    Args:
+      cluster: A tf.train.ClusterSpec if the execution is distributed.
+        None otherwise.
+      task: A TaskSpec describing the job type and the task index.
+    """
 
-  sv = tf.train.Supervisor(logdir=train_dir,
-                           is_chief=is_chief,
-                           global_step=global_step,
-                           save_model_secs=60,
-                           save_summaries_secs=60,
-                           saver=saver)
-  sess = sv.prepare_or_wait_for_session(
-      master,
-      start_standard_services=start_supervisor_services,
-      config=tf.ConfigProto(log_device_placement=False))
+    self.cluster = cluster
+    self.task = task
+    self.is_master = (task.type == "master" and task.index == 0)
+    self.log_device_placement = FLAGS.log_device_placement
+    self.train_dir = FLAGS.train_dir
+    self.config = tf.ConfigProto(log_device_placement=self.log_device_placement)
 
-  logging.info("prepared session")
-  sv.start_queue_runners(sess)
-  logging.info("started queue runners")
+    if self.is_master and self.task.index > 0:
+      raise StandardError("%s: Only one replica of master expected",
+                          task_as_string(self.task))
 
-  try:
-    logging.info("entering training loop")
-    while not sv.should_stop():
-      batch_start_time = time.time()
-      _, global_step_val, loss_val, predictions_val, labels_val = sess.run(
-          [train_op, global_step, loss, predictions, labels])
-      seconds_per_batch = time.time() - batch_start_time
-      examples_per_second = labels_val.shape[0] / seconds_per_batch
+  def run(self):
+    """Performs training on the currently defined Tensorflow graph.
 
-      hit_at_one = eval_util.calculate_hit_at_one(predictions_val, labels_val)
-      perr = eval_util.calculate_precision_at_equal_recall_rate(predictions_val,
-                                                                labels_val)
-      gap = eval_util.calculate_gap(predictions_val, labels_val)
+    Returns:
+      A tuple of the training Hit@1 and the training PERR.
+    """
 
-      logging.info("training step " + str(global_step_val) + "| Hit@1: " + (
-          "%.2f" % hit_at_one) + " PERR: " + ("%.2f" % perr) +
-          " GAP: " + ("%.2f" % gap) + " Loss: " + str(loss_val))
-      if is_chief and global_step_val % 10 == 0 and train_dir:
-        sv.summary_writer.add_summary(
-            utils.MakeSummary("model/Training_Hit@1",
-                              hit_at_one), global_step_val)
-        sv.summary_writer.add_summary(
-            utils.MakeSummary("model/Training_Perr", perr),
-            global_step_val)
-        sv.summary_writer.add_summary(
-            utils.MakeSummary("model/Training_GAP", gap),
-            global_step_val)
-        sv.summary_writer.add_summary(
-            utils.MakeSummary("global_step/Examples/Second",
-                              examples_per_second),
-            global_step_val)
-        sv.summary_writer.flush()
-  except tf.errors.OutOfRangeError:
-    logging.info("Done training -- epoch limit reached")
-  logging.info("exited training loop")
-  sv.Stop()
-  return hit_at_one, perr
+    self.remove_existing_training_directory()
 
+    target, device_fn = self.start_server_if_distributed()
 
-def main(unused_argv):
-  logging.set_verbosity(tf.logging.INFO)
-  print("tensorflow version: %s" % tf.__version__)
-  is_chief = (FLAGS.task == 0)
+    with tf.Graph().as_default() as graph:
+      with tf.device(device_fn):
 
-  # Recover session
-  saver = None
-  latest_checkpoint = tf.train.latest_checkpoint(FLAGS.train_dir)
-  if FLAGS.start_new_model:
-    logging.info("'start_new_model' flag is set. Removing existing train dir.")
-    try:
-      gfile.DeleteRecursively(FLAGS.train_dir)
-    except:
-      logging.error(
-          "Failed to delete directory " + FLAGS.train_dir +
-          " when starting a new model. Please delete it manually and" +
-          " try again.")
-  elif not latest_checkpoint:
-    logging.info("No checkpoint file found. Building a new model.")
-  else:
-    meta_filename = latest_checkpoint + ".meta"
-    if not gfile.Exists(meta_filename):
-      logging.info("No meta graph file found. Building a new model.")
+        saver = self.recover_or_build_model(device_fn)
+        global_step = tf.get_collection("global_step")[0]
+        loss = tf.get_collection("loss")[0]
+        predictions = tf.get_collection("predictions")[0]
+        labels = tf.get_collection("labels")[0]
+        train_op = tf.get_collection("train_op")[0]
+        init_op = tf.global_variables_initializer()
+
+    sv = tf.train.Supervisor(
+        graph,
+        logdir=self.train_dir,
+        init_op=init_op,
+        is_chief=self.is_master,
+        global_step=global_step,
+        save_model_secs=60,
+        save_summaries_secs=60,
+        saver=saver)
+
+    logging.info("%s: Starting managed session.", task_as_string(self.task))
+    with sv.managed_session(target, config=self.config) as sess:
+
+      self.last_save = 0
+      self.last_log = 0
+
+      try:
+        logging.info("%s: Entering training loop.", task_as_string(self.task))
+        while not sv.should_stop():
+
+          batch_start_time = time.time()
+          _, global_step_val, loss_val, predictions_val, labels_val = sess.run(
+              [train_op, global_step, loss, predictions, labels])
+          seconds_per_batch = time.time() - batch_start_time
+
+          self.now = time.time()
+          is_time_to_save = (self.now - self.last_save) > _SAVE_INTERVAL_SECONDS
+          is_time_to_log = (self.now - self.last_log) > _LOG_INTERVAL_SECONDS
+          should_save = self.is_master and is_time_to_save and self.train_dir
+          should_log = is_time_to_log or should_save
+
+          if should_log or should_save:
+            examples_per_second = labels_val.shape[0] / seconds_per_batch
+            hit_at_one = eval_util.calculate_hit_at_one(predictions_val,
+                                                        labels_val)
+            perr = eval_util.calculate_precision_at_equal_recall_rate(
+                predictions_val, labels_val)
+            gap = eval_util.calculate_gap(predictions_val, labels_val)
+
+          if should_log:
+            logging.info(
+                "%s: training step " + str(global_step_val) + "| Hit@1: " +
+                ("%.2f" % hit_at_one) + " PERR: " + ("%.2f" % perr) + " GAP: " +
+                ("%.2f" % gap) + " Loss: " + str(loss_val),
+                task_as_string(self.task))
+            self.last_log = self.now
+
+          if should_save:
+            logging.info("%s: Writing summary.", task_as_string(self.task))
+            sv.summary_writer.add_summary(
+                utils.MakeSummary("model/Training_Hit@1", hit_at_one),
+                global_step_val)
+            sv.summary_writer.add_summary(
+                utils.MakeSummary("model/Training_Perr", perr), global_step_val)
+            sv.summary_writer.add_summary(
+                utils.MakeSummary("model/Training_GAP", gap), global_step_val)
+            sv.summary_writer.add_summary(
+                utils.MakeSummary("global_step/Examples/Second",
+                                  examples_per_second), global_step_val)
+            sv.summary_writer.flush()
+            self.last_save = self.now
+
+      except tf.errors.OutOfRangeError:
+        logging.info("%s: Done training -- epoch limit reached.",
+                     task_as_string(self.task))
+
+    logging.info("%s: Exited training loop.", task_as_string(self.task))
+    sv.Stop()
+    return hit_at_one, perr
+
+  def start_server_if_distributed(self):
+    """Starts a server if the execution is distributed."""
+
+    if self.cluster:
+      logging.info("%s: Starting trainer within cluster %s.",
+                   task_as_string(self.task), self.cluster.as_dict())
+      server = start_server(self.cluster, self.task)
+      target = server.target
+      device_fn = tf.train.replica_device_setter(
+          worker_device="/job:%s/task:%d" % (self.task.type, self.task.index),
+          merge_devices=True,
+          cluster=self.cluster)
     else:
-      logging.info("Restoring from meta graph file %s", meta_filename)
-      saver = tf.train.import_meta_graph(meta_filename)
+      target = ""
+      device_fn = ""
+    return (target, device_fn)
 
-  if not saver:
-    # convert feature_names and feature_sizes to lists of values
+  def remove_existing_training_directory(self):
+    """Removes the training directory if requested."""
+
+    if self.is_master and FLAGS.start_new_model:
+      try:
+        logging.info(
+            "%s: Flag 'start_new_model' is set. Removing existing train directory.",
+            task_as_string(self.task))
+        gfile.DeleteRecursively(FLAGS.train_dir)
+      except:
+        logging.error(
+            "%s: Failed to delete directory " + FLAGS.train_dir +
+            " when starting a new model. Please delete it manually and" +
+            " try again.", task_as_string(self.task))
+
+  def recover_or_build_model(self, device_fn):
+    """Recovers the model from a checkpoint or build it."""
+
+    latest_checkpoint = tf.train.latest_checkpoint(FLAGS.train_dir)
+
+    if FLAGS.start_new_model:
+      logging.info("%s: Flag 'start_new_model' is set. Building a new model.",
+                   task_as_string(self.task))
+      return self.find_and_build_model(device_fn)
+    elif not latest_checkpoint:
+      logging.info("%s: No checkpoint file found. Building a new model.",
+                   task_as_string(self.task))
+      return self.find_and_build_model(device_fn)
+    else:
+      meta_filename = latest_checkpoint + ".meta"
+      if not gfile.Exists(meta_filename):
+        logging.info("%s: No meta graph file found. Building a new model.",
+                     task_as_string(self.task))
+        return self.find_and_build_model(device_fn)
+      else:
+        logging.info("%s: Restoring from meta graph file %s",
+                     task_as_string(self.task), meta_filename)
+        return tf.train.import_meta_graph(meta_filename)
+
+  def find_and_build_model(self, device_fn):
+    """Find the model and build the graph."""
+
+    # Convert feature_names and feature_sizes to lists of values.
     feature_names, feature_sizes = utils.GetListOfFeatureNamesAndSizes(
         FLAGS.feature_names, FLAGS.feature_sizes)
 
     if FLAGS.frame_features:
       reader = readers.YT8MFrameFeatureReader(
-          feature_names=feature_names,
-          feature_sizes=feature_sizes)
+          feature_names=feature_names, feature_sizes=feature_sizes)
     else:
       reader = readers.YT8MAggregatedFeatureReader(
-          feature_names=feature_names,
-          feature_sizes=feature_sizes)
+          feature_names=feature_names, feature_sizes=feature_sizes)
 
+    # Find the model.
     model = find_class_by_name(FLAGS.model,
-        [frame_level_models, video_level_models])()
+                               [frame_level_models, video_level_models])()
     label_loss_fn = find_class_by_name(FLAGS.label_loss, [losses])()
     optimizer_class = find_class_by_name(FLAGS.optimizer, [tf.train])
-    build_graph(reader=reader,
-                model=model,
-                optimizer_class=optimizer_class,
-                train_data_pattern=FLAGS.train_data_pattern,
-                label_loss_fn=label_loss_fn,
-                base_learning_rate=FLAGS.base_learning_rate,
-                regularization_penalty=FLAGS.regularization_penalty,
-                num_readers=FLAGS.num_readers,
-                batch_size=FLAGS.batch_size)
-    logging.info("built graph")
-    saver = tf.train.Saver()
 
-  train_loop(is_chief=is_chief,
-             train_dir=FLAGS.train_dir,
-             saver=saver,
-             master=FLAGS.master)
+    # Build the graph.
+    build_graph(
+        reader=reader,
+        model=model,
+        device_fn=device_fn,
+        optimizer_class=optimizer_class,
+        train_data_pattern=FLAGS.train_data_pattern,
+        label_loss_fn=label_loss_fn,
+        base_learning_rate=FLAGS.base_learning_rate,
+        regularization_penalty=FLAGS.regularization_penalty,
+        num_readers=FLAGS.num_readers,
+        batch_size=FLAGS.batch_size)
+    logging.info("%s: Built graph.", task_as_string(self.task))
+
+    return tf.train.Saver()
+
+
+class ParameterServer(object):
+  """A parameter server to serve variables in a distributed execution."""
+
+  def __init__(self, cluster, task):
+    """Creates a ParameterServer.
+
+    Args:
+      cluster: A tf.train.ClusterSpec if the execution is distributed.
+        None otherwise.
+      task: A TaskSpec describing the job type and the task index.
+    """
+
+    self.cluster = cluster
+    self.task = task
+
+  def run(self):
+    """Starts the parameter server."""
+
+    logging.info("%s: Starting parameter server within cluster %s.",
+                 task_as_string(self.task), self.cluster.as_dict())
+    server = start_server(self.cluster, self.task)
+    server.join()
+
+
+def start_server(cluster, task):
+  """Creates a Server.
+
+  Args:
+    cluster: A tf.train.ClusterSpec if the execution is distributed.
+      None otherwise.
+    task: A TaskSpec describing the job type and the task index.
+  """
+
+  if not task.type:
+    raise ValueError("%s: The task type must be specified." %
+                     task_as_string(task))
+  if task.index is None:
+    raise ValueError("%s: The task index must be specified." %
+                     task_as_string(task))
+
+  # Create and start a server.
+  return tf.train.Server(
+      tf.train.ClusterSpec(cluster),
+      protocol="grpc",
+      job_name=task.type,
+      task_index=task.index)
+
+
+def dispatch(cluster, task):
+  """Starts a Trainer or a ParameterServer."""
+
+  if not cluster or task.type == "master" or task.type == "worker":
+    Trainer(cluster, task).run()
+  elif task.type == "ps":
+    ParameterServer(cluster, task).run()
+  else:
+    raise ValueError("%s: Invalid task_type: %s." %
+                     (task_as_string(task), task.type))
+
+
+def task_as_string(task):
+  return "/job:%s/task:%s" % (task.type, task.index)
+
+
+def main(unused_argv):
+
+  # Load the environment.
+  env = json.loads(os.environ.get("TF_CONFIG", "{}"))
+
+  # Load the cluster data from the environment.
+  cluster_data = env.get("cluster", None)
+  cluster = tf.train.ClusterSpec(cluster_data) if cluster_data else None
+
+  # Load the task data from the environment.
+  task_data = env.get("task", None) or {"type": "master", "index": 0}
+  task = type("TaskSpec", (object,), task_data)
+
+  # Logging the version.
+  logging.set_verbosity(tf.logging.INFO)
+  logging.info("%s: Tensorflow version: %s.",
+               task_as_string(task), tf.__version__)
+
+  # Dispatch to a master, a worker, or a parameter server.
+  dispatch(cluster, task)
 
 
 if __name__ == "__main__":
   app.run()
-
