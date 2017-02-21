@@ -145,7 +145,7 @@ def get_input_data_tensors(reader,
                     data_pattern + "'.")
     logging.info("Number of training files: %s.", str(len(files)))
     filename_queue = tf.train.string_input_producer(
-        files, num_epochs=num_epochs)
+        files, num_epochs=num_epochs, shuffle=True)
     training_data = [
         reader.prepare_reader(filename_queue) for _ in xrange(num_readers)
     ]
@@ -166,7 +166,6 @@ def find_class_by_name(name, modules):
 
 def build_graph(reader,
                 model,
-                device_fn,
                 train_data_pattern,
                 label_loss_fn=losses.CrossEntropyLoss(),
                 batch_size=1000,
@@ -185,8 +184,6 @@ def build_graph(reader,
     reader: The data file reader. It should inherit from BaseReader.
     model: The core model (e.g. logistic or neural net). It should inherit
            from BaseModel.
-    device_fn: A function to pass to tf.device() created using
-                tf.train.replica_device_setter.
     train_data_pattern: glob path to the training data files.
     label_loss_fn: What kind of loss to apply to the model. It should inherit
                 from BaseLoss.
@@ -199,45 +196,45 @@ def build_graph(reader,
     num_epochs: How many passes to make over the data. 'None' means an
                 unlimited number of passes.
   """
-  with tf.device(device_fn):
-    global_step = tf.Variable(0, trainable=False, name="global_step")
-    optimizer = optimizer_class(base_learning_rate)
-    unused_video_id, model_input_raw, labels_batch, num_frames = (
-        get_input_data_tensors(
-            reader,
-            train_data_pattern,
-            batch_size=batch_size,
-            num_readers=num_readers,
-            num_epochs=num_epochs))
-    tf.summary.histogram("model/input_raw", model_input_raw)
 
-    feature_dim = len(model_input_raw.get_shape()) - 1
+  global_step = tf.Variable(0, trainable=False, name="global_step")
+  optimizer = optimizer_class(base_learning_rate)
+  unused_video_id, model_input_raw, labels_batch, num_frames = (
+      get_input_data_tensors(
+          reader,
+          train_data_pattern,
+          batch_size=batch_size,
+          num_readers=num_readers,
+          num_epochs=num_epochs))
+  tf.summary.histogram("model/input_raw", model_input_raw)
 
-    model_input = tf.nn.l2_normalize(model_input_raw, feature_dim)
+  feature_dim = len(model_input_raw.get_shape()) - 1
 
-    with tf.name_scope("model"):
-      result = model.create_model(
-          model_input,
-          num_frames=num_frames,
-          vocab_size=reader.num_classes,
-          labels=labels_batch)
+  model_input = tf.nn.l2_normalize(model_input_raw, feature_dim)
 
-      for variable in slim.get_model_variables():
-        tf.summary.histogram(variable.op.name, variable)
+  with tf.name_scope("model"):
+    result = model.create_model(
+        model_input,
+        num_frames=num_frames,
+        vocab_size=reader.num_classes,
+        labels=labels_batch)
 
-      predictions = result["predictions"]
-      if "loss" in result.keys():
-        label_loss = result["loss"]
-      else:
-        label_loss = label_loss_fn.calculate_loss(predictions, labels_batch)
-      tf.summary.scalar("label_loss", label_loss)
+    for variable in slim.get_model_variables():
+      tf.summary.histogram(variable.op.name, variable)
 
-      if "regularization_loss" in result.keys():
-        reg_loss = result["regularization_loss"]
-      else:
-        reg_loss = tf.constant(0.0)
-      if regularization_penalty != 0:
-        tf.summary.scalar("reg_loss", reg_loss)
+    predictions = result["predictions"]
+    if "loss" in result.keys():
+      label_loss = result["loss"]
+    else:
+      label_loss = label_loss_fn.calculate_loss(predictions, labels_batch)
+    tf.summary.scalar("label_loss", label_loss)
+
+    if "regularization_loss" in result.keys():
+      reg_loss = result["regularization_loss"]
+    else:
+      reg_loss = tf.constant(0.0)
+    if regularization_penalty != 0:
+      tf.summary.scalar("reg_loss", reg_loss)
 
     # Adds update_ops (e.g., moving average updates in batch normalization) as
     # a dependency to the train_op.
@@ -301,7 +298,7 @@ class Trainer(object):
     with tf.Graph().as_default() as graph:
       with tf.device(device_fn):
 
-        saver = self.recover_or_build_model(device_fn)
+        saver = self.recover_or_build_model()
         global_step = tf.get_collection("global_step")[0]
         loss = tf.get_collection("loss")[0]
         predictions = tf.get_collection("predictions")[0]
@@ -388,8 +385,8 @@ class Trainer(object):
       server = start_server(self.cluster, self.task)
       target = server.target
       device_fn = tf.train.replica_device_setter(
+          ps_device="/job:ps",
           worker_device="/job:%s/task:%d" % (self.task.type, self.task.index),
-          merge_devices=True,
           cluster=self.cluster)
     else:
       target = ""
@@ -411,7 +408,7 @@ class Trainer(object):
             " when starting a new model. Please delete it manually and" +
             " try again.", task_as_string(self.task))
 
-  def recover_or_build_model(self, device_fn):
+  def recover_or_build_model(self):
     """Recovers the model from a checkpoint or build it."""
 
     latest_checkpoint = tf.train.latest_checkpoint(FLAGS.train_dir)
@@ -419,23 +416,23 @@ class Trainer(object):
     if FLAGS.start_new_model:
       logging.info("%s: Flag 'start_new_model' is set. Building a new model.",
                    task_as_string(self.task))
-      return self.find_and_build_model(device_fn)
+      return self.find_and_build_model()
     elif not latest_checkpoint:
       logging.info("%s: No checkpoint file found. Building a new model.",
                    task_as_string(self.task))
-      return self.find_and_build_model(device_fn)
+      return self.find_and_build_model()
     else:
       meta_filename = latest_checkpoint + ".meta"
       if not gfile.Exists(meta_filename):
         logging.info("%s: No meta graph file found. Building a new model.",
                      task_as_string(self.task))
-        return self.find_and_build_model(device_fn)
+        return self.find_and_build_model()
       else:
         logging.info("%s: Restoring from meta graph file %s",
                      task_as_string(self.task), meta_filename)
         return tf.train.import_meta_graph(meta_filename)
 
-  def find_and_build_model(self, device_fn):
+  def find_and_build_model(self):
     """Find the model and build the graph."""
 
     # Convert feature_names and feature_sizes to lists of values.
@@ -459,7 +456,6 @@ class Trainer(object):
     build_graph(
         reader=reader,
         model=model,
-        device_fn=device_fn,
         optimizer_class=optimizer_class,
         train_data_pattern=FLAGS.train_data_pattern,
         label_loss_fn=label_loss_fn,
