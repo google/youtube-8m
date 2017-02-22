@@ -82,8 +82,10 @@ if __name__ == "__main__":
                        "How many threads to use for reading input files.")
   flags.DEFINE_string("optimizer", "AdamOptimizer",
                       "What optimizer class to use.")
-  flags.DEFINE_bool("log_device_placement", False,
-                    "Whether device placement should be logged.")
+  flags.DEFINE_bool(
+      "log_device_placement", False,
+      "Whether to write the device on which every op will run into the "
+      "logs on startup.")
 
 
 def validate_class_name(flag_value, category, modules, expected_superclass):
