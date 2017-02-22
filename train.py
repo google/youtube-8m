@@ -396,7 +396,7 @@ def main(unused_argv):
                 num_readers=FLAGS.num_readers,
                 batch_size=FLAGS.batch_size)
     logging.info("built graph")
-    saver = tf.train.Saver(keep_checkpoint_every_n_hours=0.5)
+    saver = tf.train.Saver(max_to_keep=0, keep_checkpoint_every_n_hours=0.25)
 
   train_loop(is_chief=is_chief,
              train_dir=FLAGS.train_dir,
