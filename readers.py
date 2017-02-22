@@ -18,7 +18,6 @@ import tensorflow as tf
 import utils
 
 from tensorflow import logging
-
 def resize_axis(tensor, axis, new_size, fill_value=0):
   """Truncates or pads a tensor to new_size on on a given axis.
 
@@ -92,7 +91,7 @@ class YT8MAggregatedFeatureReader(BaseReader):
     self.feature_sizes = feature_sizes
     self.feature_names = feature_names
 
-  def prepare_reader(self, filename_queue,):
+  def prepare_reader(self, filename_queue, batch_size=1024):
     """Creates a single reader thread for pre-aggregated YouTube 8M Examples.
 
     Args:
@@ -102,7 +101,7 @@ class YT8MAggregatedFeatureReader(BaseReader):
       A tuple of video indexes, features, labels, and padding data.
     """
     reader = tf.TFRecordReader()
-    _, serialized_example = reader.read(filename_queue)
+    _, serialized_examples = reader.read_up_to(filename_queue, batch_size)
 
     # set the mapping from the fields to data types in the proto
     num_features = len(self.feature_names)
@@ -117,22 +116,13 @@ class YT8MAggregatedFeatureReader(BaseReader):
       feature_map[self.feature_names[feature_index]] = tf.FixedLenFeature(
           [self.feature_sizes[feature_index]], tf.float32)
 
-    features = tf.parse_single_example(serialized_example,
-                                       features=feature_map)
-
-    labels = (tf.cast(
-        tf.sparse_to_dense(features["labels"].values, (self.num_classes,), 1,
-            validate_indices=False),
-        tf.bool))
+    features = tf.parse_example(serialized_examples, features=feature_map)
+    labels = tf.sparse_to_indicator(features["labels"], self.num_classes)
+    labels.set_shape([None, self.num_classes])
     concatenated_features = tf.concat([
-        features[feature_name] for feature_name in self.feature_names], 0)
-    fdim = concatenated_features.get_shape()[0].value
-    assert fdim == sum(self.feature_sizes), \
-        "dimensionality of the concatenated feature (={}) != sum of " \
-        "dimensionalities of groups of features (={})".format( \
-            fdim, sum(self.feature_sizes))
+        features[feature_name] for feature_name in self.feature_names], 1)
 
-    return features["video_id"], concatenated_features, labels, tf.constant(1)
+    return features["video_id"], concatenated_features, labels, tf.ones([tf.shape(serialized_examples)[0]])
 
 class YT8MFrameFeatureReader(BaseReader):
   """Reads TFRecords of SequenceExamples.
@@ -258,5 +248,13 @@ class YT8MFrameFeatureReader(BaseReader):
 
     # concatenate different features
     video_matrix = tf.concat(feature_matrices, 1)
-    return contexts["video_id"], video_matrix, labels, num_frames
+
+    # convert to batch format.
+    # TODO: Do proper batch reads to remove the IO bottleneck.
+    batch_video_ids = tf.expand_dims(contexts["video_id"], 0)
+    batch_video_matrix = tf.expand_dims(video_matrix, 0)
+    batch_labels = tf.expand_dims(labels, 0)
+    batch_frames = tf.expand_dims(num_frames, 0)
+
+    return batch_video_ids, batch_video_matrix, batch_labels, batch_frames
 
