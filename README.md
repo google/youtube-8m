@@ -47,10 +47,11 @@ follow the instructions [here](https://cloud.google.com/ml/docs/how-tos/getting-
 If you are participating in the Google Cloud & YouTube-8M Video Understanding
 Challenge hosted on kaggle.com, see [these instructions](https://www.kaggle.com/c/youtube8m#getting-started-with-google-cloud) instead.
 
-Please also verify that you have Tensorflow 1.0.0 or higher installed by
-running the following command:
+Please also verify that you have Python 2.7+ and Tensorflow 1.0.0 or higher
+installed by running the following commands:
 
 ```sh
+python --version
 python -c 'import tensorflow as tf; print(tf.__version__)'
 ```
 
@@ -210,16 +211,29 @@ gsutil cp $BUCKET_NAME/${JOB_TO_EVAL}/predictions.csv .
 Append
 ```sh
 --frame_features=True --model=FrameLevelLogisticModel --feature_names="rgb" \
---feature_sizes="1024" --batch_size=256
+--feature_sizes="1024" --batch_size=256 \
 --train_dir=$BUCKET_NAME/yt8m_train_frame_level_logistic_model
 ```
 
 to the 'gcloud' commands given above, and change 'video_level' in paths to
-'frame_level'.
+'frame_level'. Here is a sample command to kick-off a frame-level job:
+
+```sh
+JOB_NAME=yt8m_train_$(date +%Y%m%d_%H%M%S); gcloud --verbosity=debug beta ml jobs \
+submit training $JOB_NAME \
+--package-path=youtube-8m --module-name=youtube-8m.train \
+--staging-bucket=$BUCKET_NAME --region=us-central1 \
+--config=youtube-8m/cloudml-gpu.yaml \
+-- --train_data_pattern='gs://youtube8m-ml/1/frame_level/train/train*.tfrecord' \
+--frame_features=True --model=FrameLevelLogisticModel --feature_names="rgb" \
+--feature_sizes="1024" --batch_size=256 \
+--train_dir=$BUCKET_NAME/yt8m_train_frame_level_logistic_model
+```
 
 The 'FrameLevelLogisticModel' is designed to provide equivalent results to a
 logistic model trained over the video-level features. Please look at the
-'models.py' file to see how to implement your own models.
+'video_level_models.py' or 'frame_level_models.py' files to see how to implement
+your own models.
 
 
 ### Using Audio Features
@@ -256,6 +270,14 @@ The starter code requires Tensorflow. If you haven't installed it yet, follow
 the instructions on [tensorflow.org](https://www.tensorflow.org/install/).
 This code has been tested with Tensorflow 1.0.0. Going forward, we will continue
 to target the latest released version of Tensorflow.
+
+Please verify that you have Python 2.7+ and Tensorflow 1.0.0 or higher
+installed by running the following commands:
+
+```sh
+python --version
+python -c 'import tensorflow as tf; print(tf.__version__)'
+```
 
 You can find complete instructions for downloading the dataset on the
 [YouTube-8M website](https://research.google.com/youtube8m/download.html).
@@ -326,7 +348,7 @@ When you are happy with your model, you can generate a csv file of predictions
 from it by running
 
 ```sh
-python inference.py --output_file=$MODEL_DIR/video_level_logistic_model/predictions.csv --input_data_pattern='/path/to/features/validate*.tfrecord' --train_dir=$MODEL_DIR/video_level_logistic_model
+python inference.py --output_file=$MODEL_DIR/video_level_logistic_model/predictions.csv --input_data_pattern='/path/to/features/test*.tfrecord' --train_dir=$MODEL_DIR/video_level_logistic_model
 ```
 
 This will output the top 20 predicted labels from the model for every example
