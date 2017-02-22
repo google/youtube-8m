@@ -123,7 +123,6 @@ class YT8MAggregatedFeatureReader(BaseReader):
     concatenated_features = tf.concat([
         features[feature_name] for feature_name in self.feature_names], 0)
 
-    #import pdb; pdb.set_trace()
     return features["video_id"], concatenated_features, labels, tf.ones([tf.shape(serialized_examples)[0]])
 
 class YT8MFrameFeatureReader(BaseReader):
@@ -250,5 +249,13 @@ class YT8MFrameFeatureReader(BaseReader):
 
     # concatenate different features
     video_matrix = tf.concat(feature_matrices, 1)
-    return contexts["video_id"], video_matrix, labels, num_frames
+
+    # convert to batch format.
+    # TODO: Do proper batch reads to remove the IO bottleneck.
+    batch_video_ids = tf.expand_dims(contexts["video_id"], 0)
+    batch_video_matrix = tf.expand_dims(video_matrix, 0)
+    batch_labels = tf.expand_dims(labels, 0)
+    batch_frames = tf.expand_dims(num_frames, 0)
+
+    return batch_video_ids, batch_video_matrix, batch_labels, batch_frames
 
