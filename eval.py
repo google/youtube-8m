@@ -109,7 +109,8 @@ def get_input_evaluation_tensors(reader,
         eval_data,
         batch_size=batch_size,
         capacity=3 * batch_size,
-        allow_smaller_final_batch=True)
+        allow_smaller_final_batch=True,
+        enqueue_many=True)
 
 
 def build_graph(reader,
