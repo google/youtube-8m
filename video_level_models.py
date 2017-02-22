@@ -79,12 +79,15 @@ class MoeModel(models.BaseModel):
         model_input,
         vocab_size * (num_mixtures + 1),
         activation_fn=None,
-        weights_regularizer=slim.l2_regularizer(l2_penalty))
+        biases_initializer=None,
+        weights_regularizer=slim.l2_regularizer(l2_penalty),
+        scope="gates")
     expert_activations = slim.fully_connected(
         model_input,
         vocab_size * num_mixtures,
         activation_fn=None,
-        weights_regularizer=slim.l2_regularizer(l2_penalty))
+        weights_regularizer=slim.l2_regularizer(l2_penalty),
+        scope="experts")
 
     gating_distribution = tf.nn.softmax(tf.reshape(
         gate_activations,
