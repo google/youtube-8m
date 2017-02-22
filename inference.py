@@ -106,7 +106,8 @@ def get_input_data_tensors(reader, data_pattern, batch_size, num_readers=1):
     video_id_batch, video_batch, unused_labels, num_frames_batch = (
         tf.train.batch_join(examples_and_labels,
                             batch_size=batch_size,
-                            allow_smaller_final_batch = True))
+                            allow_smaller_final_batch = True,
+                            enqueue_many=True))
     return video_id_batch, video_batch, num_frames_batch
 
 def inference(reader, train_dir, data_pattern, out_file_location, batch_size, top_k):
