@@ -61,8 +61,18 @@ if __name__ == "__main__":
       " new model instance.")
       
   flags.DEFINE_bool(
-      "mean_var_max", False,
-      "If set, this will compute variance and maximum of frame level features"
+      "var", False,
+      "If set, this will compute variance of frame level features"
+      " before feeding to video-level model.")
+
+  flags.DEFINE_bool(
+      "max", False,
+      "If set, this will compute max of frame level features"
+      " before feeding to video-level model.")
+
+  flags.DEFINE_bool(
+      "arg_max", False,
+      "If set, this will compute arg_max of frame level features"
       " before feeding to video-level model.")
 
   # Training flags.
@@ -214,7 +224,8 @@ def build_graph(reader,
             num_epochs=num_epochs))
     tf.summary.histogram("model/input_raw", model_input_raw)
 
-    if FLAGS.mean_var_max:
+    if FLAGS.var:
+	#compute the mean and variance of the frame-level input data
         num_frames = tf.cast(tf.expand_dims(num_frames, 1), tf.float32)
         feature_size = model_input_raw.get_shape().as_list()[2]
         max_frames = model_input_raw.get_shape().as_list()[1]
@@ -222,17 +233,33 @@ def build_graph(reader,
             tf.tile(num_frames, [1, feature_size]), [-1, feature_size])
         
         avg_pooled = tf.reduce_sum(model_input_raw,axis=[1]) / denominators
-        var_pooled = tf.reduce_sum(tf.square(model_input_raw-tf.expand_dims(avg_pooled,1)),axis=[1]) - \
+        avg_pooled = tf.nn.l2_normalize(avg_pooled,1)
+	
+	#Because model_input_raw is padded with zeroes, we need to correct the sum of the variances
+	#each video will have max_frames-denominators number of zeroes padded at the end
+	var_pooled = tf.reduce_sum(tf.square(model_input_raw-tf.expand_dims(avg_pooled,1)),axis=[1]) - \
                             (max_frames-denominators)*tf.square(avg_pooled)
         var_pooled = tf.sqrt(var_pooled)
         tf.summary.histogram("model/var_pooled",var_pooled)
-        max_pooled = tf.reduce_max(model_input_raw,axis=[1])
-        tf.summary.histogram("model/max_pooled",max_pooled)
-        total_pooled = tf.concat([avg_pooled,var_pooled,max_pooled],1)
+        var_pooled = tf.nn.l2_normalize(var_pooled, 1)
+	model_input = tf.concat([avg_pooled,var_pooled],1)
 
-    feature_dim = len(total_pooled.get_shape()) - 1
+    if FLAGS.max:
+	max_pooled = tf.reduce_max(model_input_raw,axis=[1])
+	tf.summary.histogram("model/max_pooled",max_pooled)
+	max_pooled = tf.nn.l2_normalize(max_pooled,1)
 
-    model_input = tf.nn.l2_normalize(total_pooled, feature_dim)
+        model_input = tf.concat([model_input,max_pooled],1)
+
+    if FLAGS.arg_max:
+	arg_max_pooled = tf.argmax(model_input_raw,2)
+	tf.summary.histogram("model/arg_max_pooled",arg_max_pooled)
+	arg_max_pooled = tf.nn.l2_normalize(tf.cast(arg_max_pooled,tf.float32),1)
+
+	model_input = tf.concat([model_input,arg_max_pooled],1)
+    if ((not FLAGS.var and not FLAGS.max) and not FLAGS.arg_max):
+	feature_dim = len(model_input_raw.get_shape()) - 1
+	model_input = tf.nn.l2_normalize(model_input_raw, feature_dim)
 
     with tf.name_scope("model"):
       result = model.create_model(model_input,

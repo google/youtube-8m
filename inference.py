@@ -57,6 +57,8 @@ if __name__ == '__main__':
                       "to use for training.")
   flags.DEFINE_string("feature_sizes", "1024", "Length of the feature vectors.")
 
+  flags.DEFINE_bool(
+      "var",False,"compute variance")
 
   # Other flags.
   flags.DEFINE_integer("num_readers", 1,
@@ -135,6 +137,8 @@ def inference(reader, train_dir, data_pattern, out_file_location, batch_size, to
 
     try:
       while not coord.should_stop():
+	  if FLAGS.var:
+	    num_frames_tensor = tf.squeeze(num_frames_tensor)
           video_id_batch_val, video_batch_val,num_frames_batch_val = sess.run([video_id_batch, video_batch, num_frames_batch])
           predictions_val, = sess.run([predictions_tensor], feed_dict={input_tensor: video_batch_val, num_frames_tensor: num_frames_batch_val})
           now = time.time()
