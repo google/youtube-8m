@@ -148,7 +148,7 @@ def get_input_data_tensors(reader,
     filename_queue = tf.train.string_input_producer(files,
                                                     num_epochs=num_epochs)
     training_data = [
-        reader.prepare_reader(filename_queue) for _ in xrange(num_readers)]
+        reader.prepare_reader(filename_queue) for _ in range(num_readers)]
 
     return tf.train.shuffle_batch_join(
         training_data,
