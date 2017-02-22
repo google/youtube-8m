@@ -30,9 +30,6 @@ from tensorflow import gfile
 from tensorflow import logging
 import utils
 
-_SAVE_INTERVAL_SECONDS = 60
-_LOG_INTERVAL_SECONDS = 5
-
 FLAGS = flags.FLAGS
 
 if __name__ == "__main__":
@@ -86,8 +83,7 @@ if __name__ == "__main__":
       "log_device_placement", False,
       "Whether to write the device on which every op will run into the "
       "logs on startup.")
-
-
+      
 def validate_class_name(flag_value, category, modules, expected_superclass):
   """Checks that the given string matches a class of the expected type.
 
@@ -110,11 +106,11 @@ def validate_class_name(flag_value, category, modules, expected_superclass):
     if not candidate:
       continue
     if not issubclass(candidate, expected_superclass):
-      raise flags.FlagsError("%s '%s' doesn't inherit from %s." % (
-          category, flag_value, expected_superclass.__name__))
+      raise flags.FlagsError("%s '%s' doesn't inherit from %s." %
+                             (category, flag_value,
+                              expected_superclass.__name__))
     return True
   raise flags.FlagsError("Unable to find %s '%s'." % (category, flag_value))
-
 
 def get_input_data_tensors(reader,
                            data_pattern,
@@ -266,7 +262,7 @@ def build_graph(reader,
 class Trainer(object):
   """A Trainer to train a Tensorflow graph."""
 
-  def __init__(self, cluster, task):
+  def __init__(self, cluster, task, train_dir, log_device_placement=True):
     """"Creates a Trainer.
 
     Args:
@@ -278,22 +274,21 @@ class Trainer(object):
     self.cluster = cluster
     self.task = task
     self.is_master = (task.type == "master" and task.index == 0)
-    self.log_device_placement = FLAGS.log_device_placement
-    self.train_dir = FLAGS.train_dir
-    self.config = tf.ConfigProto(log_device_placement=self.log_device_placement)
+    self.train_dir = train_dir
+    self.config = tf.ConfigProto(log_device_placement=log_device_placement)
 
     if self.is_master and self.task.index > 0:
       raise StandardError("%s: Only one replica of master expected",
                           task_as_string(self.task))
 
-  def run(self):
+  def run(self, start_new_model=False):
     """Performs training on the currently defined Tensorflow graph.
 
     Returns:
       A tuple of the training Hit@1 and the training PERR.
     """
-
-    self.remove_existing_training_directory()
+    if self.is_master and start_new_model:
+      self.remove_training_directory(self.train_dir)
 
     target, device_fn = self.start_server_if_distributed()
 
@@ -321,9 +316,6 @@ class Trainer(object):
     logging.info("%s: Starting managed session.", task_as_string(self.task))
     with sv.managed_session(target, config=self.config) as sess:
 
-      self.last_save = 0
-      self.last_log = 0
-
       try:
         logging.info("%s: Entering training loop.", task_as_string(self.task))
         while not sv.should_stop():
@@ -333,13 +325,7 @@ class Trainer(object):
               [train_op, global_step, loss, predictions, labels])
           seconds_per_batch = time.time() - batch_start_time
 
-          self.now = time.time()
-          is_time_to_save = (self.now - self.last_save) > _SAVE_INTERVAL_SECONDS
-          is_time_to_log = (self.now - self.last_log) > _LOG_INTERVAL_SECONDS
-          should_save = self.is_master and is_time_to_save and self.train_dir
-          should_log = is_time_to_log or should_save
-
-          if should_log or should_save:
+          if self.is_master:
             examples_per_second = labels_val.shape[0] / seconds_per_batch
             hit_at_one = eval_util.calculate_hit_at_one(predictions_val,
                                                         labels_val)
@@ -347,15 +333,12 @@ class Trainer(object):
                 predictions_val, labels_val)
             gap = eval_util.calculate_gap(predictions_val, labels_val)
 
-          if should_log:
             logging.info(
                 "%s: training step " + str(global_step_val) + "| Hit@1: " +
                 ("%.2f" % hit_at_one) + " PERR: " + ("%.2f" % perr) + " GAP: " +
                 ("%.2f" % gap) + " Loss: " + str(loss_val),
                 task_as_string(self.task))
-            self.last_log = self.now
 
-          if should_save:
             logging.info("%s: Writing summary.", task_as_string(self.task))
             sv.summary_writer.add_summary(
                 utils.MakeSummary("model/Training_Hit@1", hit_at_one),
@@ -368,7 +351,6 @@ class Trainer(object):
                 utils.MakeSummary("global_step/Examples/Second",
                                   examples_per_second), global_step_val)
             sv.summary_writer.flush()
-            self.last_save = self.now
 
       except tf.errors.OutOfRangeError:
         logging.info("%s: Done training -- epoch limit reached.",
@@ -395,46 +377,44 @@ class Trainer(object):
       device_fn = ""
     return (target, device_fn)
 
-  def remove_existing_training_directory(self):
-    """Removes the training directory if requested."""
+  def remove_training_directory(self, train_dir):
+    """Removes the training directory."""
+    try:
+      logging.info(
+          "%s: Removing existing train directory.",
+          task_as_string(self.task))
+      gfile.DeleteRecursively(train_dir)
+    except:
+      logging.error(
+          "%s: Failed to delete directory " + train_dir +
+          " when starting a new model. Please delete it manually and" +
+          " try again.", task_as_string(self.task))
 
-    if self.is_master and FLAGS.start_new_model:
-      try:
-        logging.info(
-            "%s: Flag 'start_new_model' is set. Removing existing train directory.",
-            task_as_string(self.task))
-        gfile.DeleteRecursively(FLAGS.train_dir)
-      except:
-        logging.error(
-            "%s: Failed to delete directory " + FLAGS.train_dir +
-            " when starting a new model. Please delete it manually and" +
-            " try again.", task_as_string(self.task))
-
-  def recover_or_build_model(self):
+  def recover_or_build_model(self, start_new_model, train_dir):
     """Recovers the model from a checkpoint or build it."""
 
-    latest_checkpoint = tf.train.latest_checkpoint(FLAGS.train_dir)
+    latest_checkpoint = tf.train.latest_checkpoint(train_dir)
 
-    if FLAGS.start_new_model:
+    if start_new_model:
       logging.info("%s: Flag 'start_new_model' is set. Building a new model.",
                    task_as_string(self.task))
-      return self.find_and_build_model()
+      return self.build_model()
     elif not latest_checkpoint:
       logging.info("%s: No checkpoint file found. Building a new model.",
                    task_as_string(self.task))
-      return self.find_and_build_model()
+      return self.build_model()
     else:
       meta_filename = latest_checkpoint + ".meta"
       if not gfile.Exists(meta_filename):
         logging.info("%s: No meta graph file found. Building a new model.",
                      task_as_string(self.task))
-        return self.find_and_build_model()
+        return self.build_model()
       else:
         logging.info("%s: Restoring from meta graph file %s",
                      task_as_string(self.task), meta_filename)
         return tf.train.import_meta_graph(meta_filename)
 
-  def find_and_build_model(self):
+  def build_model(self):
     """Find the model and build the graph."""
 
     # Convert feature_names and feature_sizes to lists of values.
@@ -517,25 +497,10 @@ def start_server(cluster, task):
       job_name=task.type,
       task_index=task.index)
 
-
-def dispatch(cluster, task):
-  """Starts a Trainer or a ParameterServer."""
-
-  if not cluster or task.type == "master" or task.type == "worker":
-    Trainer(cluster, task).run()
-  elif task.type == "ps":
-    ParameterServer(cluster, task).run()
-  else:
-    raise ValueError("%s: Invalid task_type: %s." %
-                     (task_as_string(task), task.type))
-
-
 def task_as_string(task):
   return "/job:%s/task:%s" % (task.type, task.index)
 
-
 def main(unused_argv):
-
   # Load the environment.
   env = json.loads(os.environ.get("TF_CONFIG", "{}"))
 
@@ -553,7 +518,14 @@ def main(unused_argv):
                task_as_string(task), tf.__version__)
 
   # Dispatch to a master, a worker, or a parameter server.
-  dispatch(cluster, task)
+  if not cluster or task.type == "master" or task.type == "worker":
+    Trainer(cluster, task, FLAGS.train_dir, FLAGS.log_device_placement).run(
+        start_new_model=FLAGS.start_new_model)
+  elif task.type == "ps":
+    ParameterServer(cluster, task).run()
+  else:
+    raise ValueError("%s: Invalid task_type: %s." %
+                     (task_as_string(task), task.type))
 
 
 if __name__ == "__main__":
