@@ -83,7 +83,7 @@ if __name__ == "__main__":
       "log_device_placement", False,
       "Whether to write the device on which every op will run into the "
       "logs on startup.")
-      
+
 def validate_class_name(flag_value, category, modules, expected_superclass):
   """Checks that the given string matches a class of the expected type.
 
@@ -295,7 +295,7 @@ class Trainer(object):
     with tf.Graph().as_default() as graph:
       with tf.device(device_fn):
 
-        saver = self.recover_or_build_model()
+        saver = self.recover_or_build_model(start_new_model, self.train_dir)
         global_step = tf.get_collection("global_step")[0]
         loss = tf.get_collection("loss")[0]
         predictions = tf.get_collection("predictions")[0]
@@ -339,7 +339,6 @@ class Trainer(object):
                 ("%.2f" % gap) + " Loss: " + str(loss_val),
                 task_as_string(self.task))
 
-            logging.info("%s: Writing summary.", task_as_string(self.task))
             sv.summary_writer.add_summary(
                 utils.MakeSummary("model/Training_Hit@1", hit_at_one),
                 global_step_val)
