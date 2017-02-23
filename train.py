@@ -172,7 +172,7 @@ def build_graph(reader,
                 batch_size=1000,
                 base_learning_rate=0.01,
                 optimizer_class=tf.train.AdamOptimizer,
-                regularization_penalty=1e-3,
+                regularization_penalty=1,
                 num_readers=1,
                 num_epochs=None):
   """Creates the Tensorflow graph.
