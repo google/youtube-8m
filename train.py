@@ -68,7 +68,7 @@ if __name__ == "__main__":
       "label_loss", "CrossEntropyLoss",
       "Which loss function to use for training the model.")
   flags.DEFINE_float(
-      "regularization_penalty", 1e-3,
+      "regularization_penalty", 1,
       "How much weight to give to the regularization loss (the label loss has "
       "a weight of 1).")
   flags.DEFINE_float("base_learning_rate", 0.01,
@@ -172,7 +172,7 @@ def build_graph(reader,
                 batch_size=1000,
                 base_learning_rate=0.01,
                 optimizer_class=tf.train.AdamOptimizer,
-                regularization_penalty=1e-3,
+                regularization_penalty=1,
                 num_readers=1,
                 num_epochs=None):
   """Creates the Tensorflow graph.
@@ -234,6 +234,9 @@ def build_graph(reader,
         reg_loss = result["regularization_loss"]
       else:
         reg_loss = tf.constant(0.0)
+      reg_losses = tf.losses.get_regularization_losses()
+      if reg_losses:
+        reg_loss += tf.add_n(reg_losses)
       if regularization_penalty != 0:
         tf.summary.scalar("reg_loss", reg_loss)
 
