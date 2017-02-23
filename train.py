@@ -73,6 +73,9 @@ if __name__ == "__main__":
       "a weight of 1).")
   flags.DEFINE_float("base_learning_rate", 0.01,
                      "Which learning rate to start with.")
+  flags.DEFINE_integer("num_epochs", 5,
+                       "How many passes to make over the dataset before "
+                       "halting training.")
 
   # Other flags.
   flags.DEFINE_integer("num_readers", 8,
@@ -174,7 +177,7 @@ def build_graph(reader,
                 optimizer_class=tf.train.AdamOptimizer,
                 regularization_penalty=1,
                 num_readers=1,
-                num_epochs=None):
+                num_epochs=100):
   """Creates the Tensorflow graph.
 
   This will only be called once in the life of
@@ -399,7 +402,8 @@ def main(unused_argv):
                 base_learning_rate=FLAGS.base_learning_rate,
                 regularization_penalty=FLAGS.regularization_penalty,
                 num_readers=FLAGS.num_readers,
-                batch_size=FLAGS.batch_size)
+                batch_size=FLAGS.batch_size,
+                num_epochs=FLAGS.num_epochs)
     logging.info("built graph")
     saver = tf.train.Saver(max_to_keep=0, keep_checkpoint_every_n_hours=0.25)
 
