@@ -113,7 +113,9 @@ should be deployed to the cloud worker. The module-name refers to the specific
 python script which should be executed (in this case the train module). Since
 the training data files are hosted in the public 'youtube8m-ml' storage bucket
 in the 'us-central1' region, we've colocated our job in the same
-region in order to have the fastest access to the data.
+region in order to have the fastest access to the data. If you find that your
+jobs are getting queued in the 'us-central1' region, you can try the 'us-east1'
+region instead.
 
 It may take several minutes before the job starts running on Google Cloud.
 When it starts you will see outputs like the following:
