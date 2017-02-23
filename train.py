@@ -64,6 +64,11 @@ if __name__ == "__main__":
   flags.DEFINE_integer(
       "batch_size", 1024,
       "How many examples to process per batch for training.")
+  
+  flags.DEFINE_integer(
+    "epochs", 100,
+    "How many epochs to run training.")
+  
   flags.DEFINE_string(
       "label_loss", "CrossEntropyLoss",
       "Which loss function to use for training the model.")
@@ -399,7 +404,8 @@ def main(unused_argv):
                 base_learning_rate=FLAGS.base_learning_rate,
                 regularization_penalty=FLAGS.regularization_penalty,
                 num_readers=FLAGS.num_readers,
-                batch_size=FLAGS.batch_size)
+                batch_size=FLAGS.batch_size,
+                num_epochs=FLAGS.epochs)
     logging.info("built graph")
     saver = tf.train.Saver(max_to_keep=0, keep_checkpoint_every_n_hours=0.25)
 
