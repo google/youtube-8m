@@ -122,7 +122,7 @@ def inference(reader, train_dir, data_pattern, out_file_location, batch_size, to
     else:
       meta_graph_location = latest_checkpoint + ".meta"
       logging.info("loading meta-graph: " + meta_graph_location)
-    saver = tf.train.import_meta_graph(meta_graph_location)
+    saver = tf.train.import_meta_graph(meta_graph_location, clear_devices=True)
     logging.info("restoring variables from " + latest_checkpoint)
     saver.restore(sess, latest_checkpoint)
     input_tensor = tf.get_collection("input_batch_raw")[0]
