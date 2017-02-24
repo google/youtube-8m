@@ -197,13 +197,8 @@ class DBoFModel(models.BaseModel):
 class FrameLevelLSTMLogisticModel(models.BaseModel):
 
   def create_model(self, model_input, vocab_size, num_frames, **unused_params):
-    """Creates a model which uses a logistic classifier over the output
-    of stacked LSTM layers.
-
-    This class is intended to be an example for implementors of frame level
-    models. If you want to train a model over averaged features it is more
-    efficient to average them beforehand rather than on the fly.
-
+    """Creates a model which uses a stack of LSTMs to represent the video.
+    
     Args:
       model_input: A 'batch_size' x 'max_frames' x 'num_features' matrix of
                    input features.
@@ -233,8 +228,10 @@ class FrameLevelLSTMLogisticModel(models.BaseModel):
       outputs, state = tf.nn.dynamic_rnn(stacked_lstm, model_input,
                                          sequence_length=num_frames,
                                          dtype=tf.float32)
-    output = slim.fully_connected(
-        state, vocab_size, activation_fn=tf.nn.sigmoid,
-        weights_regularizer=slim.l2_regularizer(0.01), scope='final_softmax')
 
-    return {"predictions": output}
+    aggregated_model = getattr(video_level_models,
+                               FLAGS.video_level_classifier_model)
+    return aggregated_model().create_model(
+        model_input=state,
+        vocab_size=vocab_size,
+        **unused_params)
