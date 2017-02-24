@@ -130,7 +130,16 @@ def inference(reader, train_dir, data_pattern, out_file_location, batch_size, to
     num_frames_tensor = tf.get_collection("num_frames")[0]
     predictions_tensor = tf.get_collection("predictions")[0]
 
-    sess.run([tf.local_variables_initializer()])
+    # Workaround for num_epochs issue.
+    def set_up_init_ops(variables):
+      for variable in variables:
+        if "train_input" in variable.name:
+          init_num_epochs = tf.assign(variable, 1)
+          variables.remove(variable)
+          return [init_num_epochs, tf.variables_initializer(variables)]
+
+    sess.run(set_up_init_ops(tf.get_collection_ref(
+        tf.GraphKeys.LOCAL_VARIABLES)))
 
     coord = tf.train.Coordinator()
     threads = tf.train.start_queue_runners(sess=sess, coord=coord)
