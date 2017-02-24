@@ -82,7 +82,7 @@ class FrameLevelLogisticModel(models.BaseModel):
         weights_regularizer=slim.l2_regularizer(1e-8))
     return {"predictions": output}
 
-class DBoFModel(models.BaseModel):
+class DbofModel(models.BaseModel):
   """Creates a Deep Bag of Frames model.
 
   The model projects the features for each frame into a higher dimensional
@@ -194,11 +194,11 @@ class DBoFModel(models.BaseModel):
         vocab_size=vocab_size,
         **unused_params)
 
-class FrameLevelLSTMLogisticModel(models.BaseModel):
+class LstmModel(models.BaseModel):
 
   def create_model(self, model_input, vocab_size, num_frames, **unused_params):
     """Creates a model which uses a stack of LSTMs to represent the video.
-    
+
     Args:
       model_input: A 'batch_size' x 'max_frames' x 'num_features' matrix of
                    input features.
