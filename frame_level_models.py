@@ -44,6 +44,8 @@ flags.DEFINE_string("video_level_classifier_model", "MoeModel",
                     "Some Frame-Level models can be decomposed into a "
                     "generalized pooling operation followed by a "
                     "classifier layer")
+flags.DEFINE_integer("lstm_cells", 512, "Number of LSTM cells.")
+flags.DEFINE_integer("lstm_layers", 2, "Number of LSTM layers.")
 
 class FrameLevelLogisticModel(models.BaseModel):
 
@@ -80,7 +82,7 @@ class FrameLevelLogisticModel(models.BaseModel):
         weights_regularizer=slim.l2_regularizer(1e-8))
     return {"predictions": output}
 
-class DBoFModel(models.BaseModel):
+class DbofModel(models.BaseModel):
   """Creates a Deep Bag of Frames model.
 
   The model projects the features for each frame into a higher dimensional
@@ -189,5 +191,47 @@ class DBoFModel(models.BaseModel):
                                FLAGS.video_level_classifier_model)
     return aggregated_model().create_model(
         model_input=activation,
+        vocab_size=vocab_size,
+        **unused_params)
+
+class LstmModel(models.BaseModel):
+
+  def create_model(self, model_input, vocab_size, num_frames, **unused_params):
+    """Creates a model which uses a stack of LSTMs to represent the video.
+
+    Args:
+      model_input: A 'batch_size' x 'max_frames' x 'num_features' matrix of
+                   input features.
+      vocab_size: The number of classes in the dataset.
+      num_frames: A vector of length 'batch' which indicates the number of
+           frames for each video (before padding).
+
+    Returns:
+      A dictionary with a tensor containing the probability predictions of the
+      model in the 'predictions' key. The dimensions of the tensor are
+      'batch_size' x 'num_classes'.
+    """
+    lstm_size = FLAGS.lstm_cells
+    number_of_layers = FLAGS.lstm_layers
+
+    ## Batch normalize the input
+    stacked_lstm = tf.contrib.rnn.MultiRNNCell(
+            [
+                tf.contrib.rnn.BasicLSTMCell(
+                    lstm_size, forget_bias=1.0, state_is_tuple=False)
+                for _ in range(number_of_layers)
+                ],
+            state_is_tuple=False)
+
+    loss = 0.0
+    with tf.variable_scope("RNN"):
+      outputs, state = tf.nn.dynamic_rnn(stacked_lstm, model_input,
+                                         sequence_length=num_frames,
+                                         dtype=tf.float32)
+
+    aggregated_model = getattr(video_level_models,
+                               FLAGS.video_level_classifier_model)
+    return aggregated_model().create_model(
+        model_input=state,
         vocab_size=vocab_size,
         **unused_params)

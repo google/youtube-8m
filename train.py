@@ -73,7 +73,13 @@ if __name__ == "__main__":
       "a weight of 1).")
   flags.DEFINE_float("base_learning_rate", 0.01,
                      "Which learning rate to start with.")
-  flags.DEFINE_integer("num_epochs", 5,
+  flags.DEFINE_float("learning_rate_decay", 0.95,
+                     "Learning rate decay factor to be applied every "
+                     "learning_rate_decay_examples.")
+  flags.DEFINE_float("learning_rate_decay_examples", 4000000,
+                     "Multiply current learning rate by learning_rate_decay "
+                     "every learning_rate_decay_examples.")
+  flags.DEFINE_integer("num_epochs", None,
                        "How many passes to make over the dataset before "
                        "halting training.")
 
@@ -82,6 +88,7 @@ if __name__ == "__main__":
                        "How many threads to use for reading input files.")
   flags.DEFINE_string("optimizer", "AdamOptimizer",
                       "What optimizer class to use.")
+  flags.DEFINE_float("clip_gradient_norm", 1.0, "Norm to clip gradients to.")
   flags.DEFINE_bool(
       "log_device_placement", False,
       "Whether to write the device on which every op will run into the "
@@ -172,10 +179,13 @@ def build_graph(reader,
                 label_loss_fn=losses.CrossEntropyLoss(),
                 batch_size=1000,
                 base_learning_rate=0.01,
+                learning_rate_decay_examples=1000000,
+                learning_rate_decay=0.95,
                 optimizer_class=tf.train.AdamOptimizer,
+                clip_gradient_norm=1.0,
                 regularization_penalty=1,
                 num_readers=1,
-                num_epochs=100):
+                num_epochs=None):
   """Creates the Tensorflow graph.
 
   This will only be called once in the life of
@@ -192,15 +202,25 @@ def build_graph(reader,
     batch_size: How many examples to process at a time.
     base_learning_rate: What learning rate to initialize the optimizer with.
     optimizer_class: Which optimization algorithm to use.
+    clip_gradient_norm: Magnitude of the gradient to clip to.
     regularization_penalty: How much weight to give the regularization loss
                             compared to the label loss.
     num_readers: How many threads to use for I/O operations.
     num_epochs: How many passes to make over the data. 'None' means an
                 unlimited number of passes.
   """
-
+  
   global_step = tf.Variable(0, trainable=False, name="global_step")
-  optimizer = optimizer_class(base_learning_rate)
+  
+  learning_rate = tf.train.exponential_decay(
+      base_learning_rate,
+      global_step * batch_size,
+      learning_rate_decay_examples,
+      learning_rate_decay,
+      staircase=True)
+  tf.summary.scalar('learning_rate', learning_rate)
+
+  optimizer = optimizer_class(learning_rate)
   unused_video_id, model_input_raw, labels_batch, num_frames = (
       get_input_data_tensors(
           reader,
@@ -209,7 +229,7 @@ def build_graph(reader,
           num_readers=num_readers,
           num_epochs=num_epochs))
   tf.summary.histogram("model/input_raw", model_input_raw)
-
+  
   feature_dim = len(model_input_raw.get_shape()) - 1
 
   model_input = tf.nn.l2_normalize(model_input_raw, feature_dim)
@@ -256,7 +276,11 @@ def build_graph(reader,
 
     # Incorporate the L2 weight penalties etc.
     final_loss = regularization_penalty * reg_loss + label_loss
-    train_op = optimizer.minimize(final_loss, global_step=global_step)
+    train_op = slim.learning.create_train_op(
+        final_loss,
+        optimizer,
+        global_step=global_step,
+        clip_gradient_norm=clip_gradient_norm)
 
     tf.add_to_collection("global_step", global_step)
     tf.add_to_collection("loss", label_loss)
@@ -444,9 +468,12 @@ class Trainer(object):
     build_graph(reader=reader,
                 model=model,
                 optimizer_class=optimizer_class,
+                clip_gradient_norm=FLAGS.clip_gradient_norm,
                 train_data_pattern=FLAGS.train_data_pattern,
                 label_loss_fn=label_loss_fn,
                 base_learning_rate=FLAGS.base_learning_rate,
+                learning_rate_decay=FLAGS.learning_rate_decay,
+                learning_rate_decay_examples=FLAGS.learning_rate_decay_examples,
                 regularization_penalty=FLAGS.regularization_penalty,
                 num_readers=FLAGS.num_readers,
                 batch_size=FLAGS.batch_size)

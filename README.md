@@ -213,7 +213,7 @@ gsutil cp $BUCKET_NAME/${JOB_TO_EVAL}/predictions.csv .
 Append
 ```sh
 --frame_features=True --model=FrameLevelLogisticModel --feature_names="rgb" \
---feature_sizes="1024" --batch_size=256 \
+--feature_sizes="1024" --batch_size=128 \
 --train_dir=$BUCKET_NAME/yt8m_train_frame_level_logistic_model
 ```
 
@@ -397,7 +397,7 @@ VIDEO_ID,LABEL1 LABEL2
 
 ## Overview of Models
 
-This sample code contains implementations of three of the models given in the
+This sample code contains implementations of the models given in the
 [YouTube-8M technical report](https://arxiv.org/abs/1609.08675).
 
 ### Video-Level Models
@@ -409,7 +409,10 @@ This sample code contains implementations of three of the models given in the
                 is not trained, and always predicts 0.
 
 ### Frame-Level Models
-* `DBoFModel`: Projects the features for each frame into a higher dimensional
+* `LstmModel`: Processes the features for each frame using a multi-layered
+               LSTM neural net. The final internal state of the LSTM
+               is input to a video-level model for classification.
+* `DbofModel`: Projects the features for each frame into a higher dimensional
                'clustering' space, pools across frames in that space, and then
                uses a video-level model to classify the now aggregated features.
 * `FrameLevelLogisticModel`: Equivalent to 'LogisticModel', but performs
