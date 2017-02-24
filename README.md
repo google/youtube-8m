@@ -96,26 +96,21 @@ over video-level features.
 ```sh
 BUCKET_NAME=gs://${USER}_yt8m_train_bucket
 # (One Time) Create a storage bucket to store training logs and checkpoints.
-gsutil mb -l us-central1 $BUCKET_NAME
+gsutil mb -l us-east1 $BUCKET_NAME
 # Submit the training job.
 JOB_NAME=yt8m_train_$(date +%Y%m%d_%H%M%S); gcloud --verbosity=debug beta ml jobs \
 submit training $JOB_NAME \
 --package-path=youtube-8m --module-name=youtube-8m.train \
---staging-bucket=$BUCKET_NAME --region=us-central1 \
+--staging-bucket=$BUCKET_NAME --region=us-east1 \
 --config=youtube-8m/cloudml-gpu.yaml \
--- --train_data_pattern='gs://youtube8m-ml/1/video_level/train/train*.tfrecord' \
+-- --train_data_pattern='gs://youtube8m-ml-us-east1/1/video_level/train/train*.tfrecord' \
 --train_dir=$BUCKET_NAME/yt8m_train_video_level_logistic_model
 ```
 
 In the 'gsutil' command above, the 'package-path' flag refers to the directory
 containing the 'train.py' script and more generally the python package which
 should be deployed to the cloud worker. The module-name refers to the specific
-python script which should be executed (in this case the train module). Since
-the training data files are hosted in the public 'youtube8m-ml' storage bucket
-in the 'us-central1' region, we've colocated our job in the same
-region in order to have the fastest access to the data. If you find that your
-jobs are getting queued in the 'us-central1' region, you can try the 'us-east1'
-region instead.
+python script which should be executed (in this case the train module).
 
 It may take several minutes before the job starts running on Google Cloud.
 When it starts you will see outputs like the following:
@@ -152,9 +147,9 @@ JOB_TO_EVAL=yt8m_train_video_level_logistic_model
 JOB_NAME=yt8m_eval_$(date +%Y%m%d_%H%M%S); gcloud --verbosity=debug beta ml jobs \
 submit training $JOB_NAME \
 --package-path=youtube-8m --module-name=youtube-8m.eval \
---staging-bucket=$BUCKET_NAME --region=us-central1 \
+--staging-bucket=$BUCKET_NAME --region=us-east1 \
 --config=youtube-8m/cloudml-gpu.yaml \
--- --eval_data_pattern='gs://youtube8m-ml/1/video_level/validate/validate*.tfrecord' \
+-- --eval_data_pattern='gs://youtube8m-ml-us-east1/1/video_level/validate/validate*.tfrecord' \
 --train_dir=$BUCKET_NAME/${JOB_TO_EVAL} --run_once=True
 ```
 
@@ -165,7 +160,7 @@ JOB_TO_EVAL=yt8m_train_video_level_logistic_model
 JOB_NAME=yt8m_inference_$(date +%Y%m%d_%H%M%S); gcloud --verbosity=debug beta ml jobs \
 submit training $JOB_NAME \
 --package-path=youtube-8m --module-name=youtube-8m.inference \
---staging-bucket=$BUCKET_NAME --region=us-central1 \
+--staging-bucket=$BUCKET_NAME --region=us-east1 \
 --config=youtube-8m/cloudml-gpu.yaml \
 -- --input_data_pattern='gs://youtube8m-ml/1/video_level/test/test*.tfrecord' \
 --train_dir=$BUCKET_NAME/${JOB_TO_EVAL} \
@@ -224,9 +219,9 @@ to the 'gcloud' commands given above, and change 'video_level' in paths to
 JOB_NAME=yt8m_train_$(date +%Y%m%d_%H%M%S); gcloud --verbosity=debug beta ml jobs \
 submit training $JOB_NAME \
 --package-path=youtube-8m --module-name=youtube-8m.train \
---staging-bucket=$BUCKET_NAME --region=us-central1 \
+--staging-bucket=$BUCKET_NAME --region=us-east1 \
 --config=youtube-8m/cloudml-gpu.yaml \
--- --train_data_pattern='gs://youtube8m-ml/1/frame_level/train/train*.tfrecord' \
+-- --train_data_pattern='gs://youtube8m-ml-us-east1/1/frame_level/train/train*.tfrecord' \
 --frame_features=True --model=FrameLevelLogisticModel --feature_names="rgb" \
 --feature_sizes="1024" --batch_size=256 \
 --train_dir=$BUCKET_NAME/yt8m_train_frame_level_logistic_model
