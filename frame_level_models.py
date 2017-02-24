@@ -79,7 +79,7 @@ class FrameLevelLogisticModel(models.BaseModel):
 
     output = slim.fully_connected(
         avg_pooled, vocab_size, activation_fn=tf.nn.sigmoid,
-        weights_regularizer=slim.l2_regularizer(0.01))
+        weights_regularizer=slim.l2_regularizer(1e-8))
     return {"predictions": output}
 
 class DBoFModel(models.BaseModel):

@@ -30,7 +30,7 @@ flags.DEFINE_integer(
 class LogisticModel(models.BaseModel):
   """Logistic model with L2 regularization."""
 
-  def create_model(self, model_input, vocab_size, **unused_params):
+  def create_model(self, model_input, vocab_size, l2_penalty=1e-8, **unused_params):
     """Creates a logistic model.
 
     Args:
@@ -43,7 +43,7 @@ class LogisticModel(models.BaseModel):
       batch_size x num_classes."""
     output = slim.fully_connected(
         model_input, vocab_size, activation_fn=tf.nn.sigmoid,
-        weights_regularizer=slim.l2_regularizer(0.01))
+        weights_regularizer=slim.l2_regularizer(l2_penalty))
     return {"predictions": output}
 
 class MoeModel(models.BaseModel):
@@ -53,7 +53,7 @@ class MoeModel(models.BaseModel):
                    model_input,
                    vocab_size,
                    num_mixtures=None,
-                   l2_penalty=1e-5,
+                   l2_penalty=1e-8,
                    **unused_params):
     """Creates a Mixture of (Logistic) Experts model.
 
@@ -79,12 +79,15 @@ class MoeModel(models.BaseModel):
         model_input,
         vocab_size * (num_mixtures + 1),
         activation_fn=None,
-        weights_regularizer=slim.l2_regularizer(l2_penalty))
+        biases_initializer=None,
+        weights_regularizer=slim.l2_regularizer(l2_penalty),
+        scope="gates")
     expert_activations = slim.fully_connected(
         model_input,
         vocab_size * num_mixtures,
         activation_fn=None,
-        weights_regularizer=slim.l2_regularizer(l2_penalty))
+        weights_regularizer=slim.l2_regularizer(l2_penalty),
+        scope="experts")
 
     gating_distribution = tf.nn.softmax(tf.reshape(
         gate_activations,

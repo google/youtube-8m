@@ -68,7 +68,7 @@ if __name__ == "__main__":
       "label_loss", "CrossEntropyLoss",
       "Which loss function to use for training the model.")
   flags.DEFINE_float(
-      "regularization_penalty", 1e-3,
+      "regularization_penalty", 1,
       "How much weight to give to the regularization loss (the label loss has "
       "a weight of 1).")
   flags.DEFINE_float("base_learning_rate", 0.01,
@@ -79,6 +79,10 @@ if __name__ == "__main__":
   flags.DEFINE_float("learning_rate_decay_examples", 4000000,
                      "Multiply current learning rate by learning_rate_decay "
                      "every learning_rate_decay_examples.")
+  flags.DEFINE_integer("num_epochs", 5,
+                       "How many passes to make over the dataset before "
+                       "halting training.")
+
   # Other flags.
   flags.DEFINE_integer("num_readers", 8,
                        "How many threads to use for reading input files.")
@@ -153,14 +157,15 @@ def get_input_data_tensors(reader,
     filename_queue = tf.train.string_input_producer(files,
                                                     num_epochs=num_epochs)
     training_data = [
-        reader.prepare_reader(filename_queue) for _ in xrange(num_readers)]
+        reader.prepare_reader(filename_queue) for _ in range(num_readers)]
 
     return tf.train.shuffle_batch_join(
         training_data,
         batch_size=batch_size,
         capacity=FLAGS.batch_size * 5,
         min_after_dequeue=FLAGS.batch_size,
-        allow_smaller_final_batch=True)
+        allow_smaller_final_batch=True,
+        enqueue_many=True)
 
 
 def find_class_by_name(name, modules):
@@ -179,9 +184,9 @@ def build_graph(reader,
                 learning_rate_decay=0.95,
                 optimizer_class=tf.train.AdamOptimizer,
                 clip_gradient_norm=1.0,
-                regularization_penalty=1e-3,
+                regularization_penalty=1,
                 num_readers=1,
-                num_epochs=None):
+                num_epochs=100):
   """Creates the Tensorflow graph.
 
   This will only be called once in the life of
@@ -250,6 +255,9 @@ def build_graph(reader,
         reg_loss = result["regularization_loss"]
       else:
         reg_loss = tf.constant(0.0)
+      reg_losses = tf.losses.get_regularization_losses()
+      if reg_losses:
+        reg_loss += tf.add_n(reg_losses)
       if regularization_penalty != 0:
         tf.summary.scalar("reg_loss", reg_loss)
 
@@ -310,13 +318,15 @@ def train_loop(train_dir=None,
   sv = tf.train.Supervisor(logdir=train_dir,
                            is_chief=is_chief,
                            global_step=global_step,
-                           save_model_secs=60,
-                           save_summaries_secs=60,
+                           save_model_secs=15 * 60,
+                           save_summaries_secs=120,
                            saver=saver)
   sess = sv.prepare_or_wait_for_session(
       master,
       start_standard_services=start_supervisor_services,
-      config=tf.ConfigProto(log_device_placement=False))
+      config=tf.ConfigProto(
+          log_device_placement=False,
+          allow_soft_placement=True))
 
   logging.info("prepared session")
   sv.start_queue_runners(sess)
@@ -417,9 +427,10 @@ def main(unused_argv):
                 learning_rate_decay_examples=FLAGS.learning_rate_decay_examples,
                 regularization_penalty=FLAGS.regularization_penalty,
                 num_readers=FLAGS.num_readers,
-                batch_size=FLAGS.batch_size)
+                batch_size=FLAGS.batch_size,
+                num_epochs=FLAGS.num_epochs)
     logging.info("built graph")
-    saver = tf.train.Saver()
+    saver = tf.train.Saver(max_to_keep=0, keep_checkpoint_every_n_hours=0.25)
 
   train_loop(is_chief=is_chief,
              train_dir=FLAGS.train_dir,
