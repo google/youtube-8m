@@ -132,11 +132,13 @@ def inference(reader, train_dir, data_pattern, out_file_location, batch_size, to
 
     # Workaround for num_epochs issue.
     def set_up_init_ops(variables):
-      for variable in variables:
+      init_op_list = []
+      for variable in list(variables):
         if "train_input" in variable.name:
-          init_num_epochs = tf.assign(variable, 1)
+          init_op_list.append(tf.assign(variable, 1))
           variables.remove(variable)
-          return [init_num_epochs, tf.variables_initializer(variables)]
+      init_op_list.append(tf.variables_initializer(variables))
+      return init_op_list
 
     sess.run(set_up_init_ops(tf.get_collection_ref(
         tf.GraphKeys.LOCAL_VARIABLES)))
