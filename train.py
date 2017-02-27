@@ -465,45 +465,21 @@ class Trainer(object):
                                [frame_level_models, video_level_models])()
     label_loss_fn = find_class_by_name(FLAGS.label_loss, [losses])()
     optimizer_class = find_class_by_name(FLAGS.optimizer, [tf.train])
-    build_graph(reader=reader,
-                model=model,
-                optimizer_class=optimizer_class,
-                clip_gradient_norm=FLAGS.clip_gradient_norm,
-                train_data_pattern=FLAGS.train_data_pattern,
-                label_loss_fn=label_loss_fn,
-                base_learning_rate=FLAGS.base_learning_rate,
-                learning_rate_decay=FLAGS.learning_rate_decay,
-                learning_rate_decay_examples=FLAGS.learning_rate_decay_examples,
-                regularization_penalty=FLAGS.regularization_penalty,
-                num_readers=FLAGS.num_readers,
-                batch_size=FLAGS.batch_size)
-    logging.info("built graph")
-   
-    build_graph(reader=reader,
-                model=model,
-                optimizer_class=optimizer_class,
-                train_data_pattern=FLAGS.train_data_pattern,
-                label_loss_fn=label_loss_fn,
-                base_learning_rate=FLAGS.base_learning_rate,
-                regularization_penalty=FLAGS.regularization_penalty,
-                num_readers=FLAGS.num_readers,
-                batch_size=FLAGS.batch_size,
-                num_epochs=FLAGS.num_epochs)
-    logging.info("built graph")
-    
 
-    # Build the graph.
-    build_graph(
-        reader=reader,
-        model=model,
-        optimizer_class=optimizer_class,
-        train_data_pattern=FLAGS.train_data_pattern,
-        label_loss_fn=label_loss_fn,
-        base_learning_rate=FLAGS.base_learning_rate,
-        regularization_penalty=FLAGS.regularization_penalty,
-        num_readers=FLAGS.num_readers,
-        batch_size=FLAGS.batch_size,
-        num_epochs=FLAGS.num_epochs)
+    build_graph(reader=reader,
+                 model=model,
+                 optimizer_class=optimizer_class,
+                 clip_gradient_norm=FLAGS.clip_gradient_norm,
+                 train_data_pattern=FLAGS.train_data_pattern,
+                 label_loss_fn=label_loss_fn,
+                 base_learning_rate=FLAGS.base_learning_rate,
+                 learning_rate_decay=FLAGS.learning_rate_decay,
+                  learning_rate_decay_examples=FLAGS.learning_rate_decay_examples,
+                  regularization_penalty=FLAGS.regularization_penalty,
+                  num_readers=FLAGS.num_readers,
+                  batch_size=FLAGS.batch_size,
+                  num_epochs=FLAGS.num_epochs)
+
     logging.info("%s: Built graph.", task_as_string(self.task))
 
     return tf.train.Saver(max_to_keep=0, keep_checkpoint_every_n_hours=0.25)
