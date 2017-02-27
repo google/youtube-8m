@@ -45,7 +45,7 @@ This option requires you to have an appropriately configured Google Cloud
 Platform account. To create and configure your account, please make sure you
 follow the instructions [here](https://cloud.google.com/ml/docs/how-tos/getting-set-up).
 If you are participating in the Google Cloud & YouTube-8M Video Understanding
-Challenge hosted on kaggle.com, see [these instructions](https://www.kaggle.com/c/youtube8m#getting-started-with-google-cloud) instead.
+Challenge hosted on [kaggle](https://www.kaggle.com/c/youtube8m), see [these instructions](https://www.kaggle.com/c/youtube8m#getting-started-with-google-cloud) instead.
 
 Please also verify that you have Python 2.7+ and Tensorflow 1.0.0 or higher
 installed by running the following commands:
