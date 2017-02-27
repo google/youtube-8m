@@ -474,11 +474,11 @@ class Trainer(object):
                  label_loss_fn=label_loss_fn,
                  base_learning_rate=FLAGS.base_learning_rate,
                  learning_rate_decay=FLAGS.learning_rate_decay,
-                  learning_rate_decay_examples=FLAGS.learning_rate_decay_examples,
-                  regularization_penalty=FLAGS.regularization_penalty,
-                  num_readers=FLAGS.num_readers,
-                  batch_size=FLAGS.batch_size,
-                  num_epochs=FLAGS.num_epochs)
+                 learning_rate_decay_examples=FLAGS.learning_rate_decay_examples,
+                 regularization_penalty=FLAGS.regularization_penalty,
+                 num_readers=FLAGS.num_readers,
+                 batch_size=FLAGS.batch_size,
+                 num_epochs=FLAGS.num_epochs)
 
     logging.info("%s: Built graph.", task_as_string(self.task))
 
