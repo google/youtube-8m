@@ -325,10 +325,18 @@ class Trainer(object):
 
     target, device_fn = self.start_server_if_distributed()
 
+    meta_filename = self.get_meta_filename(start_new_model, self.train_dir)
+
     with tf.Graph().as_default() as graph:
+
+      if meta_filename:
+        saver = self.recover_model(meta_filename)
+
       with tf.device(device_fn):
 
-        saver = self.recover_or_build_model(start_new_model, self.train_dir)
+        if not meta_filename:
+          saver = self.build_model()
+
         global_step = tf.get_collection("global_step")[0]
         loss = tf.get_collection("loss")[0]
         predictions = tf.get_collection("predictions")[0]
@@ -422,29 +430,30 @@ class Trainer(object):
           " when starting a new model. Please delete it manually and" +
           " try again.", task_as_string(self.task))
 
-  def recover_or_build_model(self, start_new_model, train_dir):
-    """Recovers the model from a checkpoint or build it."""
-
-    latest_checkpoint = tf.train.latest_checkpoint(train_dir)
-
+  def get_meta_filename(self, start_new_model, train_dir):
     if start_new_model:
       logging.info("%s: Flag 'start_new_model' is set. Building a new model.",
                    task_as_string(self.task))
-      return self.build_model()
-    elif not latest_checkpoint:
+      return None
+    
+    latest_checkpoint = tf.train.latest_checkpoint(train_dir)
+    if not latest_checkpoint: 
       logging.info("%s: No checkpoint file found. Building a new model.",
                    task_as_string(self.task))
-      return self.build_model()
-    else:
-      meta_filename = latest_checkpoint + ".meta"
-      if not gfile.Exists(meta_filename):
-        logging.info("%s: No meta graph file found. Building a new model.",
+      return None
+    
+    meta_filename = latest_checkpoint + ".meta"
+    if not gfile.Exists(meta_filename):
+      logging.info("%s: No meta graph file found. Building a new model.",
                      task_as_string(self.task))
-        return self.build_model()
-      else:
-        logging.info("%s: Restoring from meta graph file %s",
-                     task_as_string(self.task), meta_filename)
-        return tf.train.import_meta_graph(meta_filename)
+      return None
+    else:
+      return meta_filename
+
+  def recover_model(self, meta_filename):
+    logging.info("%s: Restoring from meta graph file %s",
+                 task_as_string(self.task), meta_filename)
+    return tf.train.import_meta_graph(meta_filename)
 
   def build_model(self):
     """Find the model and build the graph."""
