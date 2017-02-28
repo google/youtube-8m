@@ -162,7 +162,7 @@ def get_input_data_tensors(reader,
     # The minimum number of instances in a queue from which examples are drawn
     # randomly. The larger this number, the more randomness at the expense of
     # higher memory requirements.
-    min_after_dequeue = 1000
+    min_after_dequeue = batch_size * 2
 
     # When batching data, the queue's capacity will be larger than the 
     # batch_size by some factor. The recommended formula is (num_threads + a 
@@ -176,7 +176,7 @@ def get_input_data_tensors(reader,
         training_data,
         batch_size=batch_size,
         capacity=capacity,
-        min_after_dequeue=FLAGS.batch_size,
+        min_after_dequeue=min_after_dequeue,
         allow_smaller_final_batch=True,
         enqueue_many=True)
 
@@ -412,7 +412,6 @@ class Trainer(object):
 
     logging.info("%s: Exited training loop.", task_as_string(self.task))
     sv.Stop()
-    return hit_at_one, perr
 
   def start_server_if_distributed(self):
     """Starts a server if the execution is distributed."""
