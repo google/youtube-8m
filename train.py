@@ -14,6 +14,7 @@
 """Binary for training Tensorflow models on the YouTube-8M dataset."""
 
 import json
+import multiprocessing
 import os
 import time
 
@@ -158,10 +159,23 @@ def get_input_data_tensors(reader,
         reader.prepare_reader(filename_queue) for _ in range(num_readers)
     ]
 
+    # The minimum number of instances in a queue from which examples are drawn
+    # randomly. The larger this number, the more randomness at the expense of
+    # higher memory requirements.
+    min_after_dequeue = 1000
+
+    # When batching data, the queue's capacity will be larger than the 
+    # batch_size by some factor. The recommended formula is (num_threads + a 
+    # small safety margin).
+    thread_count = multiprocessing.cpu_count()
+    queue_size_multiplier = thread_count + 7
+
+    capacity = min_after_dequeue + queue_size_multiplier * batch_size
+
     return tf.train.shuffle_batch_join(
         training_data,
         batch_size=batch_size,
-        capacity=FLAGS.batch_size * 5,
+        capacity=capacity,
         min_after_dequeue=FLAGS.batch_size,
         allow_smaller_final_batch=True,
         enqueue_many=True)
