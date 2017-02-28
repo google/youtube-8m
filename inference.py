@@ -24,7 +24,6 @@ from tensorflow import app
 from tensorflow import flags
 from tensorflow import gfile
 from tensorflow import logging
-from builtins import range
 
 import eval_util
 import losses
