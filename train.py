@@ -398,7 +398,6 @@ class Trainer(object):
 
     logging.info("%s: Exited training loop.", task_as_string(self.task))
     sv.Stop()
-    return hit_at_one, perr
 
   def start_server_if_distributed(self):
     """Starts a server if the execution is distributed."""
