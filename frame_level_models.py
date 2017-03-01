@@ -44,7 +44,7 @@ flags.DEFINE_string("video_level_classifier_model", "MoeModel",
                     "Some Frame-Level models can be decomposed into a "
                     "generalized pooling operation followed by a "
                     "classifier layer")
-flags.DEFINE_integer("lstm_cells", 512, "Number of LSTM cells.")
+flags.DEFINE_integer("lstm_cells", 1024, "Number of LSTM cells.")
 flags.DEFINE_integer("lstm_layers", 2, "Number of LSTM layers.")
 
 class FrameLevelLogisticModel(models.BaseModel):
