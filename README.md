@@ -406,7 +406,9 @@ This sample code contains implementations of the models given in the
 ### Frame-Level Models
 * `LstmModel`: Processes the features for each frame using a multi-layered
                LSTM neural net. The final internal state of the LSTM
-               is input to a video-level model for classification.
+               is input to a video-level model for classification. Note that
+               you will need to change the learning rate to 0.001 when using
+               this model.
 * `DbofModel`: Projects the features for each frame into a higher dimensional
                'clustering' space, pools across frames in that space, and then
                uses a video-level model to classify the now aggregated features.
