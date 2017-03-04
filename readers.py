@@ -103,6 +103,10 @@ class YT8MAggregatedFeatureReader(BaseReader):
     reader = tf.TFRecordReader()
     _, serialized_examples = reader.read_up_to(filename_queue, batch_size)
 
+    tf.add_to_collection("serialized_examples", serialized_examples)
+    return self.prepare_serialized_examples(serialized_examples)
+
+  def prepare_serialized_examples(self, serialized_examples):
     # set the mapping from the fields to data types in the proto
     num_features = len(self.feature_names)
     assert num_features > 0, "self.feature_names is empty!"
@@ -117,6 +121,7 @@ class YT8MAggregatedFeatureReader(BaseReader):
           [self.feature_sizes[feature_index]], tf.float32)
 
     features = tf.parse_example(serialized_examples, features=feature_map)
+
     labels = tf.sparse_to_indicator(features["labels"], self.num_classes)
     labels.set_shape([None, self.num_classes])
     concatenated_features = tf.concat([
@@ -202,6 +207,12 @@ class YT8MFrameFeatureReader(BaseReader):
     """
     reader = tf.TFRecordReader()
     _, serialized_example = reader.read(filename_queue)
+
+    return self.prepare_serialized_examples(serialized_example,
+        max_quantized_value, min_quantized_value)
+
+  def prepare_serialized_examples(self, serialized_example,
+      max_quantized_value=2, min_quantized_value=-2):
 
     contexts, features = tf.parse_single_sequence_example(
         serialized_example,
