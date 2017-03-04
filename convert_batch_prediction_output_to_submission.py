@@ -56,8 +56,9 @@ def to_csv_row(json_data):
         "The number of indexes (%s) and predictions (%s) must be equal." 
         % (len(class_indexes), len(predictions)))
 
-  return video_id.decode('utf-8') + "," + " ".join("%i %f" % (class_indexes[i], predictions[i])
-                                                   for i in range(len(class_indexes))) + "\n"
+  return (video_id.decode('utf-8') + "," + " ".join("%i %f" % 
+      (class_indexes[i], predictions[i]) 
+      for i in range(len(class_indexes))) + "\n")
 
 def main(unused_argv):
   logging.set_verbosity(tf.logging.INFO)
