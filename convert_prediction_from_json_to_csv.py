@@ -14,7 +14,7 @@
 
 """Utility to convert the output of batch prediction into a CSV submission.
 
-If converts the JSON files created by the command
+It converts the JSON files created by the command
 'gcloud beta ml jobs submit prediction' into a CSV file ready for submission.
 """
 
