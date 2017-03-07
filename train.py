@@ -321,8 +321,9 @@ class Trainer(object):
     self.reader = reader
     self.model_exporter = model_exporter
     self.max_steps = max_steps
-    self.export_model_steps = export_model_steps
     self.max_steps_reached = False
+    self.export_model_steps = export_model_steps
+    self.last_model_export_step = 0
 
     if self.is_master and self.task.index > 0:
       raise StandardError("%s: Only one replica of master expected",
@@ -409,13 +410,18 @@ class Trainer(object):
                                   examples_per_second), global_step_val)
             sv.summary_writer.flush()
 
-            # Exporting the model every x steps starting with step 1
-            if (global_step_val - 1) % self.export_model_steps == 0:
-              self.export_model(global_step_val, sv.saver, sv.save_path, sess, global_step_val)
+            # Exporting the model every x steps
+            time_to_export = ((self.last_model_export_step == 0) or 
+                (global_step_val - self.last_model_export_step 
+                 >= self.export_model_steps))
+
+            if self.is_master and time_to_export:
+              self.last_model_export_step = global_step_val
+              self.export_model(global_step_val, sv.saver, sv.save_path, sess)
 
         # Exporting the final model
         if self.is_master:
-          self.export_model(global_step_val, sv.saver, sv.save_path, sess, global_step_val)
+          self.export_model(global_step_val, sv.saver, sv.save_path, sess)
 
       except tf.errors.OutOfRangeError:
         logging.info("%s: Done training -- epoch limit reached.",
@@ -424,13 +430,13 @@ class Trainer(object):
     logging.info("%s: Exited training loop.", task_as_string(self.task))
     sv.Stop()
 
-  def export_model(self, global_step_val, saver, save_path, session, global_step):
+  def export_model(self, global_step_val, saver, save_path, session):
 
-    last_checkpoint = saver.save(session, save_path, global_step)
+    last_checkpoint = saver.save(session, save_path, global_step_val)
 
     model_dir = "{0}/export/step_{1}".format(self.train_dir, global_step_val)
     logging.info("%s: Exporting the model at step %s to %s.",
-                 task_as_string(self.task), global_step, model_dir)
+                 task_as_string(self.task), global_step_val, model_dir)
 
     self.model_exporter.export_model(
         model_dir=model_dir, 
