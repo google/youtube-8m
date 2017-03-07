@@ -18,6 +18,7 @@ import os
 import time
 
 import eval_util
+import export_model
 import losses
 import frame_level_models
 import video_level_models
@@ -82,6 +83,11 @@ if __name__ == "__main__":
   flags.DEFINE_integer("num_epochs", 5,
                        "How many passes to make over the dataset before "
                        "halting training.")
+  flags.DEFINE_integer("max_steps", None,
+                       "The maximum number of iterations of the training loop.")
+  flags.DEFINE_integer("export_model_steps", 1000,
+                       "The period, in number of steps, with which the model "
+                       "is exported for batch prediction.")
 
   # Other flags.
   flags.DEFINE_integer("num_readers", 8,
@@ -295,7 +301,9 @@ def build_graph(reader,
 class Trainer(object):
   """A Trainer to train a Tensorflow graph."""
 
-  def __init__(self, cluster, task, train_dir, log_device_placement=True):
+  def __init__(self, cluster, task, train_dir, model, reader, model_exporter, 
+               log_device_placement=True, max_steps=None, 
+               export_model_steps=1000):
     """"Creates a Trainer.
 
     Args:
@@ -309,6 +317,12 @@ class Trainer(object):
     self.is_master = (task.type == "master" and task.index == 0)
     self.train_dir = train_dir
     self.config = tf.ConfigProto(log_device_placement=log_device_placement)
+    self.model = model
+    self.reader = reader
+    self.model_exporter = model_exporter
+    self.max_steps = max_steps
+    self.export_model_steps = export_model_steps
+    self.max_steps_reached = False
 
     if self.is_master and self.task.index > 0:
       raise StandardError("%s: Only one replica of master expected",
@@ -335,7 +349,7 @@ class Trainer(object):
       with tf.device(device_fn):
 
         if not meta_filename:
-          saver = self.build_model()
+          saver = self.build_model(self.model, self.reader)
 
         global_step = tf.get_collection("global_step")[0]
         loss = tf.get_collection("loss")[0]
@@ -359,12 +373,15 @@ class Trainer(object):
 
       try:
         logging.info("%s: Entering training loop.", task_as_string(self.task))
-        while not sv.should_stop():
+        while (not sv.should_stop()) and (not self.max_steps_reached):
 
           batch_start_time = time.time()
           _, global_step_val, loss_val, predictions_val, labels_val = sess.run(
               [train_op, global_step, loss, predictions, labels])
           seconds_per_batch = time.time() - batch_start_time
+
+          if self.max_steps and self.max_steps <= global_step_val:
+            self.max_steps_reached = True
 
           if self.is_master:
             examples_per_second = labels_val.shape[0] / seconds_per_batch
@@ -392,12 +409,34 @@ class Trainer(object):
                                   examples_per_second), global_step_val)
             sv.summary_writer.flush()
 
+            # Exporting the model every x steps starting with step 1
+            if (global_step_val - 1) % self.export_model_steps == 0:
+              self.export_model(global_step_val, sv.saver, sv.save_path, sess, global_step_val)
+
+        # Exporting the final model
+        if self.is_master:
+          self.export_model(global_step_val, sv.saver, sv.save_path, sess, global_step_val)
+
       except tf.errors.OutOfRangeError:
         logging.info("%s: Done training -- epoch limit reached.",
                      task_as_string(self.task))
 
     logging.info("%s: Exited training loop.", task_as_string(self.task))
     sv.Stop()
+
+  def export_model(self, global_step_val, saver, save_path, session, global_step):
+
+    last_checkpoint = saver.save(session, save_path, global_step)
+
+    model_dir = "{0}/export/step_{1}".format(self.train_dir, global_step_val)
+    logging.info("%s: Exporting the model at step %s to %s.",
+                 task_as_string(self.task), global_step, model_dir)
+
+    self.model_exporter.export_model(
+        model_dir=model_dir, 
+        global_step_val=global_step_val,
+        last_checkpoint=last_checkpoint)
+
 
   def start_server_if_distributed(self):
     """Starts a server if the execution is distributed."""
@@ -454,26 +493,12 @@ class Trainer(object):
                  task_as_string(self.task), meta_filename)
     return tf.train.import_meta_graph(meta_filename)
 
-  def build_model(self):
+  def build_model(self, model, reader):
     """Find the model and build the graph."""
 
-    # Convert feature_names and feature_sizes to lists of values.
-    feature_names, feature_sizes = utils.GetListOfFeatureNamesAndSizes(
-        FLAGS.feature_names, FLAGS.feature_sizes)
-
-    if FLAGS.frame_features:
-      reader = readers.YT8MFrameFeatureReader(
-          feature_names=feature_names, feature_sizes=feature_sizes)
-    else:
-      reader = readers.YT8MAggregatedFeatureReader(
-          feature_names=feature_names, feature_sizes=feature_sizes)
-
-    # Find the model.
-    model = find_class_by_name(FLAGS.model,
-                               [frame_level_models, video_level_models])()
     label_loss_fn = find_class_by_name(FLAGS.label_loss, [losses])()
     optimizer_class = find_class_by_name(FLAGS.optimizer, [tf.train])
-
+  
     build_graph(reader=reader,
                  model=model,
                  optimizer_class=optimizer_class,
@@ -487,10 +512,23 @@ class Trainer(object):
                  num_readers=FLAGS.num_readers,
                  batch_size=FLAGS.batch_size,
                  num_epochs=FLAGS.num_epochs)
-
-    logging.info("%s: Built graph.", task_as_string(self.task))
-
+  
     return tf.train.Saver(max_to_keep=0, keep_checkpoint_every_n_hours=0.25)
+
+
+def get_reader():
+  # Convert feature_names and feature_sizes to lists of values.
+  feature_names, feature_sizes = utils.GetListOfFeatureNamesAndSizes(
+      FLAGS.feature_names, FLAGS.feature_sizes)
+
+  if FLAGS.frame_features:
+    reader = readers.YT8MFrameFeatureReader(
+        feature_names=feature_names, feature_sizes=feature_sizes)
+  else:
+    reader = readers.YT8MAggregatedFeatureReader(
+        feature_names=feature_names, feature_sizes=feature_sizes)
+    
+  return reader
 
 
 class ParameterServer(object):
@@ -562,14 +600,29 @@ def main(unused_argv):
 
   # Dispatch to a master, a worker, or a parameter server.
   if not cluster or task.type == "master" or task.type == "worker":
-    Trainer(cluster, task, FLAGS.train_dir, FLAGS.log_device_placement).run(
-        start_new_model=FLAGS.start_new_model)
+    
+    model = find_class_by_name(FLAGS.model, 
+        [frame_level_models, video_level_models])()
+    
+    reader = get_reader()
+    
+    model_exporter = export_model.ModelExporter(
+        frame_features=FLAGS.frame_features,
+        model=model,
+        reader=reader)
+
+    Trainer(cluster, task, FLAGS.train_dir, model, reader, model_exporter, 
+            FLAGS.log_device_placement, FLAGS.max_steps, 
+            FLAGS.export_model_steps).run(start_new_model=FLAGS.start_new_model)
+
   elif task.type == "ps":
+
     ParameterServer(cluster, task).run()
+
   else:
+
     raise ValueError("%s: Invalid task_type: %s." %
                      (task_as_string(task), task.type))
-
 
 if __name__ == "__main__":
   app.run()
