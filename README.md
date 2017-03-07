@@ -71,7 +71,7 @@ Here is an example command line for video-level training:
 gcloud beta ml local train \
 --package-path=youtube-8m --module-name=youtube-8m.train -- \
 --train_data_pattern='gs://youtube8m-ml/1/video_level/train/train*.tfrecord' \
---train_dir=/tmp/yt8m_train --start_new_model
+--train_dir=/tmp/yt8m_train --model=LogisticModel --start_new_model
 ```
 
 You might want to download some training shards locally to speed things up and
@@ -105,6 +105,7 @@ submit training $JOB_NAME \
 --staging-bucket=$BUCKET_NAME --region=us-east1 \
 --config=youtube-8m/cloudml-gpu.yaml \
 -- --train_data_pattern='gs://youtube8m-ml-us-east1/1/video_level/train/train*.tfrecord' \
+--model=LogisticModel \
 --train_dir=$BUCKET_NAME/yt8m_train_video_level_logistic_model
 ```
 
@@ -151,6 +152,7 @@ submit training $JOB_NAME \
 --staging-bucket=$BUCKET_NAME --region=us-east1 \
 --config=youtube-8m/cloudml-gpu.yaml \
 -- --eval_data_pattern='gs://youtube8m-ml-us-east1/1/video_level/validate/validate*.tfrecord' \
+--model=LogisticModel \
 --train_dir=$BUCKET_NAME/${JOB_TO_EVAL} --run_once=True
 ```
 
@@ -192,13 +194,13 @@ num examples processed: 8192 elapsed seconds: 14.85
 To perform inference faster, you can also use the Cloud ML batch prediction
 service.
 
-First, find the directory where the training job exported the model: 
+First, find the directory where the training job exported the model:
 
 ```
 gsutil list ${BUCKET_NAME}/yt8m_train_video_level_logistic_model/export
 ```
 
-You should see an output similar to this one: 
+You should see an output similar to this one:
 
 ```
 ${BUCKET_NAME}/yt8m_train_video_level_logistic_model/export/
@@ -232,7 +234,7 @@ have the job complete faster, you can increase 'max-worker-count' to a
 higher value.
 
 Once the batch prediction job has completed, turn its output into a submission
-in the CVS format by running the following commands: 
+in the CVS format by running the following commands:
 
 ```
 # Copy the output of the batch prediction job to a local directory
@@ -367,7 +369,7 @@ To start training a logistic model on the video-level features, run
 
 ```sh
 MODEL_DIR=/tmp/yt8m
-python train.py --train_data_pattern='/path/to/features/train*.tfrecord' --train_dir=$MODEL_DIR/video_level_logistic_model
+python train.py --train_data_pattern='/path/to/features/train*.tfrecord' --model=LogisticModel --train_dir=$MODEL_DIR/video_level_logistic_model
 ```
 
 Since the dataset is sharded into 4096 individual files, we use a wildcard (\*)
@@ -386,7 +388,7 @@ adding `--start_new_model` flag to your run configuration.
 To evaluate the model, run
 
 ```sh
-python eval.py --eval_data_pattern='/path/to/features/validate*.tfrecord' --train_dir=$MODEL_DIR/video_level_logistic_model --run_once=True
+python eval.py --eval_data_pattern='/path/to/features/validate*.tfrecord' --model=LogisticModel --train_dir=$MODEL_DIR/video_level_logistic_model --run_once=True
 ```
 
 As the model is training or evaluating, you can view the results on tensorboard
