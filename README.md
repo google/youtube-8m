@@ -485,6 +485,8 @@ This sample code contains implementations of the models given in the
                              level features as input.
 *   `model_util.py`: Contains functions that are of general utility for
                      implementing models.
+*   `export_model.py`: Provides a class to export a model during training
+                       for later use in batch prediction.
 *   `readers.py`: Contains definitions for the Video dataset and Frame
                   dataset readers.
 
@@ -503,6 +505,8 @@ This sample code contains implementations of the models given in the
 ### Misc
 *   `README.md`: This documentation.
 *   `utils.py`: Common functions.
+*   `convert_prediction_from_json_to_csv.py`: Converts the JSON output of
+        batch prediction into a CSV file for submission.
 
 ## About This Project
 This project is meant help people quickly get started working with the
