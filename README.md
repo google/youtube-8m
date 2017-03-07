@@ -68,7 +68,7 @@ You can use the `gcloud beta ml local` set of commands for that.
 Here is an example command line for video-level training:
 
 ```sh
-gcloud beta ml local train \
+gcloud ml-engine local train \
 --package-path=youtube-8m --module-name=youtube-8m.train -- \
 --train_data_pattern='gs://youtube8m-ml/1/video_level/train/train*.tfrecord' \
 --train_dir=/tmp/yt8m_train --model=LogisticModel --start_new_model
@@ -99,7 +99,7 @@ BUCKET_NAME=gs://${USER}_yt8m_train_bucket
 # (One Time) Create a storage bucket to store training logs and checkpoints.
 gsutil mb -l us-east1 $BUCKET_NAME
 # Submit the training job.
-JOB_NAME=yt8m_train_$(date +%Y%m%d_%H%M%S); gcloud --verbosity=debug beta ml jobs \
+JOB_NAME=yt8m_train_$(date +%Y%m%d_%H%M%S); gcloud --verbosity=debug ml-engine jobs \
 submit training $JOB_NAME \
 --package-path=youtube-8m --module-name=youtube-8m.train \
 --staging-bucket=$BUCKET_NAME --region=us-east1 \
@@ -146,7 +146,7 @@ Here's how to evaluate a model on the validation dataset:
 
 ```sh
 JOB_TO_EVAL=yt8m_train_video_level_logistic_model
-JOB_NAME=yt8m_eval_$(date +%Y%m%d_%H%M%S); gcloud --verbosity=debug beta ml jobs \
+JOB_NAME=yt8m_eval_$(date +%Y%m%d_%H%M%S); gcloud --verbosity=debug ml-engine jobs \
 submit training $JOB_NAME \
 --package-path=youtube-8m --module-name=youtube-8m.eval \
 --staging-bucket=$BUCKET_NAME --region=us-east1 \
@@ -160,7 +160,7 @@ And here's how to perform inference with a model on the test set:
 
 ```sh
 JOB_TO_EVAL=yt8m_train_video_level_logistic_model
-JOB_NAME=yt8m_inference_$(date +%Y%m%d_%H%M%S); gcloud --verbosity=debug beta ml jobs \
+JOB_NAME=yt8m_inference_$(date +%Y%m%d_%H%M%S); gcloud --verbosity=debug ml-engine jobs \
 submit training $JOB_NAME \
 --package-path=youtube-8m --module-name=youtube-8m.inference \
 --staging-bucket=$BUCKET_NAME --region=us-east1 \
@@ -221,7 +221,7 @@ Start the batch prediction job using the following command:
 
 ```
 JOB_NAME=yt8m_batch_predict_$(date +%Y%m%d_%H%M%S); \
-gcloud beta ml jobs submit prediction ${JOB_NAME} --verbosity=debug \
+gcloud ml-engine jobs submit prediction ${JOB_NAME} --verbosity=debug \
 --model-dir=${EXPORTED_MODEL_DIR} --data-format=TF_RECORD \
 --input-paths=gs://youtube8m-ml/1/video_level/test/test* \
 --output-path=${BUCKET_NAME}/batch_predict/${JOB_NAME} --region=us-east1 \
@@ -275,7 +275,7 @@ to the 'gcloud' commands given above, and change 'video_level' in paths to
 'frame_level'. Here is a sample command to kick-off a frame-level job:
 
 ```sh
-JOB_NAME=yt8m_train_$(date +%Y%m%d_%H%M%S); gcloud --verbosity=debug beta ml jobs \
+JOB_NAME=yt8m_train_$(date +%Y%m%d_%H%M%S); gcloud --verbosity=debug ml-engine jobs \
 submit training $JOB_NAME \
 --package-path=youtube-8m --module-name=youtube-8m.train \
 --staging-bucket=$BUCKET_NAME --region=us-east1 \
