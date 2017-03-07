@@ -17,6 +17,7 @@ or on your own machine. This README provides instructions for both.
    * [Testing Locally](#testing-locally)
    * [Training on the Cloud over Video-Level Features](#training-on-video-level-features)
    * [Evaluation and Inference](#evaluation-and-inference)
+   * [Inference Using Batch Prediction](#inference-using-batch-prediction)
    * [Accessing Files on Google Cloud](#accessing-files-on-google-cloud)
    * [Using Frame-Level Features](#using-frame-level-features)
    * [Using Audio Features](#using-audio-features)
@@ -239,9 +240,9 @@ mkdir -p /tmp/batch_predict/${JOB_NAME}
 gsutil -m cp -r ${BUCKET_NAME}/batch_predict/${JOB_NAME}/* /tmp/batch_predict/${JOB_NAME}/
 
 # Convert the output of the batch prediction job into a CVS file ready for submission
-python youtube-8m/convert_batch_prediction_output_to_submission.py \
---prediction_files_pattern="/tmp/batch_predict/${JOB_NAME}/prediction.results-*" \
---output_file="/tmp/batch_predict/${JOB_NAME}/output.csv"
+python youtube-8m/convert_prediction_from_json_to_csv.py \
+--json_prediction_files_pattern="/tmp/batch_predict/${JOB_NAME}/prediction.results-*" \
+--csv_output_file="/tmp/batch_predict/${JOB_NAME}/output.csv"
 ```
 
 ### Accessing Files on Google Cloud

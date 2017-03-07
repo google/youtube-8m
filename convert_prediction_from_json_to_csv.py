@@ -11,7 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Utility to convert the output of batch prediction into a CSV submission."""
+
+"""Utility to convert the output of batch prediction into a CSV submission.
+
+If converts the JSON files created by the command
+'gcloud beta ml jobs submit prediction' into a CSV file ready for submission.
+"""
 
 import json
 import tensorflow as tf
@@ -28,12 +33,14 @@ FLAGS = flags.FLAGS
 if __name__ == '__main__':
 
   flags.DEFINE_string(
-      "prediction_files_pattern", None,
-      "Pattern specifying the list of files that contain the output of batch "
-      "prediction.")
+      "json_prediction_files_pattern", None,
+      "Pattern specifying the list of JSON files that the command "
+      "'gcloud beta ml jobs submit prediction' outputs. These files are "
+      "located in the output path of the prediction command and are prefixed "
+      "with 'prediction.results'.")
   flags.DEFINE_string(
-      "output_file", None,
-      "The file to save the predictions to.")
+      "csv_output_file", None,
+      "The file to save the predictions converted to the CSV format.")
 
 
 def get_csv_header():
@@ -63,20 +70,21 @@ def to_csv_row(json_data):
 def main(unused_argv):
   logging.set_verbosity(tf.logging.INFO)
 
-  if not FLAGS.prediction_files_pattern:
-    raise ValueError("The flag --prediction_files_pattern must be specified.")
+  if not FLAGS.json_prediction_files_pattern:
+    raise ValueError(
+        "The flag --json_prediction_files_pattern must be specified.")
 
-  if not FLAGS.output_file:
-    raise ValueError("The flag --output_file must be specified.")
+  if not FLAGS.csv_output_file:
+    raise ValueError("The flag --csv_output_file must be specified.")
 
   logging.info("Looking for prediction files with pattern: %s", 
-               FLAGS.prediction_files_pattern)
+               FLAGS.json_prediction_files_pattern)
 
-  file_paths = gfile.Glob(FLAGS.prediction_files_pattern)  
+  file_paths = gfile.Glob(FLAGS.json_prediction_files_pattern)  
   logging.info("Found files: %s", file_paths)
 
-  logging.info("Writing submission file to: %s", FLAGS.output_file)
-  with gfile.Open(FLAGS.output_file, "w+") as output_file:
+  logging.info("Writing submission file to: %s", FLAGS.csv_output_file)
+  with gfile.Open(FLAGS.csv_output_file, "w+") as output_file:
     output_file.write(get_csv_header())
 
     for file_path in file_paths:
