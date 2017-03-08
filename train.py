@@ -416,8 +416,8 @@ class Trainer(object):
                  >= self.export_model_steps))
 
             if self.is_master and time_to_export:
-              self.last_model_export_step = global_step_val
               self.export_model(global_step_val, sv.saver, sv.save_path, sess)
+              self.last_model_export_step = global_step_val
 
         # Exporting the final model
         if self.is_master:
@@ -431,6 +431,10 @@ class Trainer(object):
     sv.Stop()
 
   def export_model(self, global_step_val, saver, save_path, session):
+
+    # If the model has already been exported at this step, return.
+    if global_step_val == self.last_model_export_step:
+      return
 
     last_checkpoint = saver.save(session, save_path, global_step_val)
 
