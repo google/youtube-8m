@@ -70,9 +70,6 @@ def format_lines(video_ids, predictions, top_k):
     top_indices = numpy.argpartition(predictions[video_index], -top_k)[-top_k:]
     line = [(class_index, predictions[video_index][class_index])
             for class_index in top_indices]
-  #  print("Type - Test :")
-  #  print(type(video_ids[video_index]))
-  #  print(video_ids[video_index].decode('utf-8'))
     line = sorted(line, key=lambda p: -p[1])
     yield video_ids[video_index].decode('utf-8') + "," + " ".join("%i %f" % pair
                                                   for pair in line) + "\n"
