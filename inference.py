@@ -66,12 +66,12 @@ if __name__ == '__main__':
 
 def format_lines(video_ids, predictions, top_k):
   batch_size = len(video_ids)
-  for video_index in xrange(batch_size):
+  for video_index in range(batch_size):
     top_indices = numpy.argpartition(predictions[video_index], -top_k)[-top_k:]
     line = [(class_index, predictions[video_index][class_index])
             for class_index in top_indices]
     line = sorted(line, key=lambda p: -p[1])
-    yield video_ids[video_index] + "," + " ".join("%i %f" % pair
+    yield video_ids[video_index].decode('utf-8') + "," + " ".join("%i %f" % pair
                                                   for pair in line) + "\n"
 
 
@@ -101,7 +101,7 @@ def get_input_data_tensors(reader, data_pattern, batch_size, num_readers=1):
     filename_queue = tf.train.string_input_producer(
         files, num_epochs=1, shuffle=False)
     examples_and_labels = [reader.prepare_reader(filename_queue)
-                           for _ in xrange(num_readers)]
+                           for _ in range(num_readers)]
 
     video_id_batch, video_batch, unused_labels, num_frames_batch = (
         tf.train.batch_join(examples_and_labels,
@@ -119,14 +119,25 @@ def inference(reader, train_dir, data_pattern, out_file_location, batch_size, to
     else:
       meta_graph_location = latest_checkpoint + ".meta"
       logging.info("loading meta-graph: " + meta_graph_location)
-    saver = tf.train.import_meta_graph(meta_graph_location)
+    saver = tf.train.import_meta_graph(meta_graph_location, clear_devices=True)
     logging.info("restoring variables from " + latest_checkpoint)
     saver.restore(sess, latest_checkpoint)
     input_tensor = tf.get_collection("input_batch_raw")[0]
     num_frames_tensor = tf.get_collection("num_frames")[0]
     predictions_tensor = tf.get_collection("predictions")[0]
 
-    sess.run([tf.local_variables_initializer()])
+    # Workaround for num_epochs issue.
+    def set_up_init_ops(variables):
+      init_op_list = []
+      for variable in list(variables):
+        if "train_input" in variable.name:
+          init_op_list.append(tf.assign(variable, 1))
+          variables.remove(variable)
+      init_op_list.append(tf.variables_initializer(variables))
+      return init_op_list
+
+    sess.run(set_up_init_ops(tf.get_collection_ref(
+        tf.GraphKeys.LOCAL_VARIABLES)))
 
     coord = tf.train.Coordinator()
     threads = tf.train.start_queue_runners(sess=sess, coord=coord)

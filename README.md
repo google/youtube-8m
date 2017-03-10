@@ -17,6 +17,7 @@ or on your own machine. This README provides instructions for both.
    * [Testing Locally](#testing-locally)
    * [Training on the Cloud over Video-Level Features](#training-on-video-level-features)
    * [Evaluation and Inference](#evaluation-and-inference)
+   * [Inference Using Batch Prediction](#inference-using-batch-prediction)
    * [Accessing Files on Google Cloud](#accessing-files-on-google-cloud)
    * [Using Frame-Level Features](#using-frame-level-features)
    * [Using Audio Features](#using-audio-features)
@@ -45,12 +46,13 @@ This option requires you to have an appropriately configured Google Cloud
 Platform account. To create and configure your account, please make sure you
 follow the instructions [here](https://cloud.google.com/ml/docs/how-tos/getting-set-up).
 If you are participating in the Google Cloud & YouTube-8M Video Understanding
-Challenge hosted on kaggle.com, see [these instructions](https://www.kaggle.com/c/youtube8m#getting-started-with-google-cloud) instead.
+Challenge hosted on [kaggle](https://www.kaggle.com/c/youtube8m), see [these instructions](https://www.kaggle.com/c/youtube8m#getting-started-with-google-cloud) instead.
 
-Please also verify that you have Tensorflow 1.0.0 or higher installed by
-running the following command:
+Please also verify that you have Python 2.7+ and Tensorflow 1.0.0 or higher
+installed by running the following commands:
 
 ```sh
+python --version
 python -c 'import tensorflow as tf; print(tf.__version__)'
 ```
 
@@ -66,10 +68,10 @@ You can use the `gcloud beta ml local` set of commands for that.
 Here is an example command line for video-level training:
 
 ```sh
-gcloud beta ml local train \
+gcloud ml-engine local train \
 --package-path=youtube-8m --module-name=youtube-8m.train -- \
 --train_data_pattern='gs://youtube8m-ml/1/video_level/train/train*.tfrecord' \
---train_dir=/tmp/yt8m_train --start_new_model
+--train_dir=/tmp/yt8m_train --model=LogisticModel --start_new_model
 ```
 
 You might want to download some training shards locally to speed things up and
@@ -95,24 +97,22 @@ over video-level features.
 ```sh
 BUCKET_NAME=gs://${USER}_yt8m_train_bucket
 # (One Time) Create a storage bucket to store training logs and checkpoints.
-gsutil mb -l us-central1 $BUCKET_NAME
+gsutil mb -l us-east1 $BUCKET_NAME
 # Submit the training job.
-JOB_NAME=yt8m_train_$(date +%Y%m%d_%H%M%S); gcloud --verbosity=debug beta ml jobs \
+JOB_NAME=yt8m_train_$(date +%Y%m%d_%H%M%S); gcloud --verbosity=debug ml-engine jobs \
 submit training $JOB_NAME \
 --package-path=youtube-8m --module-name=youtube-8m.train \
---staging-bucket=$BUCKET_NAME --region=us-central1 \
+--staging-bucket=$BUCKET_NAME --region=us-east1 \
 --config=youtube-8m/cloudml-gpu.yaml \
--- --train_data_pattern='gs://youtube8m-ml/1/video_level/train/train*.tfrecord' \
+-- --train_data_pattern='gs://youtube8m-ml-us-east1/1/video_level/train/train*.tfrecord' \
+--model=LogisticModel \
 --train_dir=$BUCKET_NAME/yt8m_train_video_level_logistic_model
 ```
 
 In the 'gsutil' command above, the 'package-path' flag refers to the directory
 containing the 'train.py' script and more generally the python package which
 should be deployed to the cloud worker. The module-name refers to the specific
-python script which should be executed (in this case the train module). Since
-the training data files are hosted in the public 'youtube8m-ml' storage bucket
-in the 'us-central1' region, we've colocated our job in the same
-region in order to have the fastest access to the data.
+python script which should be executed (in this case the train module).
 
 It may take several minutes before the job starts running on Google Cloud.
 When it starts you will see outputs like the following:
@@ -146,12 +146,13 @@ Here's how to evaluate a model on the validation dataset:
 
 ```sh
 JOB_TO_EVAL=yt8m_train_video_level_logistic_model
-JOB_NAME=yt8m_eval_$(date +%Y%m%d_%H%M%S); gcloud --verbosity=debug beta ml jobs \
+JOB_NAME=yt8m_eval_$(date +%Y%m%d_%H%M%S); gcloud --verbosity=debug ml-engine jobs \
 submit training $JOB_NAME \
 --package-path=youtube-8m --module-name=youtube-8m.eval \
---staging-bucket=$BUCKET_NAME --region=us-central1 \
+--staging-bucket=$BUCKET_NAME --region=us-east1 \
 --config=youtube-8m/cloudml-gpu.yaml \
--- --eval_data_pattern='gs://youtube8m-ml/1/video_level/validate/validate*.tfrecord' \
+-- --eval_data_pattern='gs://youtube8m-ml-us-east1/1/video_level/validate/validate*.tfrecord' \
+--model=LogisticModel \
 --train_dir=$BUCKET_NAME/${JOB_TO_EVAL} --run_once=True
 ```
 
@@ -159,10 +160,10 @@ And here's how to perform inference with a model on the test set:
 
 ```sh
 JOB_TO_EVAL=yt8m_train_video_level_logistic_model
-JOB_NAME=yt8m_inference_$(date +%Y%m%d_%H%M%S); gcloud --verbosity=debug beta ml jobs \
+JOB_NAME=yt8m_inference_$(date +%Y%m%d_%H%M%S); gcloud --verbosity=debug ml-engine jobs \
 submit training $JOB_NAME \
 --package-path=youtube-8m --module-name=youtube-8m.inference \
---staging-bucket=$BUCKET_NAME --region=us-central1 \
+--staging-bucket=$BUCKET_NAME --region=us-east1 \
 --config=youtube-8m/cloudml-gpu.yaml \
 -- --input_data_pattern='gs://youtube8m-ml/1/video_level/test/test*.tfrecord' \
 --train_dir=$BUCKET_NAME/${JOB_TO_EVAL} \
@@ -189,6 +190,62 @@ and the following for the inference code:
 num examples processed: 8192 elapsed seconds: 14.85
 ```
 
+### Inference Using Batch Prediction
+To perform inference faster, you can also use the Cloud ML batch prediction
+service.
+
+First, find the directory where the training job exported the model:
+
+```
+gsutil list ${BUCKET_NAME}/yt8m_train_video_level_logistic_model/export
+```
+
+You should see an output similar to this one:
+
+```
+${BUCKET_NAME}/yt8m_train_video_level_logistic_model/export/
+${BUCKET_NAME}/yt8m_train_video_level_logistic_model/export/step_1/
+${BUCKET_NAME}/yt8m_train_video_level_logistic_model/export/step_1001/
+${BUCKET_NAME}/yt8m_train_video_level_logistic_model/export/step_2001/
+${BUCKET_NAME}/yt8m_train_video_level_logistic_model/export/step_3001/
+```
+
+Select the latest version of the model that was saved. For instance, in our
+case, we select the version of the model that was saved at step 3001:
+
+```
+EXPORTED_MODEL_DIR=${BUCKET_NAME}/yt8m_train_video_level_logistic_model/export/step_3001/
+```
+
+Start the batch prediction job using the following command:
+
+```
+JOB_NAME=yt8m_batch_predict_$(date +%Y%m%d_%H%M%S); \
+gcloud ml-engine jobs submit prediction ${JOB_NAME} --verbosity=debug \
+--model-dir=${EXPORTED_MODEL_DIR} --data-format=TF_RECORD \
+--input-paths=gs://youtube8m-ml/1/video_level/test/test* \
+--output-path=${BUCKET_NAME}/batch_predict/${JOB_NAME} --region=us-east1 \
+--runtime-version=1.0 --max-worker-count=10
+```
+
+You can check the progress of the job on the
+[Google Cloud ML Jobs console](https://console.cloud.google.com/ml/jobs). To
+have the job complete faster, you can increase 'max-worker-count' to a
+higher value.
+
+Once the batch prediction job has completed, turn its output into a submission
+in the CVS format by running the following commands:
+
+```
+# Copy the output of the batch prediction job to a local directory
+mkdir -p /tmp/batch_predict/${JOB_NAME}
+gsutil -m cp -r ${BUCKET_NAME}/batch_predict/${JOB_NAME}/* /tmp/batch_predict/${JOB_NAME}/
+
+# Convert the output of the batch prediction job into a CVS file ready for submission
+python youtube-8m/convert_prediction_from_json_to_csv.py \
+--json_prediction_files_pattern="/tmp/batch_predict/${JOB_NAME}/prediction.results-*" \
+--csv_output_file="/tmp/batch_predict/${JOB_NAME}/output.csv"
+```
 
 ### Accessing Files on Google Cloud
 
@@ -210,7 +267,7 @@ gsutil cp $BUCKET_NAME/${JOB_TO_EVAL}/predictions.csv .
 Append
 ```sh
 --frame_features=True --model=FrameLevelLogisticModel --feature_names="rgb" \
---feature_sizes="1024" --batch_size=256 \
+--feature_sizes="1024" --batch_size=128 \
 --train_dir=$BUCKET_NAME/yt8m_train_frame_level_logistic_model
 ```
 
@@ -218,20 +275,21 @@ to the 'gcloud' commands given above, and change 'video_level' in paths to
 'frame_level'. Here is a sample command to kick-off a frame-level job:
 
 ```sh
-JOB_NAME=yt8m_train_$(date +%Y%m%d_%H%M%S); gcloud --verbosity=debug beta ml jobs \
+JOB_NAME=yt8m_train_$(date +%Y%m%d_%H%M%S); gcloud --verbosity=debug ml-engine jobs \
 submit training $JOB_NAME \
 --package-path=youtube-8m --module-name=youtube-8m.train \
---staging-bucket=$BUCKET_NAME --region=us-central1 \
+--staging-bucket=$BUCKET_NAME --region=us-east1 \
 --config=youtube-8m/cloudml-gpu.yaml \
--- --train_data_pattern='gs://youtube8m-ml/1/frame_level/train/train*.tfrecord' \
+-- --train_data_pattern='gs://youtube8m-ml-us-east1/1/frame_level/train/train*.tfrecord' \
 --frame_features=True --model=FrameLevelLogisticModel --feature_names="rgb" \
---feature_sizes="1024" --batch_size=256 \
+--feature_sizes="1024" --batch_size=128 \
 --train_dir=$BUCKET_NAME/yt8m_train_frame_level_logistic_model
 ```
 
 The 'FrameLevelLogisticModel' is designed to provide equivalent results to a
 logistic model trained over the video-level features. Please look at the
-'models.py' file to see how to implement your own models.
+'video_level_models.py' or 'frame_level_models.py' files to see how to implement
+your own models.
 
 
 ### Using Audio Features
@@ -269,6 +327,14 @@ the instructions on [tensorflow.org](https://www.tensorflow.org/install/).
 This code has been tested with Tensorflow 1.0.0. Going forward, we will continue
 to target the latest released version of Tensorflow.
 
+Please verify that you have Python 2.7+ and Tensorflow 1.0.0 or higher
+installed by running the following commands:
+
+```sh
+python --version
+python -c 'import tensorflow as tf; print(tf.__version__)'
+```
+
 You can find complete instructions for downloading the dataset on the
 [YouTube-8M website](https://research.google.com/youtube8m/download.html).
 We recommend downloading the smaller video-level features dataset first when
@@ -303,7 +369,7 @@ To start training a logistic model on the video-level features, run
 
 ```sh
 MODEL_DIR=/tmp/yt8m
-python train.py --train_data_pattern='/path/to/features/train*.tfrecord' --train_dir=$MODEL_DIR/video_level_logistic_model
+python train.py --train_data_pattern='/path/to/features/train*.tfrecord' --model=LogisticModel --train_dir=$MODEL_DIR/video_level_logistic_model
 ```
 
 Since the dataset is sharded into 4096 individual files, we use a wildcard (\*)
@@ -322,7 +388,7 @@ adding `--start_new_model` flag to your run configuration.
 To evaluate the model, run
 
 ```sh
-python eval.py --eval_data_pattern='/path/to/features/validate*.tfrecord' --train_dir=$MODEL_DIR/video_level_logistic_model --run_once=True
+python eval.py --eval_data_pattern='/path/to/features/validate*.tfrecord' --model=LogisticModel --train_dir=$MODEL_DIR/video_level_logistic_model --run_once=True
 ```
 
 As the model is training or evaluating, you can view the results on tensorboard
@@ -338,7 +404,7 @@ When you are happy with your model, you can generate a csv file of predictions
 from it by running
 
 ```sh
-python inference.py --output_file=$MODEL_DIR/video_level_logistic_model/predictions.csv --input_data_pattern='/path/to/features/validate*.tfrecord' --train_dir=$MODEL_DIR/video_level_logistic_model
+python inference.py --output_file=$MODEL_DIR/video_level_logistic_model/predictions.csv --input_data_pattern='/path/to/features/test*.tfrecord' --train_dir=$MODEL_DIR/video_level_logistic_model
 ```
 
 This will output the top 20 predicted labels from the model for every example
@@ -385,7 +451,7 @@ VIDEO_ID,LABEL1 LABEL2
 
 ## Overview of Models
 
-This sample code contains implementations of three of the models given in the
+This sample code contains implementations of the models given in the
 [YouTube-8M technical report](https://arxiv.org/abs/1609.08675).
 
 ### Video-Level Models
@@ -397,7 +463,12 @@ This sample code contains implementations of three of the models given in the
                 is not trained, and always predicts 0.
 
 ### Frame-Level Models
-* `DBoFModel`: Projects the features for each frame into a higher dimensional
+* `LstmModel`: Processes the features for each frame using a multi-layered
+               LSTM neural net. The final internal state of the LSTM
+               is input to a video-level model for classification. Note that
+               you will need to change the learning rate to 0.001 when using
+               this model.
+* `DbofModel`: Projects the features for each frame into a higher dimensional
                'clustering' space, pools across frames in that space, and then
                uses a video-level model to classify the now aggregated features.
 * `FrameLevelLogisticModel`: Equivalent to 'LogisticModel', but performs
@@ -416,6 +487,8 @@ This sample code contains implementations of three of the models given in the
                              level features as input.
 *   `model_util.py`: Contains functions that are of general utility for
                      implementing models.
+*   `export_model.py`: Provides a class to export a model during training
+                       for later use in batch prediction.
 *   `readers.py`: Contains definitions for the Video dataset and Frame
                   dataset readers.
 
@@ -434,6 +507,8 @@ This sample code contains implementations of three of the models given in the
 ### Misc
 *   `README.md`: This documentation.
 *   `utils.py`: Common functions.
+*   `convert_prediction_from_json_to_csv.py`: Converts the JSON output of
+        batch prediction into a CSV file for submission.
 
 ## About This Project
 This project is meant help people quickly get started working with the

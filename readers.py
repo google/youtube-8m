@@ -18,7 +18,6 @@ import tensorflow as tf
 import utils
 
 from tensorflow import logging
-
 def resize_axis(tensor, axis, new_size, fill_value=0):
   """Truncates or pads a tensor to new_size on on a given axis.
 
@@ -104,6 +103,10 @@ class YT8MAggregatedFeatureReader(BaseReader):
     reader = tf.TFRecordReader()
     _, serialized_examples = reader.read_up_to(filename_queue, batch_size)
 
+    tf.add_to_collection("serialized_examples", serialized_examples)
+    return self.prepare_serialized_examples(serialized_examples)
+
+  def prepare_serialized_examples(self, serialized_examples):
     # set the mapping from the fields to data types in the proto
     num_features = len(self.feature_names)
     assert num_features > 0, "self.feature_names is empty!"
@@ -204,6 +207,12 @@ class YT8MFrameFeatureReader(BaseReader):
     reader = tf.TFRecordReader()
     _, serialized_example = reader.read(filename_queue)
 
+    return self.prepare_serialized_examples(serialized_example,
+        max_quantized_value, min_quantized_value)
+
+  def prepare_serialized_examples(self, serialized_example,
+      max_quantized_value=2, min_quantized_value=-2):
+
     contexts, features = tf.parse_single_sequence_example(
         serialized_example,
         context_features={"video_id": tf.FixedLenFeature(
@@ -249,5 +258,13 @@ class YT8MFrameFeatureReader(BaseReader):
 
     # concatenate different features
     video_matrix = tf.concat(feature_matrices, 1)
-    return contexts["video_id"], video_matrix, labels, num_frames
+
+    # convert to batch format.
+    # TODO: Do proper batch reads to remove the IO bottleneck.
+    batch_video_ids = tf.expand_dims(contexts["video_id"], 0)
+    batch_video_matrix = tf.expand_dims(video_matrix, 0)
+    batch_labels = tf.expand_dims(labels, 0)
+    batch_frames = tf.expand_dims(num_frames, 0)
+
+    return batch_video_ids, batch_video_matrix, batch_labels, batch_frames
 
