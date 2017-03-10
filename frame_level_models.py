@@ -218,17 +218,15 @@ class LstmModel(models.BaseModel):
     stacked_lstm = tf.contrib.rnn.MultiRNNCell(
             [
                 tf.contrib.rnn.BasicLSTMCell(
-                    lstm_size, forget_bias=1.0, state_is_tuple=False)
+                    lstm_size, forget_bias=1.0, state_is_tuple=True)
                 for _ in range(number_of_layers)
-                ],
-            state_is_tuple=False)
+                ])
 
     loss = 0.0
     with tf.variable_scope("RNN"):
       outputs, state = tf.nn.dynamic_rnn(stacked_lstm, model_input,
                                          sequence_length=num_frames,
-                                         dtype=tf.float32,
-                                         state_is_tuple=True)
+                                         dtype=tf.float32)
 
     aggregated_model = getattr(video_level_models,
                                FLAGS.video_level_classifier_model)
