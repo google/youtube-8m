@@ -502,24 +502,6 @@ class Trainer(object):
         global_step_val=global_step_val,
         last_checkpoint=last_checkpoint)
 
-
-    print("tensorflow version: %s" % tf.__version__)
-    """Starts a server if the execution is distributed."""
-
-    if self.cluster:
-      logging.info("%s: Starting trainer within cluster %s.",
-                   task_as_string(self.task), self.cluster.as_dict())
-      server = start_server(self.cluster, self.task)
-      target = server.target
-      device_fn = tf.train.replica_device_setter(
-          ps_device="/job:ps",
-          worker_device="/job:%s/task:%d" % (self.task.type, self.task.index),
-          cluster=self.cluster)
-    else:
-      target = ""
-      device_fn = ""
-    return (target, device_fn)
-
   def start_server_if_distributed(self):
     """Starts a server if the execution is distributed."""
 
