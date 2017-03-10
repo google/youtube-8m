@@ -227,7 +227,8 @@ class LstmModel(models.BaseModel):
     with tf.variable_scope("RNN"):
       outputs, state = tf.nn.dynamic_rnn(stacked_lstm, model_input,
                                          sequence_length=num_frames,
-                                         dtype=tf.float32)
+                                         dtype=tf.float32,
+                                         state_is_tuple=True)
 
     aggregated_model = getattr(video_level_models,
                                FLAGS.video_level_classifier_model)

@@ -315,7 +315,7 @@ def build_graph(reader,
   if regularization_penalty != 0:
     reg_loss = tf.reduce_mean(tf.stack(reg_losses))
     tf.summary.scalar("reg_loss", reg_loss)
-  merged_gradients = average_gradients(tower_gradients)
+  merged_gradients = utils.average_gradients(tower_gradients)
 
   if clip_gradient_norm > 0:
     with tf.name_scope('clip_grads'):
