@@ -339,7 +339,6 @@ def build_graph(reader,
     reg_loss = tf.reduce_mean(tf.stack(reg_losses))
     tf.summary.scalar("reg_loss", reg_loss)
   merged_gradients = average_gradients(tower_gradients)
-  print "merged_gradients: " + str(merged_gradients)
 
   if clip_gradient_norm > 0:
     with tf.name_scope('clip_grads'):
@@ -425,8 +424,7 @@ class Trainer(object):
         global_step=global_step,
         save_model_secs=15 * 60,
         save_summaries_secs=120,
-        saver=saver,
-        config=tf.ConfigProto())
+        saver=saver)
 
     logging.info("%s: Starting managed session.", task_as_string(self.task))
     with sv.managed_session(target, config=self.config) as sess:
@@ -438,11 +436,12 @@ class Trainer(object):
           _, global_step_val, loss_val, predictions_val, labels_val = sess.run(
               [train_op, global_step, loss, predictions, labels])
           seconds_per_batch = time.time() - batch_start_time
+          examples_per_second = labels_val.shape[0] / seconds_per_batch
 
           if self.max_steps and self.max_steps <= global_step_val:
             self.max_steps_reached = True
 
-          if is_chief and global_step_val % 10 == 0 and train_dir:
+          if self.is_master and global_step_val % 10 == 0 and self.train_dir:
             eval_start_time = time.time()
             hit_at_one = eval_util.calculate_hit_at_one(predictions_val, labels_val)
             perr = eval_util.calculate_precision_at_equal_recall_rate(predictions_val,
