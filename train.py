@@ -251,52 +251,52 @@ def build_graph(reader,
   label_losses = []
   reg_losses = []
   for i in xrange(num_towers):
-    with (tf.device(device_string % i) and
-          tf.variable_scope(tf.get_variable_scope(), reuse=True if i > 0 else None) and
-          tf.name_scope("tower%d" % i) and
-          slim.arg_scope([slim.model_variable, slim.variable], device="/cpu:0" if FLAGS.num_gpus!=1 else "/gpu:0")):
-      result = model.create_model(
-          tower_inputs[i],
-          num_frames=tower_num_frames[i],
-          vocab_size=reader.num_classes,
-          labels=tower_labels[i],
-          l2_penalty=FLAGS.regularization_penalty)
+    with tf.device(device_string % i):
+      with (tf.variable_scope(tf.get_variable_scope(), reuse=True if i > 0 else None) and
+            tf.name_scope("tower%d" % i) and
+            slim.arg_scope([slim.model_variable, slim.variable], device="/cpu:0" if FLAGS.num_gpus!=1 else "/gpu:0")):
+        result = model.create_model(
+            tower_inputs[i],
+            num_frames=tower_num_frames[i],
+            vocab_size=reader.num_classes,
+            labels=tower_labels[i],
+            l2_penalty=FLAGS.regularization_penalty)
 
-      predictions = result["predictions"]
-      tower_predictions.append(predictions)
-      if "loss" in result.keys():
-        label_loss = result["loss"]
-      else:
-        label_loss = label_loss_fn.calculate_loss(predictions, tower_labels[i])
+        predictions = result["predictions"]
+        tower_predictions.append(predictions)
+        if "loss" in result.keys():
+          label_loss = result["loss"]
+        else:
+          label_loss = label_loss_fn.calculate_loss(predictions, tower_labels[i])
 
-      if "regularization_loss" in result.keys():
-        reg_loss = result["regularization_loss"]
-      else:
-        reg_loss = tf.constant(0.0)
-      reg_loss_list = tf.losses.get_regularization_losses()
-      if reg_loss_list:
-        reg_loss += tf.add_n(reg_loss_list)
+        if "regularization_loss" in result.keys():
+          reg_loss = result["regularization_loss"]
+        else:
+          reg_loss = tf.constant(0.0)
+        reg_loss_list = tf.losses.get_regularization_losses()
+        if reg_loss_list:
+          reg_loss += tf.add_n(reg_loss_list)
 
-      reg_losses.append(reg_loss)
+        reg_losses.append(reg_loss)
 
-      # Adds update_ops (e.g., moving average updates in batch normalization) as
-      # a dependency to the train_op.
-      update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
-      if "update_ops" in result.keys():
-        update_ops += result["update_ops"]
-      if update_ops:
-        with tf.control_dependencies(update_ops):
-          barrier = tf.no_op(name="gradient_barrier")
-          with tf.control_dependencies([barrier]):
-            label_loss = tf.identity(label_loss)
+        # Adds update_ops (e.g., moving average updates in batch normalization) as
+        # a dependency to the train_op.
+        update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+        if "update_ops" in result.keys():
+          update_ops += result["update_ops"]
+        if update_ops:
+          with tf.control_dependencies(update_ops):
+            barrier = tf.no_op(name="gradient_barrier")
+            with tf.control_dependencies([barrier]):
+              label_loss = tf.identity(label_loss)
 
-      label_losses.append(label_loss)
+        label_losses.append(label_loss)
 
-      # Incorporate the L2 weight penalties etc.
-      final_loss = regularization_penalty * reg_loss + label_loss
-      gradients = optimizer.compute_gradients(final_loss,
-          colocate_gradients_with_ops=False)
-      tower_gradients.append(gradients)
+        # Incorporate the L2 weight penalties etc.
+        final_loss = regularization_penalty * reg_loss + label_loss
+        gradients = optimizer.compute_gradients(final_loss,
+            colocate_gradients_with_ops=False)
+        tower_gradients.append(gradients)
   label_loss = tf.reduce_mean(tf.stack(label_losses))
   tf.summary.scalar("label_loss", label_loss)
   if regularization_penalty != 0:
@@ -365,15 +365,20 @@ def train_loop(train_dir=None,
       seconds_per_batch = time.time() - batch_start_time
       examples_per_second = labels_val.shape[0] / seconds_per_batch
 
-      hit_at_one = eval_util.calculate_hit_at_one(predictions_val, labels_val)
-      perr = eval_util.calculate_precision_at_equal_recall_rate(predictions_val,
-                                                                labels_val)
-      gap = eval_util.calculate_gap(predictions_val, labels_val)
-
-      logging.info("training step " + str(global_step_val) + "| Hit@1: " + (
-          "%.2f" % hit_at_one) + " PERR: " + ("%.2f" % perr) +
-          " GAP: " + ("%.2f" % gap) + " Loss: " + str(loss_val))
       if is_chief and global_step_val % 10 == 0 and train_dir:
+        eval_start_time = time.time()
+        hit_at_one = eval_util.calculate_hit_at_one(predictions_val, labels_val)
+        perr = eval_util.calculate_precision_at_equal_recall_rate(predictions_val,
+                                                                  labels_val)
+        gap = eval_util.calculate_gap(predictions_val, labels_val)
+        eval_end_time = time.time()
+        eval_time = eval_end_time - eval_start_time
+        logging.info("training step " + str(global_step_val) + "| Hit@1: " + (
+          "%.2f" % hit_at_one) + " PERR: " + ("%.2f" % perr) +
+          " GAP: " + ("%.2f" % gap) + " Loss: " + str(loss_val) +
+          " Train time: " + ("%.2f" % seconds_per_batch) + "s Eval time: " +
+          str(eval_time) + "s")
+
         sv.summary_writer.add_summary(
             utils.MakeSummary("model/Training_Hit@1",
                               hit_at_one), global_step_val)
@@ -388,6 +393,8 @@ def train_loop(train_dir=None,
                               examples_per_second),
             global_step_val)
         sv.summary_writer.flush()
+      else:
+        logging.info("training step " + str(global_step_val) + "| Loss: " + str(loss_val) + " Train time: " + ("%.2f" % seconds_per_batch) + "s Examples/sec: " + str(examples_per_second))
   except tf.errors.OutOfRangeError:
     logging.info("Done training -- epoch limit reached")
   logging.info("exited training loop")
