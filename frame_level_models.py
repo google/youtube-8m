@@ -144,7 +144,7 @@ class DbofModel(models.BaseModel):
 
     cluster_weights = tf.get_variable("cluster_weights",
       [feature_size, cluster_size],
-      initializer = tf.random_normal(stddev=1 / math.sqrt(feature_size)))
+      initializer = tf.random_normal_initializer(stddev=1 / math.sqrt(feature_size)))
     tf.summary.histogram("cluster_weights", cluster_weights)
     activation = tf.matmul(reshaped_input, cluster_weights)
     if add_batch_norm:
@@ -168,7 +168,7 @@ class DbofModel(models.BaseModel):
 
     hidden1_weights = tf.get_variable("hidden1_weights",
       [cluster_size, hidden1_size],
-      initializer=tf.random_normal(stddev=1 / math.sqrt(cluster_size)))
+      initializer=tf.random_normal_initializer(stddev=1 / math.sqrt(cluster_size)))
     tf.summary.histogram("hidden1_weights", hidden1_weights)
     activation = tf.matmul(activation, hidden1_weights)
     if add_batch_norm:
@@ -181,7 +181,7 @@ class DbofModel(models.BaseModel):
     else:
       hidden1_biases = tf.get_variable("hidden1_biases",
         [hidden1_size],
-        initializer = tf.random_normal(stddev=0.01))
+        initializer = tf.random_normal_initializer(stddev=0.01))
       tf.summary.histogram("hidden1_biases", hidden1_biases)
       activation += hidden1_biases
     activation = tf.nn.relu6(activation)
