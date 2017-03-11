@@ -261,8 +261,9 @@ def build_graph(reader,
         tf.name_scope("tower%d" % i) and
         slim.arg_scope([slim.model_variable, slim.variable], device="/cpu:0" if FLAGS.num_gpus!=1 else "/gpu:0")):
 
+        ti = tf.Print(tower_inputs[i], [tf.shape(tower_inputs[i])], "tower inputs shape")
         result = model.create_model(
-          tower_inputs[i],
+          ti,
           num_frames=tower_num_frames[i],
           vocab_size=reader.num_classes,
           labels=tower_labels[i],
@@ -276,7 +277,9 @@ def build_graph(reader,
         if "loss" in result.keys():
           label_loss = result["loss"]
         else:
-          label_loss = label_loss_fn.calculate_loss(predictions, tower_labels[i])
+          p = tf.Print(predictions, [tf.shape(predictions)], "predictions shape")
+          tl = tf.Print(tower_labels[i], [tf.shape(tower_labels[i])], "tower labels shape")
+          label_loss = label_loss_fn.calculate_loss(p, tl)
 
         if "regularization_loss" in result.keys():
           reg_loss = result["regularization_loss"]
