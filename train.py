@@ -228,8 +228,8 @@ def build_graph(reader,
   tf.summary.scalar('learning_rate', learning_rate)
 
   if FLAGS.num_gpus > 0:
-      num_towers = FLAGS.num_gpus
-      device_string = '/gpu:%d'
+    num_towers = FLAGS.num_gpus
+    device_string = '/gpu:%d'
   else:
     num_towers = 2
     device_string = '/cpu:%d'
