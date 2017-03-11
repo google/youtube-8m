@@ -41,6 +41,7 @@ class ModelExporter(object):
 
     with self.graph.as_default():
       with tf.Session() as session:
+        session.run(tf.global_variables_initializer())
         self.saver.restore(session, last_checkpoint)
 
         signature = signature_def_utils.build_signature_def(
