@@ -122,6 +122,8 @@ class DbofModel(models.BaseModel):
     cluster_size = cluster_size or FLAGS.dbof_cluster_size
     hidden1_size = hidden_size or FLAGS.dbof_hidden_size
 
+    print "reusing: " + str(tf.get_variable_scope().reuse)
+
     num_frames = tf.cast(tf.expand_dims(num_frames, 1), tf.float32)
     if random_frames:
       model_input = utils.SampleRandomFrames(model_input, num_frames,

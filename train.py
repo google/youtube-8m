@@ -231,7 +231,7 @@ def build_graph(reader,
       num_towers = FLAGS.num_gpus
       device_string = '/gpu:%d'
   else:
-    num_towers = 1
+    num_towers = 2
     device_string = '/cpu:%d'
 
   optimizer = optimizer_class(base_learning_rate)
