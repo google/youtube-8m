@@ -142,9 +142,9 @@ class DbofModel(models.BaseModel):
           is_training=is_training,
           scope="input_bn")
 
-    cluster_weights = tf.Variable(tf.random_normal(
-        [feature_size, cluster_size],
-        stddev=1 / math.sqrt(feature_size)))
+    cluster_weights = tf.get_variable("cluster_weights",
+      [feature_size, cluster_size],
+      initializer = tf.random_normal_initializer(stddev=1 / math.sqrt(feature_size)))
     tf.summary.histogram("cluster_weights", cluster_weights)
     activation = tf.matmul(reshaped_input, cluster_weights)
     if add_batch_norm:
@@ -155,9 +155,9 @@ class DbofModel(models.BaseModel):
           is_training=is_training,
           scope="cluster_bn")
     else:
-      cluster_biases = tf.Variable(
-          tf.random_normal(
-              [cluster_size], stddev=1 / math.sqrt(feature_size)))
+      cluster_biases = tf.get_variable("cluster_biases",
+        [cluster_size],
+        initializer = tf.random_normal(stddev=1 / math.sqrt(feature_size)))
       tf.summary.histogram("cluster_biases", cluster_biases)
       activation += cluster_biases
     activation = tf.nn.relu6(activation)
@@ -166,9 +166,9 @@ class DbofModel(models.BaseModel):
     activation = tf.reshape(activation, [-1, max_frames, cluster_size])
     activation = utils.FramePooling(activation, FLAGS.dbof_pooling_method)
 
-    hidden1_weights = tf.Variable(tf.random_normal(
-        [cluster_size, hidden1_size],
-        stddev=1 / math.sqrt(cluster_size)))
+    hidden1_weights = tf.get_variable("hidden1_weights",
+      [cluster_size, hidden1_size],
+      initializer=tf.random_normal_initializer(stddev=1 / math.sqrt(cluster_size)))
     tf.summary.histogram("hidden1_weights", hidden1_weights)
     activation = tf.matmul(activation, hidden1_weights)
     if add_batch_norm:
@@ -179,9 +179,9 @@ class DbofModel(models.BaseModel):
           is_training=is_training,
           scope="hidden1_bn")
     else:
-      hidden1_biases = tf.Variable(
-          tf.random_normal(
-              [hidden1_size], stddev=0.01))
+      hidden1_biases = tf.get_variable("hidden1_biases",
+        [hidden1_size],
+        initializer = tf.random_normal_initializer(stddev=0.01))
       tf.summary.histogram("hidden1_biases", hidden1_biases)
       activation += hidden1_biases
     activation = tf.nn.relu6(activation)
@@ -220,8 +220,7 @@ class LstmModel(models.BaseModel):
                 tf.contrib.rnn.BasicLSTMCell(
                     lstm_size, forget_bias=1.0, state_is_tuple=False)
                 for _ in range(number_of_layers)
-                ],
-            state_is_tuple=False)
+                ])
 
     loss = 0.0
     with tf.variable_scope("RNN"):

@@ -41,6 +41,7 @@ class ModelExporter(object):
 
     with self.graph.as_default():
       with tf.Session() as session:
+        session.run(tf.global_variables_initializer())
         self.saver.restore(session, last_checkpoint)
 
         signature = signature_def_utils.build_signature_def(
@@ -99,7 +100,8 @@ class ModelExporter(object):
           model_input,
           num_frames=num_frames,
           vocab_size=self.reader.num_classes,
-          labels=labels_batch)
+          labels=labels_batch,
+          is_training=False)
 
       for variable in slim.get_model_variables():
         tf.summary.histogram(variable.op.name, variable)
