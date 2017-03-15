@@ -255,61 +255,58 @@ def build_graph(reader,
   tower_predictions = []
   tower_label_losses = []
   tower_reg_losses = []
-  for i in xrange(num_towers):
+  for i in range(num_towers):
+    # For some reason these 'with' statements can't be combined onto the same
+    # line. They have to be nested.
     with tf.device(device_string % i):
-      with (tf.variable_scope(tf.get_variable_scope(), reuse=True if i > 0 else None) and
-        tf.name_scope("tower%d" % i) and
-        slim.arg_scope([slim.model_variable, slim.variable], device="/cpu:0" if FLAGS.num_gpus!=1 else "/gpu:0")):
+      with (tf.variable_scope(("tower"), reuse=True if i > 0 else None)):
+        with (slim.arg_scope([slim.model_variable, slim.variable], device="/cpu:0" if FLAGS.num_gpus!=1 else "/gpu:0")):
+          result = model.create_model(
+            tower_inputs[i],
+            num_frames=tower_num_frames[i],
+            vocab_size=reader.num_classes,
+            labels=tower_labels[i],
+            l2_penalty=FLAGS.regularization_penalty)
+          for variable in slim.get_model_variables():
+            tf.summary.histogram(variable.op.name, variable)
 
-        ti = tf.Print(tower_inputs[i], [tf.shape(tower_inputs[i])], "tower inputs shape")
-        result = model.create_model(
-          ti,
-          num_frames=tower_num_frames[i],
-          vocab_size=reader.num_classes,
-          labels=tower_labels[i],
-          l2_penalty=FLAGS.regularization_penalty)
-        for variable in slim.get_model_variables():
-          tf.summary.histogram(variable.op.name, variable)
+          predictions = result["predictions"]
+          tower_predictions.append(predictions)
 
-        predictions = result["predictions"]
-        tower_predictions.append(predictions)
+          if "loss" in result.keys():
+            label_loss = result["loss"]
+          else:
+            label_loss = label_loss_fn.calculate_loss(predictions, tower_labels[i])
 
-        if "loss" in result.keys():
-          label_loss = result["loss"]
-        else:
-          p = tf.Print(predictions, [tf.shape(predictions)], "predictions shape")
-          tl = tf.Print(tower_labels[i], [tf.shape(tower_labels[i])], "tower labels shape")
-          label_loss = label_loss_fn.calculate_loss(p, tl)
+          if "regularization_loss" in result.keys():
+            reg_loss = result["regularization_loss"]
+          else:
+            reg_loss = tf.constant(0.0)
 
-        if "regularization_loss" in result.keys():
-          reg_loss = result["regularization_loss"]
-        else:
-          reg_loss = tf.constant(0.0)
+          reg_losses = tf.losses.get_regularization_losses()
+          if reg_losses:
+            reg_loss += tf.add_n(reg_losses)
 
-        reg_losses = tf.losses.get_regularization_losses()
-        if reg_losses:
-          reg_loss += tf.add_n(reg_losses)
+          tower_reg_losses.append(reg_loss)
 
-        tower_reg_losses.append(reg_loss)
+          # Adds update_ops (e.g., moving average updates in batch normalization) as
+          # a dependency to the train_op.
+          update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+          if "update_ops" in result.keys():
+            update_ops += result["update_ops"]
+          if update_ops:
+            with tf.control_dependencies(update_ops):
+              barrier = tf.no_op(name="gradient_barrier")
+              with tf.control_dependencies([barrier]):
+                label_loss = tf.identity(label_loss)
 
-        # Adds update_ops (e.g., moving average updates in batch normalization) as
-        # a dependency to the train_op.
-        update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
-        if "update_ops" in result.keys():
-          update_ops += result["update_ops"]
-        if update_ops:
-          with tf.control_dependencies(update_ops):
-            barrier = tf.no_op(name="gradient_barrier")
-            with tf.control_dependencies([barrier]):
-              label_loss = tf.identity(label_loss)
+          tower_label_losses.append(label_loss)
 
-        tower_label_losses.append(label_loss)
-
-        # Incorporate the L2 weight penalties etc.
-        final_loss = regularization_penalty * reg_loss + label_loss
-        gradients = optimizer.compute_gradients(final_loss,
-            colocate_gradients_with_ops=False)
-        tower_gradients.append(gradients)
+          # Incorporate the L2 weight penalties etc.
+          final_loss = regularization_penalty * reg_loss + label_loss
+          gradients = optimizer.compute_gradients(final_loss,
+              colocate_gradients_with_ops=False)
+          tower_gradients.append(gradients)
   label_loss = tf.reduce_mean(tf.stack(tower_label_losses))
   tf.summary.scalar("label_loss", label_loss)
   if regularization_penalty != 0:

@@ -91,7 +91,7 @@ class ModelExporter(object):
     feature_dim = len(model_input_raw.get_shape()) - 1
     model_input = tf.nn.l2_normalize(model_input_raw, feature_dim)
 
-    with tf.name_scope("model"):
+    with tf.variable_scope("tower"):
       result = self.model.create_model(
           model_input,
           num_frames=num_frames,
