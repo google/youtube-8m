@@ -351,7 +351,8 @@ class Trainer(object):
     self.task = task
     self.is_master = (task.type == "master" and task.index == 0)
     self.train_dir = train_dir
-    self.config = tf.ConfigProto(allow_soft_placement=False,log_device_placement=log_device_placement)
+    self.config = tf.ConfigProto(
+        allow_soft_placement=True,log_device_placement=log_device_placement)
     self.model = model
     self.reader = reader
     self.model_exporter = model_exporter
