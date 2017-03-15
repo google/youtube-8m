@@ -181,8 +181,8 @@ def clip_gradient_norms(gradients_to_variables, max_norm):
     clipped_grads_and_vars.append((grad, var))
   return clipped_grads_and_vars
 
-def average_gradients(tower_grads):
-  """Calculate the average gradient for each shared variable across all towers.
+def combine_gradients(tower_grads):
+  """Calculate the combined gradient for each shared variable across all towers.
 
   Note that this function provides a synchronization point across all towers.
 
@@ -191,7 +191,7 @@ def average_gradients(tower_grads):
       is over individual gradients. The inner list is over the gradient
       calculation for each tower.
   Returns:
-     List of pairs of (gradient, variable) where the gradient has been averaged
+     List of pairs of (gradient, variable) where the gradient has been summed
      across all towers.
   """
   filtered_grads = [[x for x in grad_list if x[0] is not None] for grad_list in tower_grads]

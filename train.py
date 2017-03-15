@@ -262,15 +262,15 @@ def build_graph(reader,
       with (tf.variable_scope(("tower"), reuse=True if i > 0 else None)):
         with (slim.arg_scope([slim.model_variable, slim.variable], device="/cpu:0" if FLAGS.num_gpus!=1 else "/gpu:0")):
           result = model.create_model(
-            tower_inputs[i],
-            num_frames=tower_num_frames[i],
+            tf.Print(tower_inputs[i], [tf.shape(tower_inputs[i])], "tower input: "),
+            num_frames=tf.Print(tower_num_frames[i], [tf.shape(tower_num_frames[i])], "tower num frames: "),
             vocab_size=reader.num_classes,
-            labels=tower_labels[i],
+            labels=tf.Print(tower_labels[i], [tf.shape(tower_labels[i])], "tower labels: "),
             l2_penalty=FLAGS.regularization_penalty)
           for variable in slim.get_model_variables():
             tf.summary.histogram(variable.op.name, variable)
 
-          predictions = result["predictions"]
+          predictions = tf.Print(result["predictions"], [tf.shape(result["predictions"])], "predictions: ")
           tower_predictions.append(predictions)
 
           if "loss" in result.keys():
@@ -312,7 +312,7 @@ def build_graph(reader,
   if regularization_penalty != 0:
     reg_loss = tf.reduce_mean(tf.stack(tower_reg_losses))
     tf.summary.scalar("reg_loss", reg_loss)
-  merged_gradients = utils.average_gradients(tower_gradients)
+  merged_gradients = utils.combine_gradients(tower_gradients)
 
   if clip_gradient_norm > 0:
     with tf.name_scope('clip_grads'):
