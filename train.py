@@ -263,7 +263,7 @@ def build_graph(reader,
         with (slim.arg_scope([slim.model_variable, slim.variable], device="/cpu:0" if FLAGS.num_gpus!=1 else "/gpu:0")):
           result = model.create_model(
             tower_inputs[i],
-            num_frames=tower_num_frames[i]
+            num_frames=tower_num_frames[i],
             vocab_size=reader.num_classes,
             labels=tower_labels[i],
             l2_penalty=FLAGS.regularization_penalty)

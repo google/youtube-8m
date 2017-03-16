@@ -232,6 +232,6 @@ class LstmModel(models.BaseModel):
                                FLAGS.video_level_classifier_model)
 
     return aggregated_model().create_model(
-        model_input=tf.Print(state, [tf.shape(state)], "state: "),
+        model_input=state,
         vocab_size=vocab_size,
         **unused_params)
