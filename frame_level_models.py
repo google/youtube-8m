@@ -214,13 +214,12 @@ class LstmModel(models.BaseModel):
     lstm_size = FLAGS.lstm_cells
     number_of_layers = FLAGS.lstm_layers
 
-    with tf.device(device_string % i):
-      stacked_lstm = tf.contrib.rnn.MultiRNNCell(
-              [
-                  tf.contrib.rnn.BasicLSTMCell(
-                      lstm_size, forget_bias=1.0, state_is_tuple=False)
-                  for _ in range(number_of_layers)
-                  ], state_is_tuple=False)
+    stacked_lstm = tf.contrib.rnn.MultiRNNCell(
+            [
+                tf.contrib.rnn.BasicLSTMCell(
+                    lstm_size, forget_bias=1.0, state_is_tuple=False)
+                for _ in range(number_of_layers)
+                ], state_is_tuple=False)
 
     loss = 0.0
 
