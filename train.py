@@ -262,15 +262,15 @@ def build_graph(reader,
       with (tf.variable_scope(("tower"), reuse=True if i > 0 else None)):
         with (slim.arg_scope([slim.model_variable, slim.variable], device="/cpu:0" if FLAGS.num_gpus!=1 else "/gpu:0")):
           result = model.create_model(
-            tf.Print(tower_inputs[i], [tf.shape(tower_inputs[i])], "tower input: "),
-            num_frames=tf.Print(tower_num_frames[i], [tf.shape(tower_num_frames[i])], "tower num frames: "),
+            tower_inputs[i],
+            num_frames=tower_num_frames[i]
             vocab_size=reader.num_classes,
-            labels=tf.Print(tower_labels[i], [tf.shape(tower_labels[i])], "tower labels: "),
+            labels=tower_labels[i],
             l2_penalty=FLAGS.regularization_penalty)
           for variable in slim.get_model_variables():
             tf.summary.histogram(variable.op.name, variable)
 
-          predictions = tf.Print(result["predictions"], [tf.shape(result["predictions"])], "predictions: ")
+          predictions = result["predictions"]
           tower_predictions.append(predictions)
 
           if "loss" in result.keys():
