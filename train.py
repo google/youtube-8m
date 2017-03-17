@@ -428,7 +428,7 @@ class Trainer(object):
               "%.2f" % hit_at_one) + " PERR: " + ("%.2f" % perr) +
               " GAP: " + ("%.2f" % gap) + " Loss: " + str(loss_val) +
               " Train time: " + ("%.2f" % seconds_per_batch) + "s Eval time: " +
-              str(eval_time) + "s")
+              str("%.2f" % eval_time) + "s")
 
             sv.summary_writer.add_summary(
                 utils.MakeSummary("model/Training_Hit@1", hit_at_one),
