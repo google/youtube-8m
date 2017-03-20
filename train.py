@@ -219,6 +219,14 @@ def build_graph(reader,
 
   global_step = tf.Variable(0, trainable=False, name="global_step")
 
+  if FLAGS.num_gpus > 0:
+    num_towers = FLAGS.num_gpus
+    device_string = '/gpu:%d'
+  else:
+    num_towers = 1
+    device_string = '/cpu:%d'
+
+
   learning_rate = tf.train.exponential_decay(
       base_learning_rate,
       global_step * batch_size * num_towers,
@@ -226,13 +234,6 @@ def build_graph(reader,
       learning_rate_decay,
       staircase=True)
   tf.summary.scalar('learning_rate', learning_rate)
-
-  if FLAGS.num_gpus > 0:
-    num_towers = FLAGS.num_gpus
-    device_string = '/gpu:%d'
-  else:
-    num_towers = 1
-    device_string = '/cpu:%d'
 
   optimizer = optimizer_class(learning_rate)
   unused_video_id, model_input_raw, labels_batch, num_frames = (
