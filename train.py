@@ -234,7 +234,7 @@ def build_graph(reader,
     num_towers = 1
     device_string = '/cpu:%d'
 
-  optimizer = optimizer_class(base_learning_rate)
+  optimizer = optimizer_class(learning_rate)
   unused_video_id, model_input_raw, labels_batch, num_frames = (
       get_input_data_tensors(
           reader,
