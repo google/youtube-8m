@@ -317,6 +317,14 @@ Similarly, to use audio-visual Frame-Level features use:
 lists provided to the two flags above match. Also, the order must match when
 running training, evaluation, or inference.
 
+### Using Larger Machine Types
+
+Some complex frame-level models can take as long as a week to converge when
+using only one GPU. You can train these models more quickly by using more
+powerful machine types which have additional GPUs. To use a configuration with
+4 GPUs, replace the argument to `--config` with `youtube-8m/cloudml-4gpu.yaml`.
+Be careful with this argument as it will also increase the rate you are charged
+by a factor of 4 as well.
 
 ## Running on Your Own Machine
 
@@ -424,6 +432,40 @@ logistic model trained over the video-level features. Please look at the
 ### Using Audio Features
 
 See [Using Audio Features](#using-audio-features) section above.
+
+### Using GPUs
+
+It's possible to use one or more GPUs to accelerate your computations.
+Depending on the relative speeds of your installed GPU and CPU, you can expect
+up to a 5x improvement in training speeds from using one GPU. First, you need to
+have a version of Tensorflow installed which has GPU support. You can verify
+that Tensorflow is able to see your GPU by running
+
+```
+python -c 'import tensorflow as tf; tf.Session()'
+```
+
+This will print out something like the following if Tensorflow is able to use
+your installed GPU:
+
+```
+I tensorflow/core/common_runtime/gpu/gpu_init.cc:102] Found device 0 with properties:
+name: Tesla M40
+major: 5 minor: 2 memoryClockRate (GHz) 1.112
+pciBusID 0000:04:00.0
+Total memory: 11.25GiB
+Free memory: 11.09GiB
+...
+```
+
+To use your installed GPUs, simply specify the number of GPUs you want to use
+via the `num_gpus` flag. The forward and backward passes will be computed with
+the GPUs, whereas the CPU will be used primarily for the input and output
+pipelines. If you have multiple GPUs, each of them will be given a full batch
+of examples, and the resulting gradients will be summed together before being
+applied. This will increase your effective batch size. For example, if you set
+`batch_size=128` and `num_gpus=4`, this will result in 512 examples being
+evaluated every training step.
 
 ### Ground-Truth Label Files
 

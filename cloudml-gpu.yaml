@@ -2,3 +2,6 @@ trainingInput:
   scaleTier: CUSTOM
   masterType: standard_gpu
   runtimeVersion: "1.0"
+  args: [
+    "--num_gpus=1"
+  ]
