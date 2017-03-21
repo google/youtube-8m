@@ -1,0 +1,7 @@
+trainingInput:
+  scaleTier: CUSTOM
+  masterType: complex_model_m_gpu
+  runtimeVersion: "1.0"
+  args: [
+    "--num_gpus=4"
+  ]
