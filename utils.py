@@ -196,7 +196,6 @@ def combine_gradients(tower_grads):
   """
   filtered_grads = [[x for x in grad_list if x[0] is not None] for grad_list in tower_grads]
   final_grads = []
-  print filtered_grads
   for i in xrange(len(filtered_grads[0])):
     grads = [filtered_grads[t][i] for t in xrange(len(filtered_grads))]
     grad = tf.stack([x[0] for x in grads], 0)

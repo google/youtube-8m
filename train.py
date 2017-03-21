@@ -92,7 +92,7 @@ if __name__ == "__main__":
   # Other flags.
   flags.DEFINE_integer("num_readers", 8,
                        "How many threads to use for reading input files.")
-  flags.DEFINE_integer("num_gpus", 0,
+  flags.DEFINE_integer("num_gpus", 1,
                      "How many GPUs are allocated to each worker.")
   flags.DEFINE_string("optimizer", "AdamOptimizer",
                       "What optimizer class to use.")
@@ -425,11 +425,11 @@ class Trainer(object):
             eval_end_time = time.time()
             eval_time = eval_end_time - eval_start_time
 
-            logging.info("training step " + str(global_step_val) + "| Hit@1: " + (
-              "%.2f" % hit_at_one) + " PERR: " + ("%.2f" % perr) +
-              " GAP: " + ("%.2f" % gap) + " Loss: " + str(loss_val) +
-              " Train time: " + ("%.2f" % seconds_per_batch) + "s Eval time: " +
-              str("%.2f" % eval_time) + "s")
+            logging.info("training step " + str(global_step_val) + " | Loss: " + ("%.2f" % loss_val) +
+              " Train time: " + ("%.2f" % seconds_per_batch) +
+              "s Examples/sec: " + ("%.2f" % examples_per_second) + " | Hit@1: " +
+              ("%.2f" % hit_at_one) + " PERR: " + ("%.2f" % perr) +
+              " GAP: " + ("%.2f" % gap))
 
             sv.summary_writer.add_summary(
                 utils.MakeSummary("model/Training_Hit@1", hit_at_one),
@@ -452,7 +452,9 @@ class Trainer(object):
               self.export_model(global_step_val, sv.saver, sv.save_path, sess)
               self.last_model_export_step = global_step_val
           else:
-            logging.info("training step " + str(global_step_val) + "| Loss: " + str(loss_val) + " Train time: " + ("%.2f" % seconds_per_batch) + "s Examples/sec: " + str(examples_per_second))
+            logging.info("training step " + str(global_step_val) + " | Loss: " +
+              ("%.2f" % loss_val) + " Train time: " + ("%.2f" % seconds_per_batch) +
+              "s Examples/sec: " + ("%.2f" % examples_per_second))
       except tf.errors.OutOfRangeError:
         logging.info("%s: Done training -- epoch limit reached.",
                      task_as_string(self.task))
