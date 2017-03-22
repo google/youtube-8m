@@ -21,12 +21,14 @@ or on your own machine. This README provides instructions for both.
    * [Accessing Files on Google Cloud](#accessing-files-on-google-cloud)
    * [Using Frame-Level Features](#using-frame-level-features)
    * [Using Audio Features](#using-audio-features)
+   * [Using Larger Machine Types](#using-larger-machine-types)
 * [Running on Your Own Machine](#running-on-your-own-machine)
    * [Requirements](#requirements-1)
    * [Training on Video-Level Features](#training-on-video-level-features-1)
    * [Evaluation and Inference](#evaluation-and-inference-1)
    * [Using Frame-Level Features](#using-frame-level-features-1)
    * [Using Audio Features](#using-audio-features-1)
+   * [Using GPUs](#using-gpus)
    * [Ground-Truth Label Files](#ground-truth-label-files)
 * [Overview of Models](#overview-of-models)
    * [Video-Level Models](#video-level-models)
@@ -317,6 +319,14 @@ Similarly, to use audio-visual Frame-Level features use:
 lists provided to the two flags above match. Also, the order must match when
 running training, evaluation, or inference.
 
+### Using Larger Machine Types
+
+Some complex frame-level models can take as long as a week to converge when
+using only one GPU. You can train these models more quickly by using more
+powerful machine types which have additional GPUs. To use a configuration with
+4 GPUs, replace the argument to `--config` with `youtube-8m/cloudml-4gpu.yaml`.
+Be careful with this argument as it will also increase the rate you are charged
+by a factor of 4 as well.
 
 ## Running on Your Own Machine
 
@@ -424,6 +434,36 @@ logistic model trained over the video-level features. Please look at the
 ### Using Audio Features
 
 See [Using Audio Features](#using-audio-features) section above.
+
+### Using GPUs
+
+If your Tensorflow installation has GPU support, this code will make use of all
+of your compatible GPUs. You can verify your installation by running
+
+```
+python -c 'import tensorflow as tf; tf.Session()'
+```
+
+This will print out something like the following for each of your compatible
+GPUs.
+
+```
+I tensorflow/core/common_runtime/gpu/gpu_init.cc:102] Found device 0 with properties:
+name: Tesla M40
+major: 5 minor: 2 memoryClockRate (GHz) 1.112
+pciBusID 0000:04:00.0
+Total memory: 11.25GiB
+Free memory: 11.09GiB
+...
+```
+
+If at least one GPU was found, the forward and backward passes will be computed
+with the GPUs, whereas the CPU will be used primarily for the input and output
+pipelines. If you have multiple GPUs, each of them will be given a full batch
+of examples, and the resulting gradients will be summed together before being
+applied. This will increase your effective batch size. For example, if you set
+`batch_size=128` and you have 4 GPUs, this will result in 512 examples being
+evaluated every training step.
 
 ### Ground-Truth Label Files
 

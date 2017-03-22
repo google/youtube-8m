@@ -29,6 +29,7 @@ from tensorflow import app
 from tensorflow import flags
 from tensorflow import gfile
 from tensorflow import logging
+from tensorflow.python.client import device_lib
 import utils
 
 FLAGS = flags.FLAGS
@@ -69,7 +70,7 @@ if __name__ == "__main__":
   flags.DEFINE_string("label_loss", "CrossEntropyLoss",
                       "Which loss function to use for training the model.")
   flags.DEFINE_float(
-      "regularization_penalty", 1,
+      "regularization_penalty", 1.0,
       "How much weight to give to the regularization loss (the label loss has "
       "a weight of 1).")
   flags.DEFINE_float("base_learning_rate", 0.01,
@@ -167,8 +168,8 @@ def get_input_data_tensors(reader,
     return tf.train.shuffle_batch_join(
         training_data,
         batch_size=batch_size,
-        capacity=FLAGS.batch_size * 5,
-        min_after_dequeue=FLAGS.batch_size,
+        capacity=batch_size * 5,
+        min_after_dequeue=batch_size,
         allow_smaller_final_batch=True,
         enqueue_many=True)
 
@@ -177,7 +178,6 @@ def find_class_by_name(name, modules):
   """Searches the provided modules for the named class and returns it."""
   modules = [getattr(module, name, None) for module in modules]
   return next(a for a in modules if a)
-
 
 def build_graph(reader,
                 model,
@@ -215,12 +215,25 @@ def build_graph(reader,
     num_epochs: How many passes to make over the data. 'None' means an
                 unlimited number of passes.
   """
-  
+
   global_step = tf.Variable(0, trainable=False, name="global_step")
-  
+
+  local_device_protos = device_lib.list_local_devices()
+  gpus = [x.name for x in local_device_protos if x.device_type == 'GPU']
+  num_gpus = len(gpus)
+
+  if num_gpus > 0:
+    logging.info("Using the following GPUs to train: " + str(gpus))
+    num_towers = num_gpus
+    device_string = '/gpu:%d'
+  else:
+    logging.info("No GPUs found. Training on CPU.")
+    num_towers = 1
+    device_string = '/cpu:%d'
+
   learning_rate = tf.train.exponential_decay(
       base_learning_rate,
-      global_step * batch_size,
+      global_step * batch_size * num_towers,
       learning_rate_decay_examples,
       learning_rate_decay,
       staircase=True)
@@ -231,78 +244,102 @@ def build_graph(reader,
       get_input_data_tensors(
           reader,
           train_data_pattern,
-          batch_size=batch_size,
+          batch_size=batch_size * num_towers,
           num_readers=num_readers,
           num_epochs=num_epochs))
   tf.summary.histogram("model/input_raw", model_input_raw)
-  
+
   feature_dim = len(model_input_raw.get_shape()) - 1
 
   model_input = tf.nn.l2_normalize(model_input_raw, feature_dim)
 
-  with tf.name_scope("model"):
-    result = model.create_model(
-        model_input,
-        num_frames=num_frames,
-        vocab_size=reader.num_classes,
-        labels=labels_batch)
+  tower_inputs = tf.split(model_input, num_towers)
+  tower_labels = tf.split(labels_batch, num_towers)
+  tower_num_frames = tf.split(num_frames, num_towers)
+  tower_gradients = []
+  tower_predictions = []
+  tower_label_losses = []
+  tower_reg_losses = []
+  for i in range(num_towers):
+    # For some reason these 'with' statements can't be combined onto the same
+    # line. They have to be nested.
+    with tf.device(device_string % i):
+      with (tf.variable_scope(("tower"), reuse=True if i > 0 else None)):
+        with (slim.arg_scope([slim.model_variable, slim.variable], device="/cpu:0" if num_gpus!=1 else "/gpu:0")):
+          result = model.create_model(
+            tower_inputs[i],
+            num_frames=tower_num_frames[i],
+            vocab_size=reader.num_classes,
+            labels=tower_labels[i],
+            l2_penalty=FLAGS.regularization_penalty)
+          for variable in slim.get_model_variables():
+            tf.summary.histogram(variable.op.name, variable)
 
-    for variable in slim.get_model_variables():
-      tf.summary.histogram(variable.op.name, variable)
+          predictions = result["predictions"]
+          tower_predictions.append(predictions)
 
-    predictions = result["predictions"]
-    if "loss" in result.keys():
-      label_loss = result["loss"]
-    else:
-      label_loss = label_loss_fn.calculate_loss(predictions, labels_batch)
-    tf.summary.scalar("label_loss", label_loss)
+          if "loss" in result.keys():
+            label_loss = result["loss"]
+          else:
+            label_loss = label_loss_fn.calculate_loss(predictions, tower_labels[i])
 
-    if "regularization_loss" in result.keys():
-      reg_loss = result["regularization_loss"]
-    else:
-      reg_loss = tf.constant(0.0)
-    
-    reg_losses = tf.losses.get_regularization_losses()
-    if reg_losses:
-      reg_loss += tf.add_n(reg_losses)
-    
-    if regularization_penalty != 0:
-      tf.summary.scalar("reg_loss", reg_loss)
+          if "regularization_loss" in result.keys():
+            reg_loss = result["regularization_loss"]
+          else:
+            reg_loss = tf.constant(0.0)
 
-    # Adds update_ops (e.g., moving average updates in batch normalization) as
-    # a dependency to the train_op.
-    update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
-    if "update_ops" in result.keys():
-      update_ops += result["update_ops"]
-    if update_ops:
-      with tf.control_dependencies(update_ops):
-        barrier = tf.no_op(name="gradient_barrier")
-        with tf.control_dependencies([barrier]):
-          label_loss = tf.identity(label_loss)
+          reg_losses = tf.losses.get_regularization_losses()
+          if reg_losses:
+            reg_loss += tf.add_n(reg_losses)
 
-    # Incorporate the L2 weight penalties etc.
-    final_loss = regularization_penalty * reg_loss + label_loss
-    train_op = slim.learning.create_train_op(
-        final_loss,
-        optimizer,
-        global_step=global_step,
-        clip_gradient_norm=clip_gradient_norm)
+          tower_reg_losses.append(reg_loss)
 
-    tf.add_to_collection("global_step", global_step)
-    tf.add_to_collection("loss", label_loss)
-    tf.add_to_collection("predictions", predictions)
-    tf.add_to_collection("input_batch_raw", model_input_raw)
-    tf.add_to_collection("input_batch", model_input)
-    tf.add_to_collection("num_frames", num_frames)
-    tf.add_to_collection("labels", tf.cast(labels_batch, tf.float32))
-    tf.add_to_collection("train_op", train_op)
+          # Adds update_ops (e.g., moving average updates in batch normalization) as
+          # a dependency to the train_op.
+          update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+          if "update_ops" in result.keys():
+            update_ops += result["update_ops"]
+          if update_ops:
+            with tf.control_dependencies(update_ops):
+              barrier = tf.no_op(name="gradient_barrier")
+              with tf.control_dependencies([barrier]):
+                label_loss = tf.identity(label_loss)
+
+          tower_label_losses.append(label_loss)
+
+          # Incorporate the L2 weight penalties etc.
+          final_loss = regularization_penalty * reg_loss + label_loss
+          gradients = optimizer.compute_gradients(final_loss,
+              colocate_gradients_with_ops=False)
+          tower_gradients.append(gradients)
+  label_loss = tf.reduce_mean(tf.stack(tower_label_losses))
+  tf.summary.scalar("label_loss", label_loss)
+  if regularization_penalty != 0:
+    reg_loss = tf.reduce_mean(tf.stack(tower_reg_losses))
+    tf.summary.scalar("reg_loss", reg_loss)
+  merged_gradients = utils.combine_gradients(tower_gradients)
+
+  if clip_gradient_norm > 0:
+    with tf.name_scope('clip_grads'):
+      merged_gradients = utils.clip_gradient_norms(merged_gradients, clip_gradient_norm)
+
+  train_op = optimizer.apply_gradients(merged_gradients, global_step=global_step)
+
+  tf.add_to_collection("global_step", global_step)
+  tf.add_to_collection("loss", label_loss)
+  tf.add_to_collection("predictions", tf.concat(tower_predictions, 0))
+  tf.add_to_collection("input_batch_raw", model_input_raw)
+  tf.add_to_collection("input_batch", model_input)
+  tf.add_to_collection("num_frames", num_frames)
+  tf.add_to_collection("labels", tf.cast(labels_batch, tf.float32))
+  tf.add_to_collection("train_op", train_op)
 
 
 class Trainer(object):
   """A Trainer to train a Tensorflow graph."""
 
-  def __init__(self, cluster, task, train_dir, model, reader, model_exporter, 
-               log_device_placement=True, max_steps=None, 
+  def __init__(self, cluster, task, train_dir, model, reader, model_exporter,
+               log_device_placement=True, max_steps=None,
                export_model_steps=1000):
     """"Creates a Trainer.
 
@@ -316,7 +353,8 @@ class Trainer(object):
     self.task = task
     self.is_master = (task.type == "master" and task.index == 0)
     self.train_dir = train_dir
-    self.config = tf.ConfigProto(log_device_placement=log_device_placement)
+    self.config = tf.ConfigProto(
+        allow_soft_placement=True,log_device_placement=log_device_placement)
     self.model = model
     self.reader = reader
     self.model_exporter = model_exporter
@@ -348,7 +386,6 @@ class Trainer(object):
         saver = self.recover_model(meta_filename)
 
       with tf.device(device_fn):
-
         if not meta_filename:
           saver = self.build_model(self.model, self.reader)
 
@@ -371,32 +408,32 @@ class Trainer(object):
 
     logging.info("%s: Starting managed session.", task_as_string(self.task))
     with sv.managed_session(target, config=self.config) as sess:
-
       try:
         logging.info("%s: Entering training loop.", task_as_string(self.task))
         while (not sv.should_stop()) and (not self.max_steps_reached):
-
           batch_start_time = time.time()
           _, global_step_val, loss_val, predictions_val, labels_val = sess.run(
               [train_op, global_step, loss, predictions, labels])
           seconds_per_batch = time.time() - batch_start_time
+          examples_per_second = labels_val.shape[0] / seconds_per_batch
 
           if self.max_steps and self.max_steps <= global_step_val:
             self.max_steps_reached = True
 
-          if self.is_master:
-            examples_per_second = labels_val.shape[0] / seconds_per_batch
-            hit_at_one = eval_util.calculate_hit_at_one(predictions_val,
-                                                        labels_val)
-            perr = eval_util.calculate_precision_at_equal_recall_rate(
-                predictions_val, labels_val)
+          if self.is_master and global_step_val % 10 == 0 and self.train_dir:
+            eval_start_time = time.time()
+            hit_at_one = eval_util.calculate_hit_at_one(predictions_val, labels_val)
+            perr = eval_util.calculate_precision_at_equal_recall_rate(predictions_val,
+                                                                      labels_val)
             gap = eval_util.calculate_gap(predictions_val, labels_val)
+            eval_end_time = time.time()
+            eval_time = eval_end_time - eval_start_time
 
-            logging.info(
-                "%s: training step " + str(global_step_val) + "| Hit@1: " +
-                ("%.2f" % hit_at_one) + " PERR: " + ("%.2f" % perr) + " GAP: " +
-                ("%.2f" % gap) + " Loss: " + str(loss_val),
-                task_as_string(self.task))
+            logging.info("training step " + str(global_step_val) + " | Loss: " + ("%.2f" % loss_val) +
+              " Train time: " + ("%.2f" % seconds_per_batch) +
+              "s Examples/sec: " + ("%.2f" % examples_per_second) + " | Hit@1: " +
+              ("%.2f" % hit_at_one) + " PERR: " + ("%.2f" % perr) +
+              " GAP: " + ("%.2f" % gap))
 
             sv.summary_writer.add_summary(
                 utils.MakeSummary("model/Training_Hit@1", hit_at_one),
@@ -411,18 +448,17 @@ class Trainer(object):
             sv.summary_writer.flush()
 
             # Exporting the model every x steps
-            time_to_export = ((self.last_model_export_step == 0) or 
-                (global_step_val - self.last_model_export_step 
+            time_to_export = ((self.last_model_export_step == 0) or
+                (global_step_val - self.last_model_export_step
                  >= self.export_model_steps))
 
             if self.is_master and time_to_export:
               self.export_model(global_step_val, sv.saver, sv.save_path, sess)
               self.last_model_export_step = global_step_val
-
-        # Exporting the final model
-        if self.is_master:
-          self.export_model(global_step_val, sv.saver, sv.save_path, sess)
-
+          else:
+            logging.info("training step " + str(global_step_val) + " | Loss: " +
+              ("%.2f" % loss_val) + " Train time: " + ("%.2f" % seconds_per_batch) +
+              "s Examples/sec: " + ("%.2f" % examples_per_second))
       except tf.errors.OutOfRangeError:
         logging.info("%s: Done training -- epoch limit reached.",
                      task_as_string(self.task))
@@ -443,10 +479,9 @@ class Trainer(object):
                  task_as_string(self.task), global_step_val, model_dir)
 
     self.model_exporter.export_model(
-        model_dir=model_dir, 
+        model_dir=model_dir,
         global_step_val=global_step_val,
         last_checkpoint=last_checkpoint)
-
 
   def start_server_if_distributed(self):
     """Starts a server if the execution is distributed."""
@@ -483,13 +518,13 @@ class Trainer(object):
       logging.info("%s: Flag 'start_new_model' is set. Building a new model.",
                    task_as_string(self.task))
       return None
-    
+
     latest_checkpoint = tf.train.latest_checkpoint(train_dir)
-    if not latest_checkpoint: 
+    if not latest_checkpoint:
       logging.info("%s: No checkpoint file found. Building a new model.",
                    task_as_string(self.task))
       return None
-    
+
     meta_filename = latest_checkpoint + ".meta"
     if not gfile.Exists(meta_filename):
       logging.info("%s: No meta graph file found. Building a new model.",
@@ -508,7 +543,7 @@ class Trainer(object):
 
     label_loss_fn = find_class_by_name(FLAGS.label_loss, [losses])()
     optimizer_class = find_class_by_name(FLAGS.optimizer, [tf.train])
-  
+
     build_graph(reader=reader,
                  model=model,
                  optimizer_class=optimizer_class,
@@ -522,7 +557,7 @@ class Trainer(object):
                  num_readers=FLAGS.num_readers,
                  batch_size=FLAGS.batch_size,
                  num_epochs=FLAGS.num_epochs)
-  
+
     return tf.train.Saver(max_to_keep=0, keep_checkpoint_every_n_hours=0.25)
 
 
@@ -537,7 +572,7 @@ def get_reader():
   else:
     reader = readers.YT8MAggregatedFeatureReader(
         feature_names=feature_names, feature_sizes=feature_sizes)
-    
+
   return reader
 
 
@@ -610,27 +645,23 @@ def main(unused_argv):
 
   # Dispatch to a master, a worker, or a parameter server.
   if not cluster or task.type == "master" or task.type == "worker":
-    
-    model = find_class_by_name(FLAGS.model, 
+    model = find_class_by_name(FLAGS.model,
         [frame_level_models, video_level_models])()
-    
+
     reader = get_reader()
-    
+
     model_exporter = export_model.ModelExporter(
         frame_features=FLAGS.frame_features,
         model=model,
         reader=reader)
 
-    Trainer(cluster, task, FLAGS.train_dir, model, reader, model_exporter, 
-            FLAGS.log_device_placement, FLAGS.max_steps, 
+    Trainer(cluster, task, FLAGS.train_dir, model, reader, model_exporter,
+            FLAGS.log_device_placement, FLAGS.max_steps,
             FLAGS.export_model_steps).run(start_new_model=FLAGS.start_new_model)
 
   elif task.type == "ps":
-
     ParameterServer(cluster, task).run()
-
   else:
-
     raise ValueError("%s: Invalid task_type: %s." %
                      (task_as_string(task), task.type))
 

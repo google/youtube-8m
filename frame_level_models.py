@@ -214,7 +214,6 @@ class LstmModel(models.BaseModel):
     lstm_size = FLAGS.lstm_cells
     number_of_layers = FLAGS.lstm_layers
 
-    ## Batch normalize the input
     stacked_lstm = tf.contrib.rnn.MultiRNNCell(
             [
                 tf.contrib.rnn.BasicLSTMCell(
@@ -223,13 +222,14 @@ class LstmModel(models.BaseModel):
                 ], state_is_tuple=False)
 
     loss = 0.0
-    with tf.variable_scope("RNN"):
-      outputs, state = tf.nn.dynamic_rnn(stacked_lstm, model_input,
-                                         sequence_length=num_frames,
-                                         dtype=tf.float32)
+
+    outputs, state = tf.nn.dynamic_rnn(stacked_lstm, model_input,
+                                       sequence_length=num_frames,
+                                       dtype=tf.float32)
 
     aggregated_model = getattr(video_level_models,
                                FLAGS.video_level_classifier_model)
+
     return aggregated_model().create_model(
         model_input=state,
         vocab_size=vocab_size,

@@ -121,7 +121,6 @@ class YT8MAggregatedFeatureReader(BaseReader):
           [self.feature_sizes[feature_index]], tf.float32)
 
     features = tf.parse_example(serialized_examples, features=feature_map)
-
     labels = tf.sparse_to_indicator(features["labels"], self.num_classes)
     labels.set_shape([None, self.num_classes])
     concatenated_features = tf.concat([

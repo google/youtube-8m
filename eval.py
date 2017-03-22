@@ -145,7 +145,7 @@ def build_graph(reader,
   # Normalize input features.
   model_input = tf.nn.l2_normalize(model_input_raw, feature_dim)
 
-  with tf.name_scope("model"):
+  with tf.variable_scope("tower"):
     result = model.create_model(model_input,
                                 num_frames=num_frames,
                                 vocab_size=reader.num_classes,

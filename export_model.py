@@ -49,7 +49,7 @@ class ModelExporter(object):
             outputs=self.outputs,
             method_name=signature_constants.PREDICT_METHOD_NAME)
 
-        signature_map = {signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY: 
+        signature_map = {signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY:
                          signature}
 
         model_builder = saved_model_builder.SavedModelBuilder(model_dir)
@@ -60,24 +60,21 @@ class ModelExporter(object):
         model_builder.save()
 
   def build_inputs_and_outputs(self):
-
     if self.frame_features:
-
       serialized_examples = tf.placeholder(tf.string, shape=(None,))
 
       fn = lambda x: self.build_prediction_graph(x)
       video_id_output, top_indices_output, top_predictions_output = (
-          tf.map_fn(fn, serialized_examples, 
+          tf.map_fn(fn, serialized_examples,
                     dtype=(tf.string, tf.int32, tf.float32)))
 
     else:
-
       serialized_examples = tf.placeholder(tf.string, shape=(None,))
 
       video_id_output, top_indices_output, top_predictions_output = (
           self.build_prediction_graph(serialized_examples))
 
-    inputs = {"example_bytes": 
+    inputs = {"example_bytes":
               saved_model_utils.build_tensor_info(serialized_examples)}
 
     outputs = {
@@ -87,15 +84,14 @@ class ModelExporter(object):
 
     return inputs, outputs
 
-  def build_prediction_graph(self, serialized_examples):    
-
+  def build_prediction_graph(self, serialized_examples):
     video_id, model_input_raw, labels_batch, num_frames = (
         self.reader.prepare_serialized_examples(serialized_examples))
 
     feature_dim = len(model_input_raw.get_shape()) - 1
     model_input = tf.nn.l2_normalize(model_input_raw, feature_dim)
 
-    with tf.name_scope("model"):
+    with tf.variable_scope("tower"):
       result = self.model.create_model(
           model_input,
           num_frames=num_frames,
@@ -108,6 +104,6 @@ class ModelExporter(object):
 
       predictions = result["predictions"]
 
-      top_predictions, top_indices = tf.nn.top_k(predictions, 
+      top_predictions, top_indices = tf.nn.top_k(predictions,
           _TOP_PREDICTIONS_IN_OUTPUT)
     return video_id, top_indices, top_predictions
