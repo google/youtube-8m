@@ -29,6 +29,7 @@ from tensorflow import app
 from tensorflow import flags
 from tensorflow import gfile
 from tensorflow import logging
+from tensorflow.python.client import device_lib
 import utils
 
 FLAGS = flags.FLAGS
@@ -92,8 +93,6 @@ if __name__ == "__main__":
   # Other flags.
   flags.DEFINE_integer("num_readers", 8,
                        "How many threads to use for reading input files.")
-  flags.DEFINE_integer("num_gpus", 1,
-                     "How many GPUs are allocated to each worker.")
   flags.DEFINE_string("optimizer", "AdamOptimizer",
                       "What optimizer class to use.")
   flags.DEFINE_float("clip_gradient_norm", 1.0, "Norm to clip gradients to.")
@@ -219,13 +218,18 @@ def build_graph(reader,
 
   global_step = tf.Variable(0, trainable=False, name="global_step")
 
-  if FLAGS.num_gpus > 0:
-    num_towers = FLAGS.num_gpus
+  local_device_protos = device_lib.list_local_devices()
+  gpus = [x.name for x in local_device_protos if x.device_type == 'GPU']
+  num_gpus = len(gpus)
+
+  if num_gpus > 0:
+    logging.info("Using the following GPUs to train: " + str(gpus))
+    num_towers = num_gpus
     device_string = '/gpu:%d'
   else:
+    logging.info("No GPUs found. Training on CPU.")
     num_towers = 1
     device_string = '/cpu:%d'
-
 
   learning_rate = tf.train.exponential_decay(
       base_learning_rate,
@@ -261,7 +265,7 @@ def build_graph(reader,
     # line. They have to be nested.
     with tf.device(device_string % i):
       with (tf.variable_scope(("tower"), reuse=True if i > 0 else None)):
-        with (slim.arg_scope([slim.model_variable, slim.variable], device="/cpu:0" if FLAGS.num_gpus!=1 else "/gpu:0")):
+        with (slim.arg_scope([slim.model_variable, slim.variable], device="/cpu:0" if num_gpus!=1 else "/gpu:0")):
           result = model.create_model(
             tower_inputs[i],
             num_frames=tower_num_frames[i],

@@ -437,18 +437,15 @@ See [Using Audio Features](#using-audio-features) section above.
 
 ### Using GPUs
 
-It's possible to use one or more GPUs to accelerate your computations.
-Depending on the relative speeds of your installed GPU and CPU, you can expect
-up to a 5x improvement in training speeds from using one GPU. First, you need to
-have a version of Tensorflow installed which has GPU support. You can verify
-that Tensorflow is able to see your GPU by running
+If your Tensorflow installation has GPU support, this code will make use of all
+of your compatible GPUs. You can verify your installation by running
 
 ```
 python -c 'import tensorflow as tf; tf.Session()'
 ```
 
-This will print out something like the following if Tensorflow is able to use
-your installed GPU:
+This will print out something like the following for each of your compatible
+GPUs.
 
 ```
 I tensorflow/core/common_runtime/gpu/gpu_init.cc:102] Found device 0 with properties:
@@ -460,13 +457,12 @@ Free memory: 11.09GiB
 ...
 ```
 
-To use your installed GPUs, simply specify the number of GPUs you want to use
-via the `num_gpus` flag. The forward and backward passes will be computed with
-the GPUs, whereas the CPU will be used primarily for the input and output
+If at least one GPU was found, the forward and backward passes will be computed
+with the GPUs, whereas the CPU will be used primarily for the input and output
 pipelines. If you have multiple GPUs, each of them will be given a full batch
 of examples, and the resulting gradients will be summed together before being
 applied. This will increase your effective batch size. For example, if you set
-`batch_size=128` and `num_gpus=4`, this will result in 512 examples being
+`batch_size=128` and you have 4 GPUs, this will result in 512 examples being
 evaluated every training step.
 
 ### Ground-Truth Label Files
