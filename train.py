@@ -270,8 +270,7 @@ def build_graph(reader,
             tower_inputs[i],
             num_frames=tower_num_frames[i],
             vocab_size=reader.num_classes,
-            labels=tower_labels[i],
-            l2_penalty=FLAGS.regularization_penalty)
+            labels=tower_labels[i])
           for variable in slim.get_model_variables():
             tf.summary.histogram(variable.op.name, variable)
 
