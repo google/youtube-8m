@@ -429,8 +429,7 @@ class Trainer(object):
             eval_time = eval_end_time - eval_start_time
 
             logging.info("training step " + str(global_step_val) + " | Loss: " + ("%.2f" % loss_val) +
-              " Train time: " + ("%.2f" % seconds_per_batch) +
-              "s Examples/sec: " + ("%.2f" % examples_per_second) + " | Hit@1: " +
+              " Examples/sec: " + ("%.2f" % examples_per_second) + " | Hit@1: " +
               ("%.2f" % hit_at_one) + " PERR: " + ("%.2f" % perr) +
               " GAP: " + ("%.2f" % gap))
 
@@ -456,8 +455,7 @@ class Trainer(object):
               self.last_model_export_step = global_step_val
           else:
             logging.info("training step " + str(global_step_val) + " | Loss: " +
-              ("%.2f" % loss_val) + " Train time: " + ("%.2f" % seconds_per_batch) +
-              "s Examples/sec: " + ("%.2f" % examples_per_second))
+              ("%.2f" % loss_val) + " Examples/sec: " + ("%.2f" % examples_per_second))
       except tf.errors.OutOfRangeError:
         logging.info("%s: Done training -- epoch limit reached.",
                      task_as_string(self.task))
