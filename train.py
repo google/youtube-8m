@@ -362,9 +362,9 @@ class Trainer(object):
     self.export_model_steps = export_model_steps
     self.last_model_export_step = 0
 
-    if self.is_master and self.task.index > 0:
-      raise StandardError("%s: Only one replica of master expected",
-                          task_as_string(self.task))
+#     if self.is_master and self.task.index > 0:
+#       raise StandardError("%s: Only one replica of master expected",
+#                           task_as_string(self.task))
 
   def run(self, start_new_model=False):
     """Performs training on the currently defined Tensorflow graph.
