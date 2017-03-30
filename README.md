@@ -17,7 +17,6 @@ or on your own machine. This README provides instructions for both.
    * [Testing Locally](#testing-locally)
    * [Training on the Cloud over Video-Level Features](#training-on-video-level-features)
    * [Evaluation and Inference](#evaluation-and-inference)
-   * [Inference Using Batch Prediction](#inference-using-batch-prediction)
    * [Accessing Files on Google Cloud](#accessing-files-on-google-cloud)
    * [Using Frame-Level Features](#using-frame-level-features)
    * [Using Audio Features](#using-audio-features)
@@ -190,63 +189,6 @@ and the following for the inference code:
 
 ```
 num examples processed: 8192 elapsed seconds: 14.85
-```
-
-### Inference Using Batch Prediction
-To perform inference faster, you can also use the Cloud ML batch prediction
-service.
-
-First, find the directory where the training job exported the model:
-
-```
-gsutil list ${BUCKET_NAME}/yt8m_train_video_level_logistic_model/export
-```
-
-You should see an output similar to this one:
-
-```
-${BUCKET_NAME}/yt8m_train_video_level_logistic_model/export/
-${BUCKET_NAME}/yt8m_train_video_level_logistic_model/export/step_1/
-${BUCKET_NAME}/yt8m_train_video_level_logistic_model/export/step_1001/
-${BUCKET_NAME}/yt8m_train_video_level_logistic_model/export/step_2001/
-${BUCKET_NAME}/yt8m_train_video_level_logistic_model/export/step_3001/
-```
-
-Select the latest version of the model that was saved. For instance, in our
-case, we select the version of the model that was saved at step 3001:
-
-```
-EXPORTED_MODEL_DIR=${BUCKET_NAME}/yt8m_train_video_level_logistic_model/export/step_3001/
-```
-
-Start the batch prediction job using the following command:
-
-```
-JOB_NAME=yt8m_batch_predict_$(date +%Y%m%d_%H%M%S); \
-gcloud ml-engine jobs submit prediction ${JOB_NAME} --verbosity=debug \
---model-dir=${EXPORTED_MODEL_DIR} --data-format=TF_RECORD \
---input-paths=gs://youtube8m-ml/1/video_level/test/test* \
---output-path=${BUCKET_NAME}/batch_predict/${JOB_NAME} --region=us-east1 \
---runtime-version=1.0 --max-worker-count=10
-```
-
-You can check the progress of the job on the
-[Google Cloud ML Jobs console](https://console.cloud.google.com/ml/jobs). To
-have the job complete faster, you can increase 'max-worker-count' to a
-higher value.
-
-Once the batch prediction job has completed, turn its output into a submission
-in the CVS format by running the following commands:
-
-```
-# Copy the output of the batch prediction job to a local directory
-mkdir -p /tmp/batch_predict/${JOB_NAME}
-gsutil -m cp -r ${BUCKET_NAME}/batch_predict/${JOB_NAME}/* /tmp/batch_predict/${JOB_NAME}/
-
-# Convert the output of the batch prediction job into a CVS file ready for submission
-python youtube-8m/convert_prediction_from_json_to_csv.py \
---json_prediction_files_pattern="/tmp/batch_predict/${JOB_NAME}/prediction.results-*" \
---csv_output_file="/tmp/batch_predict/${JOB_NAME}/output.csv"
 ```
 
 ### Accessing Files on Google Cloud
