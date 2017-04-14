@@ -218,9 +218,9 @@ class LstmModel(models.BaseModel):
     stacked_lstm = tf.contrib.rnn.MultiRNNCell(
             [
                 tf.contrib.rnn.BasicLSTMCell(
-                    lstm_size, forget_bias=1.0, state_is_tuple=False)
+                    lstm_size, forget_bias=1.0)
                 for _ in range(number_of_layers)
-                ], state_is_tuple=False)
+                ])
 
     loss = 0.0
     with tf.variable_scope("RNN"):
@@ -231,6 +231,6 @@ class LstmModel(models.BaseModel):
     aggregated_model = getattr(video_level_models,
                                FLAGS.video_level_classifier_model)
     return aggregated_model().create_model(
-        model_input=state[-1],
+        model_input=state[-1].h,
         vocab_size=vocab_size,
         **unused_params)
