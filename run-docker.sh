@@ -1,8 +1,8 @@
 # set defaults
-USE_GPU=
+USE_GPU=false
 HOST_PORT=9999
 GPU_IMAGE=tensorflow/tensorflow:latest-gpu
-CPU_IMAGE=tensorflow/tensorflow
+CPU_IMAGE=purbanski/pca_matrix
 
 DATA=/mnt/data/kaggle
 MODELS=/mnt/models/video
