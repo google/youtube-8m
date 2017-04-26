@@ -10,8 +10,8 @@ import yaml
 
 from PIL import Image
 from tensorflow.python.platform import gfile
+from features_utils import write_to_tfrecord
 
-os.environ['GLOG_minloglevel'] = '2'
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s')
