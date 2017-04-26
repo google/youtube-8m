@@ -2,7 +2,7 @@
 USE_GPU=false
 HOST_PORT=9999
 GPU_IMAGE=tensorflow/tensorflow:latest-gpu
-CPU_IMAGE=mzak/pipeline
+CPU_IMAGE=yt8m/pipeline
 
 DATA=/mnt/data/
 MODELS=/mnt/models/video

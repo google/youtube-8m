@@ -5,10 +5,11 @@ import logging
 import numpy as np
 import os
 import pickle
-from PIL import Image
 import tensorflow as tf
-from tensorflow.python.platform import gfile
 import yaml
+
+from PIL import Image
+from tensorflow.python.platform import gfile
 
 os.environ['GLOG_minloglevel'] = '2'
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -162,6 +163,7 @@ def video_features(video_name, inception_model_path, pca_model_path):
     final_vector = np.mean(q_features, axis = 0)
     final_vector = final_vector.reshape(1, len(final_vector))
     return final_vector
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
