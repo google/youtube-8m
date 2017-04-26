@@ -144,7 +144,7 @@ def scenes_features(scenes, inception_model_path):
 def decrease_dimension(features, pca_model_path):
     # open PCA model
     with open(pca_model_path, "rb") as file:
-        pca_obj = pickle.load(file, encoding='latin1')
+        pca_obj = pickle.load(file)
     
     # reduce dimension and quantize data
     features = pca_obj.transform(features)
