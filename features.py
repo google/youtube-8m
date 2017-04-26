@@ -179,23 +179,35 @@ def video_features(video_name, inception_model_path, pca_model_path):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-v",
-        "--video_path",
+        "-v", "--video_path",
         help="Path to transformed video",
         required=True)
+
     parser.add_argument(
-        "-m",
-        "--model",
+        "-m","--model",
         help="Path inception model",
         required=True)
-    parser.add_argument("-p", "--pca", help="Path pca model", required=True)
+
+    parser.add_argument(
+        "-p", "--pca",
+        help="Path pca model",
+        required=True)
+
+    parser.add_argument(
+        "--output_path",
+        help="path to tfrecord_features",
+        default="/data/video/video-level-features")
+
     args = parser.parse_args()
 
-    video_name = args.video_path
-    inception_model_path = args.model
-    pca_model_path = args.pca
-    video_features_vector = video_features(
-        video_name, inception_model_path, pca_model_path)
+    logger = logging.getLogger(__name__)
 
-    print(type(video_features_vector))
-    print(video_features_vector.shape)
+    logger.info("Extracting features")
+    video_features_vector = video_features(args.video_path, args.model, args.pca)
+
+    logger.info(type(video_features_vector))
+    logger.info(video_features_vector.shape)
+    logger.info("Saving features as TFRecordfile")
+
+    output_file = os.path.join(args.output_path, "test.tfrecord")
+    write_to_tfrecord(args.video_path, [], video_features_vector, output_file)
