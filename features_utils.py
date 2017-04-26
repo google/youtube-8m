@@ -23,7 +23,7 @@ def write_to_tfrecord(video_id, labels, features, output_file):
     '''
     writer = tf.python_io.TFRecordWriter(output_file)
     example = tf.train.Example(features=tf.train.Features(feature={
-        'video_id': tf.train.Feature(bytes_list=tf.train.BytesList(value=[cheap_hash(video_idi)])),
+        'video_id': tf.train.Feature(bytes_list=tf.train.BytesList(value=[cheap_hash(video_id)])),
         'labels': tf.train.Feature(int64_list=tf.train.Int64List(value=labels)),
         'mean_rgb': tf.train.Feature(float_list=tf.train.FloatList(value=features))
         }

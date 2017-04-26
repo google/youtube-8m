@@ -172,7 +172,7 @@ def video_features(video_name, inception_model_path, pca_model_path):
 
     # take average in columns
     final_vector = np.mean(q_features, axis=0)
-    final_vector = final_vector.reshape(1, len(final_vector))
+
     return final_vector
 
 
