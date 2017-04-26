@@ -174,3 +174,6 @@ if __name__ == '__main__':
     inception_model_path = args.model
     pca_model_path = args.pca
     video_features_vector = video_features(video_name, inception_model_path, pca_model_path)
+
+    print(type(video_features_vector))
+    print(video_features_vector.shape)
