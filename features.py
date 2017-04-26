@@ -23,6 +23,7 @@ def load_file(file_name):
 
 
 def get_scene_from_frames(video_capture, frames_directory_path):
+    #TODO: use existing code to process video with ffmpeg
     scenes = []
     # Save one frame per interval
     i = 0
@@ -35,10 +36,11 @@ def get_scene_from_frames(video_capture, frames_directory_path):
 
         if not success:
             break
-        frame_path = os.path.join(
-            frames_directory_path, '%d.png') % i
+
+        frame_path = os.path.join(frames_directory_path, '%d.jpeg') % i
         scenes.append(frame_path)
-        cv2.imwrite(frame_path, image, [cv2.IMWRITE_PNG_COMPRESSION, 9])
+
+        cv2.imwrite(frame_path, image, [cv2.IMWRITE_JPEG_QUALITY, 95])
 
         i += 1
         if i >= 360:
@@ -97,13 +99,7 @@ def extract_all_features(list_images_paths):
 
 
 def process_scenes(scenes):
-    def convert_to_jpeg(list_img_filenames):
-        for img_path in list_img_filenames:
-            img_png = Image.open(img_path)
-            img_png.save(img_path, 'jpeg')  # convert to jpeg
-
     try:
-        convert_to_jpeg(scenes)
         if scenes:
             img_features_dict = extract_all_features(scenes)
     except IOError:
@@ -156,16 +152,16 @@ def scenes_features(scenes, inception_model_path):
     return features
 
 
-def decrease_dimension(features, pca_model_path):
+def decrease_dimension(features, pca_model_path, quantize=False):
     # open PCA model
     with open(pca_model_path, "rb") as file:
-        pca_obj = pickle.load(file)
+        pca = pickle.load(file)
 
     # reduce dimension and quantize data
-    features = pca_obj.transform(features)
+    features = pca.transform(features)
     features = np.array(features, dtype=np.float32)
-    q_features = quantize(features)
-    return q_features
+
+    return quantize(features) if quantize else features
 
 
 def video_features(video_name, inception_model_path, pca_model_path):
