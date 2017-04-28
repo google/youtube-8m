@@ -141,8 +141,6 @@ if __name__ == '__main__':
 
     features = feature_pipeline(args.video_path, args.model, args.pca)
 
-    logger.info(type(features))
-    logger.info(features.shape)
     logger.info("Saving features as TFRecordfile")
 
     output_file = os.path.join(args.output_path, "test.tfrecord")
