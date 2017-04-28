@@ -1,25 +1,21 @@
 #!/usr/bin/env python3
 import argparse
-import cv2
 import logging
-import numpy as np
 import os
 import pickle
-import tensorflow as tf
-import yaml
 
-from PIL import Image
+import cv2
+import numpy as np
+import tensorflow as tf
+
 from tensorflow.python.platform import gfile
 from features_utils import write_to_tfrecord
+
+from t1000.embedding import video
 
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s')
-
-
-def load_file(file_name):
-    video_capture = cv2.VideoCapture(file_name)
-    return video_capture
 
 
 def get_scene_from_frames(video_capture, frames_directory_path):
@@ -50,14 +46,7 @@ def get_scene_from_frames(video_capture, frames_directory_path):
     return scenes
 
 
-def create_graph(model_dir):
-    with gfile.FastGFile(model_dir, 'rb') as f:
-        graph_def = tf.GraphDef()
-        graph_def.ParseFromString(f.read())
-        _ = tf.import_graph_def(graph_def, name='')
-
-
-def compute_features(image, sess, next_to_last_tensor):
+def compute_features(image, sess):
     """
     Extract features from image using inception v3 cnn.
     Inputs:
@@ -67,12 +56,22 @@ def compute_features(image, sess, next_to_last_tensor):
     Returns:
     -features: list of extracted features
     """
+    logger = logging.getLogger(__name__)
+
     if not gfile.Exists(image):
         tf.logging.fatal('File does not exist %s', image)
+
     image_data = gfile.FastGFile(image, 'rb').read()
-    predictions = sess.run(next_to_last_tensor, {
-                           'DecodeJpeg/contents:0': image_data})
+
+    # What is this?
+    logger.info(type(image_data))
+
+    # get tensor from network
+    pool3_layer = sess.graph.get_tensor_by_name('pool_3:0')
+
+    predictions = sess.run(pool3_layer, {'DecodeJpeg/contents:0': image_data})
     features = np.squeeze(predictions)
+
     return features
 
 
@@ -88,7 +87,6 @@ def extract_all_features(list_images_paths):
 
     with tf.Session() as sess:
 
-        next_to_last_tensor = sess.graph.get_tensor_by_name('pool_3:0')
 
         for image_path in list_images_paths:
             features = compute_features(image_path, sess, next_to_last_tensor)
@@ -96,17 +94,6 @@ def extract_all_features(list_images_paths):
             img_features.append(features)
 
     return np.array(img_features, dtype=np.float32)
-
-
-def process_scenes(scenes):
-    try:
-        if scenes:
-            img_features_dict = extract_all_features(scenes)
-    except IOError:
-        logging.info("No frame found in a video")
-
-    return img_features_dict
-
 
 def dequantize(feat_vector, max_quantized_value=2, min_quantized_value=-2):
     """Dequantize the feature from the byte format to the float format.
@@ -141,18 +128,31 @@ def quantize(features, max_quantized_value=2, min_quantized_value=-2):
 
 
 def video_scenes(video_name):
-    video_capture = load_file(video_name)
+    video_capture = cv2.VideoCapture(file_name)
     scenes = get_scene_from_frames(video_capture, '.')
     return scenes
 
 
-def scenes_features(scenes, inception_model_path):
-    create_graph(inception_model_path)
-    features = process_scenes(scenes)
+def scenes_features(scenes, model_dir):
+    with gfile.FastGFile(model_dir, 'rb') as f
+        graph_def = tf.GraphDef()
+        graph_def.ParseFromString(f.read())
+        _ = tf.import_graph_def(graph_def, name='')
+
+    try:
+        if scenes:
+            features = extract_all_features(scenes)
+    except IOError:
+        logging.info("No frame found in a video")
+
     return features
 
 
 def decrease_dimension(features, pca_model_path, quantize=False):
+    '''
+    Reduces the dimensionality of data
+    '''
+
     # open PCA model
     with open(pca_model_path, "rb") as file:
         pca = pickle.load(file)
