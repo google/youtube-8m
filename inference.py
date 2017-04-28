@@ -167,8 +167,11 @@ def inference(reader, train_dir, data_pattern, out_file_location, batch_size, to
     finally:
         coord.request_stop()
 
+    logging.info("Joining threads")
     coord.join(threads)
+    logging.ingo("Closing session")
     sess.close()
+    logging.ingo("Closed session")
 
 
 def main(unused_argv):
