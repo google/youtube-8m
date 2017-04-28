@@ -7,8 +7,8 @@ def cheap_hash(txt, length=11):
     Hashes a sting
     '''
     hash = hashlib.sha1()
-    hash.update(txt)
-    return hash.hexdigest()[:length]
+    hash.update(txt.encode('utf-8'))
+    return bytes(hash.hexdigest()[:length], 'utf-8')
 
 
 def write_to_tfrecord(video_id, labels, features, output_file):

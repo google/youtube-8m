@@ -4,7 +4,6 @@ import logging
 import os
 import pickle
 
-import cv2
 import numpy as np
 import tensorflow as tf
 
@@ -55,15 +54,18 @@ def pca(features, pca_model_path):
     Reduces the dimensionality of data
     '''
 
+    logger = logging.getLogger(__name__)
+    logger.debug("Performing PCA")
+
     # open PCA model
     with open(pca_model_path, "rb") as file:
-        pca = pickle.load(file)
+        pca = pickle.load(file, encoding='latin1')
 
     # reduce dimension and quantize data
     features = pca.transform(features)
     features = np.array(features, dtype=np.float32)
 
-    return features 
+    return features
 
 
 def incepction_v3(frames, model_dir):
@@ -85,9 +87,7 @@ def incepction_v3(frames, model_dir):
         for frame in frames:
             # get tensor from network
             pool3_layer = sess.graph.get_tensor_by_name('pool_3:0')
-            predictions = sess.run(pool3_layer, {'DecodeJpeg/contents:0': frame})
-
-            logger.info(type(predictions))
+            predictions = sess.run(pool3_layer, {'DecodeJpeg:0': frame})
             # concatenate features
             features = np.squeeze(predictions)
             img_features.append(features)
