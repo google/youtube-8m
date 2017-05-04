@@ -24,13 +24,18 @@ if $USE_GPU
 then
     echo "Running docker on GPU"
     nvidia-docker run -it -d \
+	-p $HOST_PORT:8888 \
+	--log-driver=journald \
         --volume=$MODELS:/models \
         --volume=$DATA:/data \
 	--name $NAME \
+	--workdir=/workspace \
 	--volume=$(pwd):/workspace $GPU_IMAGE /bin/bash
 else
     echo "Running docker on CPU"
     docker run -it -d \
+	    -p $HOST_PORT:8888 \
+	    --log-driver=journald \
 	    --volume=$MODELS:/models \
 	    --volume=$DATA:/data \
 	    --name $NAME \

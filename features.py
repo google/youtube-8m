@@ -13,8 +13,9 @@ from features_utils import write_to_tfrecord
 from t1000.embedding import video
 
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s')
+    level=logging.DEBUG,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[logging.StreamHandler()])
 
 
 def dequantize(feat_vector, max_quantized_value=2, min_quantized_value=-2):
