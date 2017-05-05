@@ -6,7 +6,7 @@ CPU_IMAGE=yt8m:cpu
 
 DATA=/mnt/data/
 MODELS=/mnt/models
-NAME=video_tags
+NAME=video-tags
 
 # parse arguments
 while getopts gd:m:p:e: option
@@ -39,5 +39,6 @@ else
 	    --volume=$MODELS:/models \
 	    --volume=$DATA:/data \
 	    --name $NAME \
+	    --workdir=/workspace \
 	    --volume=$(pwd):/workspace $CPU_IMAGE /bin/bash
 fi
