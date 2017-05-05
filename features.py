@@ -119,9 +119,7 @@ def feature_pipeline(
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "-v", "--video_path", help="Path to transformed video",
-        required=True)
+    parser.add_argument("video_path", help="Path to transformed video")
 
     parser.add_argument(
         "-i","--inception3-path", help="Path to inception model",
