@@ -124,11 +124,11 @@ if __name__ == '__main__':
         required=True)
 
     parser.add_argument(
-        "-m","--model", help="Path to inception model",
+        "-i","--inception3-path", help="Path to inception model",
         required=True)
 
     parser.add_argument(
-        "-p", "--pca", help="Path pca model",
+        "-p", "--pca-path", help="Path pca model path",
         required=True)
 
     parser.add_argument(
@@ -140,7 +140,7 @@ if __name__ == '__main__':
     logger = logging.getLogger(__name__)
     logger.info("Extracting features from: {0}".format(args.video_path))
 
-    features = feature_pipeline(args.video_path, args.model, args.pca)
+    features = feature_pipeline(args.video_path, args.inception3_path, args.pca_path)
 
     logger.info("Saving features as TFRecordfile")
 

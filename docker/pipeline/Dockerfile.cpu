@@ -1,6 +1,8 @@
 FROM gcr.io/tensorflow/tensorflow:latest-gpu-py3
 
-RUN apt update && apt-get install -y ffmpeg 
+RUN apt update && apt-get install -y \
+	ffmpeg \
+	git
 
 WORKDIR /app
 

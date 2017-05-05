@@ -5,11 +5,11 @@ GPU_IMAGE=yt8m:gpu
 CPU_IMAGE=yt8m:cpu
 
 DATA=/mnt/data/
-MODELS=/mnt/models/video
+MODELS=/mnt/models
 NAME=video_tags
 
 # parse arguments
-while getopts gd:m:p: option
+while getopts gd:m:p:e: option
 do 
     case "${option}" in 
         g) USE_GPU='true';;
