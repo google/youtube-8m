@@ -1,4 +1,6 @@
-FROM gcr.io/tensorflow/tensorflow:latest-gpu-py3
+FROM gcr.io/tensorflow/tensorflow:latest-py3
+ARG GITHUB_TOKEN
+ENV GITHUB_TOKEN ${GITHUB_TOKEN}
 
 RUN apt update && apt-get install -y \
 	ffmpeg \
@@ -9,5 +11,6 @@ WORKDIR /app
 COPY requirements.txt /app/requirements.txt
 RUN pip install -U pip
 RUN pip install -r ./requirements.txt
+RUN pip install git+https://${GITHUB_TOKEN}@github.com/nowthisnews/ds-transform.git
 
 WORKDIR /workspace

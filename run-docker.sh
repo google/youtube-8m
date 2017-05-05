@@ -1,5 +1,5 @@
 # set defaults
-USE_GPU=false
+USE_GPU=true
 HOST_PORT=9999
 GPU_IMAGE=yt8m:gpu
 CPU_IMAGE=yt8m:cpu
