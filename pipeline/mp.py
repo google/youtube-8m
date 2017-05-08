@@ -35,13 +35,16 @@ class Producer(multiprocessing.Process):
             # get items
             video_id, video_tags, video_path = self.items.pop()
 
-            # extract frames
             if processed_items % self.logging_step == 0:
-                logger.info("[Producer %d] Downloading URL" % self.idx)
+                logger.info("[Producer %d] Downloading URL for item number %d" % (
+                    self.idx, processed_items))
+
+            # extract frames
             frames = video.extract_frames(video_path)
 
             if processed_items % self.logging_step == 0:
-                logger.info("[Producer %d] Extracted frames from %s" % (self.idx, video_id))
+                logger.info("[Producer %d] Extracted frames from %s for item number %d" % (
+                    self.idx, video_id, processed_items))
 
             # add items to queue
             self.queue.put((video_id, frames, video_tags))
