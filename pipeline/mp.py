@@ -4,6 +4,7 @@ import os
 import pickle
 
 import numpy as np
+import tensorflow as tf
 
 from t1000.embedding import video
 from tensorflow.python.platform import gfile
@@ -35,11 +36,11 @@ class Producer(multiprocessing.Process):
             video_id, video_tags, video_path = self.items.pop()
 
             # extract frames
-            if producer_object % self.logging_step == 0:
+            if processed_items % self.logging_step == 0:
                 logger.info("[Producer %d] Downloading URL" % self.idx)
             frames = video.extract_frames(video_path)
 
-            if producer_object % self.logging_step == 0:
+            if processed_items % self.logging_step == 0:
                 logger.info("[Producer %d] Extracted frames from %s" % (self.idx, video_id))
 
             # add items to queue
