@@ -1,9 +1,9 @@
 MODEL_PATH = '/models/image/inception/classify_image_graph_def.pb'
 DATA_PATH = '/data/video/video-level-features/'
 NPROD = 4
-LIMIT = 10
+LIMIT = None
 MIN_TAGS = 10
-LOGGING_INTERVAL = 2
+LOGGING_INTERVAL = 20 
 
 VQUERY = "select post_id, url from videos where status='ok'"
 TQUERY = "select id, tags from videos where tags is not NULL"
