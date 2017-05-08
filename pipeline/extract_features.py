@@ -3,6 +3,7 @@ DATA_PATH = '/data/video/video-level-features/'
 NPROD = 4
 LIMIT = 10
 MIN_TAGS = 10
+LOGGING_INTERVAL = 2
 
 VQUERY = "select post_id, url from videos where status='ok'"
 TQUERY = "select id, tags from videos where tags is not NULL"
@@ -61,9 +62,14 @@ if __name__ == '__main__':
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     work = filtered[:LIMIT]
 
-    fsq = lambda : sq.fetch(work, model_path=MODEL_PATH, data_path=os.path.join(DATA_PATH, 'seq'))
+    fsq = lambda : sq.fetch(work,
+                            model_path=MODEL_PATH,
+                            data_path=os.path.join(DATA_PATH, 'seq'),
+                            logging_step=LOGGING_INTERVAL)
+
     fmp = lambda : mp.fetch(work, nprod=NPROD,
                             model_path=MODEL_PATH,
-                            data_path=os.path.join(DATA_PATH, 'mp'))
+                            data_path=os.path.join(DATA_PATH, 'mp'),
+                            logging_step=LOGGING_INTERVAL)
 
     run_and_measure(fmp, len(work))

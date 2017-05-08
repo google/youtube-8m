@@ -119,7 +119,7 @@ class Consumer(multiprocessing.Process):
         logger.info("Ending consumer")
         return
 
-def mp(work, nprod, model_path, data_path, logging_step = 100):
+def fetch(work, nprod, model_path, data_path, logging_step = 100):
     work = chunks(work, nprod)
     #make reader for reading data. lets call this object Producer
     producers = []
