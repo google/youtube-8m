@@ -1,6 +1,5 @@
 import os
 import logging.config
-
 import yaml
 
 def setup_logging(
@@ -19,4 +18,4 @@ def setup_logging(
             config = yaml.safe_load(f.read())
         logging.config.dictConfig(config)
     else:
-        logging.basicConfig(level=default_level)
+       logging.basicConfig(level=default_level)

@@ -1,6 +1,7 @@
 import psycopg2
 import itertools
 
+from collections import Counter
 from itertools import groupby
 from operator import itemgetter
 from heapq import merge
