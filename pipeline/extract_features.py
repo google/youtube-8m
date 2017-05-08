@@ -32,7 +32,7 @@ logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s  %(levelname)-8s %(message)s',
                     datefmt='%m-%d %H:%M:%S')
 
-def fetch(dbname, user, host, password, query):
+def fetch(host, dbname, user, password, query):
     '''
     Executes query on a given database
     '''
@@ -331,16 +331,20 @@ def run_and_measure(fun, n):
 if __name__ == '__main__':
     logger = logging.getLogger(__name__)
 
-    dbname='ds-wizards'
     host='192.95.32.117'
+
+    vdbname='ds-wizards'
     vuser='wizard'
     vpassword='GaG23jVxZhMnQaU53r8o'
+
+    tdbname='ds-content-tags'
     tuser='ds-content-tags'
     tpassword='0fXjWl592vNf1gYvIw8w'
 
-    vres = fetch(dbname, vuser, host, vpassword, VQUERY)
+    vres = fetch(host, vdbname, vuser, vpassword, VQUERY)
     vres = [(post_id.split("_")[1], url) for post_id, url in vres]
-    tres = fetch(dbname, vuser, host, vpassword, TQUERY)
+
+    tres = fetch(host, tdbname, tuser, tpassword, TQUERY)
     videos = inner_join(tres, vres)
 
     filtered, t2i, i2t = filter_videos(videos, 10)
