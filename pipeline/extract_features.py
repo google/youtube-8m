@@ -2,6 +2,7 @@ MODEL_PATH = '/models/image/inception/classify_image_graph_def.pb'
 DATA_PATH = '/data/video/video-level-features/'
 NPROD = 4
 LIMIT = 10
+MIN_TAGS = 10
 
 VQUERY = "select post_id, url from videos where status='ok'"
 TQUERY = "select id, tags from videos where tags is not NULL"
@@ -16,99 +17,14 @@ import pickle
 import time
 
 import numpy as np
-import psycopg2
 import tensorflow as tf
 
 from collections import Counter
-from heapq import merge
-from itertools import groupby
-from operator import itemgetter
-
+from t1000.embedding import video
 from tensorflow.python.platform import gfile
 
-from t1000.embedding import video
-
-logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s  %(levelname)-8s %(message)s',
-                    datefmt='%m-%d %H:%M:%S')
-
-def fetch(host, dbname, user, password, query):
-    '''
-    Executes query on a given database
-    '''
-    connection_string = "dbname='{0}' user='{1}' host='{2}' password='{3}'".format(
-        dbname, user, host, password)
-    try:
-        conn = psycopg2.connect(connection_string)
-        curr = conn.cursor()
-        curr.execute(query)
-        res = curr.fetchall()
-    except Exception as e:
-        print(e)
-        logging.exception('')
-    finally:
-        curr.close()
-        conn.close()
-
-    return res
-
-def inner_join(a, b):
-    '''
-    Joins two iterables of tuples on the first 
-    element
-
-    Arguments:
-    a - list of tuples (id, x)
-    b - list of tuples (id, y)
-
-    Returns:
-    list of tuples (id, x, y)
-    '''
-    key = itemgetter(0)
-    a.sort(key=key) 
-    b.sort(key=key)
-    for _, group in groupby(merge(a, b, key=key), key):
-        row_a, row_b = next(group), next(group, None)
-        if row_b is not None: # join
-            yield row_a + row_b[1:]
-
-
-def filter_videos(videos, min_count = 10):
-    '''
-    Filters videos and returns mapping to the original tags
-
-    Returns:
-    filtered       - a list with transformed and filtered videos
-    tags_2_indices - a dictinary that transforms tags to rank of their
-                     frequencies
-    indices_2_tags - inverse dictionary
-    '''
-
-    # we have to iterate twice, first to create dictionary, then 
-    # then to filter tags and transform the list
-    if not isinstance(videos, list):
-        videos = list(videos)
-
-    # Filters top tags and creates mapping
-    count = Counter(itertools.chain(*[tup[1] for tup in videos]))
-    tags_2_indices = { 
-        tag_id: index 
-            for index, (tag_id, count) in enumerate(count.most_common(), 1)
-            if count >= min_count 
-    }
-
-    # reverse index for decoding 
-    indices_2_tags = { 
-        v: k for k, v in tags_2_indices.items()
-    }
-
-    filtered = []
-    for video_id, tags, url in videos:
-        encoded = [tags_2_indices[t] for t in tags if t in tags_2_indices]
-        if encoded:
-            filtered.append((video_id, encoded, url))
-
-    return filtered, tags_2_indices, indices_2_tags
+from db import fetch, inner_join, filter_videos
+from utils.logging import setup_logging
 
 
 ## Sequential dataprocessing
@@ -329,6 +245,7 @@ def run_and_measure(fun, n):
 
 
 if __name__ == '__main__':
+    setup_logging()
     logger = logging.getLogger(__name__)
 
     host='192.95.32.117'
@@ -347,20 +264,20 @@ if __name__ == '__main__':
     tres = fetch(host, tdbname, tuser, tpassword, TQUERY)
     videos = inner_join(tres, vres)
 
-    filtered, t2i, i2t = filter_videos(videos, 10)
+    filtered, t2i, i2t = filter_videos(videos, MIN_TAGS)
     logger.info("Found %d videos with %d unique tags" % (len(filtered), len(t2i)))
 
     # we will need thid eventually
     tags = {
 	tag_id: (name, path) for (tag_id, name, path) in fetch(
-            dbname, user, host, password, TAGS)
+            host, tdbname, tuser, tpassword, TAGS)
     }
 
 
-#    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-#    work = filtered[:LIMIT]
-#
-#    fsq = lambda : fetch_sq(work, model_path=MODEL_PATH, data_path=os.path.join(DATA_PATH, 'seq'))
-#    fmp = lambda : fetch_mp(work, nprod=4, model_path=MODEL_PATH, data_path=os.path.join(DATA_PATH, 'mp'))
-#
-#    run_and_measure(fmp, len(work))
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    work = filtered[:LIMIT]
+
+    fsq = lambda : fetch_sq(work, model_path=MODEL_PATH, data_path=os.path.join(DATA_PATH, 'seq'))
+    fmp = lambda : fetch_mp(work, nprod=4, model_path=MODEL_PATH, data_path=os.path.join(DATA_PATH, 'mp'))
+
+    run_and_measure(fmp, len(work))
