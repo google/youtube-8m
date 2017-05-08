@@ -130,7 +130,7 @@ def fetch(work, nprod, model_path, data_path, logging_step = 100):
 
     #make receivers for the data. Lets call these Consumers
     #Each consumer is assigned a queue
-    consumer_object = Consumer(1, queues, model_path, data_path, logging_step)
+    consumer_object = Consumer(queues, model_path, data_path, logging_step)
     consumer_object.start()
 
     # start the producer processes
