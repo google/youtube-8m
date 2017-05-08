@@ -1,6 +1,6 @@
 MODEL_PATH = '/models/image/inception/classify_image_graph_def.pb'
 DATA_PATH = '/data/video/video-level-features/'
-NPROD = 4
+NPROD = 1
 LIMIT = None
 MIN_TAGS = 10
 LOGGING_INTERVAL = 20 
