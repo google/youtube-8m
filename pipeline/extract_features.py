@@ -1,15 +1,16 @@
 MODEL_PATH = '/models/image/inception/classify_image_graph_def.pb'
-DATA_PATH = '/data/video/video-level-features/'
+DATA_PATH = '/data/video/video-level-features/mp/'
 NPROD = 1
 LIMIT = None
 MIN_TAGS = 10
-LOGGING_INTERVAL = 20 
+LOGGING_INTERVAL = 20
 
 VQUERY = "select post_id, url from videos where status='ok'"
 TQUERY = "select id, tags from videos where tags is not NULL"
 TAGS = "select tag_id, name, path from content_tags"
 
 import logging
+import glob
 import os
 import time
 
@@ -60,16 +61,27 @@ if __name__ == '__main__':
 
 
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
+    # check if we have processed some of those items
+    processed_videos = set([os.path.splitext(os.path.basename(f))[0]
+                            for f in glob.glob(os.path.join(DATA_PATH, "*.pickle"))])
+
+    logger.info("Found %d processed videos" % len(processed_videos))
+
+    filtered = [(video_id, tags, url) for (video_id, tags, url) in filtered if
+                video_id not in  processed_videos]
+
+    logger.info("After dequeing processed videos, %d items left" % len(filtered))
     work = filtered[:LIMIT]
 
-    fsq = lambda : sq.fetch(work,
-                            model_path=MODEL_PATH,
-                            data_path=os.path.join(DATA_PATH, 'seq'),
-                            logging_step=LOGGING_INTERVAL)
+    #fsq = lambda : sq.fetch(work,
+    #                          model_path=MODEL_PATH,
+    #                        data_path=DATA_PATH,
+    #                    logging_step=LOGGING_INTERVAL)
 
     fmp = lambda : mp.fetch(work, nprod=NPROD,
                             model_path=MODEL_PATH,
-                            data_path=os.path.join(DATA_PATH, 'mp'),
+                            data_path=DATA_PATH,
                             logging_step=LOGGING_INTERVAL)
 
     run_and_measure(fmp, len(work))
