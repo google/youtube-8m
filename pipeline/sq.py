@@ -9,28 +9,22 @@ import tensorflow as tf
 from t1000.embedding import video
 from tensorflow.python.platform import gfile
 
-class FramesIterator:
-    '''iterator that yields raw frames from database'''
+def frame_iterator(work, logging_step = 20):
+    logger = logging.getLogger(__name__)
+    for index, (video_id, video_tags, video_path) in enumerate(work):
 
-    def __init__(self, videos):
-        self.videos = copy.deepcopy(videos)
+        if index % logging_step == 0:
+            logger.info("Downloading URL for item number %d" % index)
 
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        logger = logging.getLogger(__name__)
-        if self.videos:
-            logger.debug("Downloading url")
-            video_id, video_tags, video_path = self.videos.pop()
-
-            # this could be done in parallel
+        try:
             frames = video.extract_frames(video_path)
-        else:
-            raise StopIteration
 
-        return video_id, frames, video_tags
+            yield video_id, frames, video_tags
 
+        except ValueError as e:
+            logger.exception("Exception happened while processing video %s for item number %d" %(
+                video_id, index))
+            pass
 
 def extract_incepction_v3(frame_iterator, model_dir, data_dir, logging_step = 100):
     '''
@@ -81,6 +75,6 @@ def extract_incepction_v3(frame_iterator, model_dir, data_dir, logging_step = 10
 
 def fetch(work, model_path, data_path, logging_step = 100):
     extract_incepction_v3(
-        FramesIterator(work),
+        frame_iterator(work),
         model_path, data_path, logging_step)
 
