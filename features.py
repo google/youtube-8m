@@ -13,8 +13,9 @@ from features_utils import write_to_tfrecord
 from t1000.embedding import video
 
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s')
+    level=logging.DEBUG,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[logging.StreamHandler()])
 
 
 def dequantize(feat_vector, max_quantized_value=2, min_quantized_value=-2):
@@ -118,16 +119,14 @@ def feature_pipeline(
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument("video_path", help="Path to transformed video")
+
     parser.add_argument(
-        "-v", "--video_path", help="Path to transformed video",
+        "-i","--inception3-path", help="Path to inception model",
         required=True)
 
     parser.add_argument(
-        "-m","--model", help="Path to inception model",
-        required=True)
-
-    parser.add_argument(
-        "-p", "--pca", help="Path pca model",
+        "-p", "--pca-path", help="Path pca model path",
         required=True)
 
     parser.add_argument(
@@ -139,7 +138,7 @@ if __name__ == '__main__':
     logger = logging.getLogger(__name__)
     logger.info("Extracting features from: {0}".format(args.video_path))
 
-    features = feature_pipeline(args.video_path, args.model, args.pca)
+    features = feature_pipeline(args.video_path, args.inception3_path, args.pca_path)
 
     logger.info("Saving features as TFRecordfile")
 
