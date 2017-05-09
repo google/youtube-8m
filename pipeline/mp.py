@@ -47,8 +47,8 @@ class Producer(multiprocessing.Process):
                 # add items to queue
                 self.queue.put((video_id, frames, video_tags))
             except Exception as e:
-                logger.exception("Exception happend")
-
+                logger.exception("[Producer %d] Exception happend whiel processing video %s for item number %d" %(
+                    self.idx, video_id, processed_items))
 
             if processed_items % self.logging_step == 0:
                 logger.info("[Producer %d] Extracted frames from %s for item number %d" % (
