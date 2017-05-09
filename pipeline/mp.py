@@ -19,6 +19,7 @@ def chunks(seq, num):
 
     return out
 
+
 class Producer(multiprocessing.Process):
     def __init__(self, items, idx, queue, logging_step=100):
         super(Producer, self).__init__()
@@ -40,14 +41,19 @@ class Producer(multiprocessing.Process):
                     self.idx, processed_items))
 
             # extract frames
-            frames = video.extract_frames(video_path)
+            try:
+                frames = video.extract_frames(video_path)
+
+                # add items to queue
+                self.queue.put((video_id, frames, video_tags))
+            except Exception as e:
+                logger.exception("Exception happend")
+
 
             if processed_items % self.logging_step == 0:
                 logger.info("[Producer %d] Extracted frames from %s for item number %d" % (
                     self.idx, video_id, processed_items))
 
-            # add items to queue
-            self.queue.put((video_id, frames, video_tags))
             processed_items = processed_items + 1
 
         logger.info("[Producer %d] Signaling end of work" % self.idx)
