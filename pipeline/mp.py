@@ -40,12 +40,10 @@ class Producer(multiprocessing.Process):
                 logger.info("[Producer %d] Downloading URL for item number %d" % (
                     self.idx, processed_items))
 
-            # extract frames
             try:
                 frames = video.extract_frames(video_path)
-
-                # add items to queue
                 self.queue.put((video_id, frames, video_tags))
+
             except Exception as e:
                 logger.exception("[Producer %d] Exception happend whiel processing video %s for item number %d" %(
                     self.idx, video_id, processed_items))
