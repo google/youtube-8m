@@ -1,6 +1,7 @@
 import copy
 import pickle
 import logging
+import os
 
 import numpy as np
 import tensorflow as tf
