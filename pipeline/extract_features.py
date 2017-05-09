@@ -71,17 +71,17 @@ if __name__ == '__main__':
     filtered = [(video_id, tags, url) for (video_id, tags, url) in filtered if
                 video_id not in  processed_videos]
 
-    logger.info("After dequeing processed videos, %d items left" % len(filtered))
+    logger.info("After removing processed videos, %d items left" % len(filtered))
     work = filtered[:LIMIT]
 
-    #fsq = lambda : sq.fetch(work,
-    #                          model_path=MODEL_PATH,
-    #                        data_path=DATA_PATH,
-    #                    logging_step=LOGGING_INTERVAL)
+    fsq = lambda : sq.fetch(work,
+                            model_path=MODEL_PATH,
+                            data_path=DATA_PATH,
+                            logging_step=LOGGING_INTERVAL)
 
     fmp = lambda : mp.fetch(work, nprod=NPROD,
                             model_path=MODEL_PATH,
                             data_path=DATA_PATH,
                             logging_step=LOGGING_INTERVAL)
 
-    run_and_measure(fmp, len(work))
+    run_and_measure(fsq, len(work))

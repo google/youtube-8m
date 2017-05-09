@@ -33,7 +33,7 @@ class FramesIterator:
 
 def extract_incepction_v3(frame_iterator, model_dir, data_dir, logging_step = 100):
     '''
-    Extract incepction_v3 features from frame generator.
+    Extract inception_v3 features from frame generator.
 
     Inputs:
     frame_iterator - an iterator yielding video frames
@@ -43,7 +43,7 @@ def extract_incepction_v3(frame_iterator, model_dir, data_dir, logging_step = 10
     logger = logging.getLogger(__name__)
     logger.info("Extracting inception features")
 
-    # load incepction 3 graph
+    # load inception 3 graph
     with gfile.FastGFile(model_dir, 'rb') as f:
         graph_def = tf.GraphDef()
         graph_def.ParseFromString(f.read())

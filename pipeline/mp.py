@@ -72,7 +72,7 @@ class Consumer(multiprocessing.Process):
         logger = logging.getLogger(__name__)
         logger.info("Starting consumer")
 
-            # load incepction 3 graph
+        # load inception 3 graph
         with gfile.FastGFile(self.model_dir, 'rb') as f:
             graph_def = tf.GraphDef()
             graph_def.ParseFromString(f.read())
@@ -81,6 +81,7 @@ class Consumer(multiprocessing.Process):
         logger.info("Loaded graph")
 
         with tf.Session() as sess:
+            #TODO: add queueing and batching for optimal performance
             processed_items = 0
             while self.queues:
                 for queue in self.queues:
@@ -129,15 +130,12 @@ class Consumer(multiprocessing.Process):
 
 def fetch(work, nprod, model_path, data_path, logging_step = 100):
     work = chunks(work, nprod)
-    #make reader for reading data. lets call this object Producer
     producers = []
     queues = []
     for idx in range(nprod):
         queues.append(multiprocessing.Queue())
         producers.append(Producer(work[idx], idx, queues[idx], logging_step))
 
-    #make receivers for the data. Lets call these Consumers
-    #Each consumer is assigned a queue
     consumer_object = Consumer(queues, model_path, data_path, logging_step)
     consumer_object.start()
 
