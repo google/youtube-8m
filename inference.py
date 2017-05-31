@@ -50,8 +50,8 @@ if __name__ == '__main__':
   # Model flags.
   flags.DEFINE_bool(
       "frame_features", False,
-      "If set, then --eval_data_pattern must be frame-level features. "
-      "Otherwise, --eval_data_pattern must be aggregated video-level "
+      "If set, then --input_data_pattern must be frame-level features. "
+      "Otherwise, --input_data_pattern must be aggregated video-level "
       "features. The model must also be set appropriately (i.e. to read 3D "
       "batches VS 4D batches.")
   flags.DEFINE_integer(
