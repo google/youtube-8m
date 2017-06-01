@@ -55,7 +55,7 @@ if __name__ == '__main__':
       "features. The model must also be set appropriately (i.e. to read 3D "
       "batches VS 4D batches.")
   flags.DEFINE_integer(
-      "batch_size", 8192,
+      "batch_size", 4096,
       "How many examples to process per batch.")
   flags.DEFINE_string("feature_names", "mean_rgb", "Name of the feature "
                       "to use for training.")
@@ -128,9 +128,13 @@ def inference(reader, checkpoint_file, train_dir, data_pattern, out_file_locatio
     else:
       meta_graph_location = latest_checkpoint + ".meta"
       logging.info("loading meta-graph: " + meta_graph_location)
+      logging.info("loaded graph!")
+
     saver = tf.train.import_meta_graph(meta_graph_location, clear_devices=True)
     logging.info("restoring variables from " + latest_checkpoint)
     saver.restore(sess, latest_checkpoint)
+    logging.info("Restored variables!")
+
     input_tensor = tf.get_collection("input_batch_raw")[0]
     num_frames_tensor = tf.get_collection("num_frames")[0]
     predictions_tensor = tf.get_collection("predictions")[0]
