@@ -109,20 +109,27 @@ class YT8MAggregatedFeatureReader(BaseReader):
   def prepare_serialized_examples(self, serialized_examples):
     # set the mapping from the fields to data types in the proto
     num_features = len(self.feature_names)
+
     assert num_features > 0, "self.feature_names is empty!"
     assert len(self.feature_names) == len(self.feature_sizes), \
     "length of feature_names (={}) != length of feature_sizes (={})".format( \
     len(self.feature_names), len(self.feature_sizes))
 
-    feature_map = {"video_id": tf.FixedLenFeature([], tf.string),
-                   "labels": tf.VarLenFeature(tf.int64)}
-    for feature_index in range(num_features):
-      feature_map[self.feature_names[feature_index]] = tf.FixedLenFeature(
-          [self.feature_sizes[feature_index]], tf.float32)
+    # Basic fields in TF Example object
+    feature_map = {
+        "video_id": tf.FixedLenFeature([], tf.string),
+        "labels": tf.VarLenFeature(tf.int64)
+    }
+
+    # Add additional features
+    for name, size in zip(self.feature_names, self.feature_sizes):
+        feature_map[name] = tf.FixedLenFeature([size], tf.float32)
 
     features = tf.parse_example(serialized_examples, features=feature_map)
+
     labels = tf.sparse_to_indicator(features["labels"], self.num_classes)
     labels.set_shape([None, self.num_classes])
+
     concatenated_features = tf.concat([
         features[feature_name] for feature_name in self.feature_names], 1)
 
