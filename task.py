@@ -2,7 +2,6 @@ import os
 import numpy as np
 import tensorflow as tf
 from tensorflow.contrib import layers, learn, losses, metrics
-from tensorflow.contrib.learn.python.learn.estimators import model_fn as model_fn_lib
 from tensorflow.contrib.learn.python.learn import learn_runner
 from tensorflow.contrib.training import HParams
 # from tensorflow.python.training import basic_session_run_hooks as bhooks
@@ -175,7 +174,7 @@ def find_class_by_name(name, modules):
   return next(a for a in modules if a)
 
 
-def model_fn(features,labels,mode,params):
+def model_fn(features, labels, mode, params):
 
 
     optimizer_class = find_class_by_name(params.optimizer, [tf.train])
@@ -260,31 +259,26 @@ def model_fn(features,labels,mode,params):
 
                      tower_label_losses.append(label_loss)
 
-    # Incorporate the L2 weight penalties etc.
+    label_loss = tf.reduce_mean(tf.stack(tower_label_losses))
+    predictions = tf.concat(tower_predictions, 0)
+    tf.summary.scalar("label_loss", label_loss)
+    if params.regularization_penalty != 0:
+        reg_loss = tf.reduce_mean(tf.stack(tower_reg_losses))
+        tf.summary.scalar("reg_loss", reg_loss)
+
     if mode == learn.ModeKeys.TRAIN:
+        # Incorporate the L2 weight penalties, etc.
         final_loss = params.regularization_penalty * reg_loss + label_loss
-        gradients = optimizer.compute_gradients(final_loss,
-         colocate_gradients_with_ops=False)
+        gradients = optimizer.compute_gradients(
+            final_loss, colocate_gradients_with_ops=False)
         tower_gradients.append(gradients)
-
-        predictions = tf.concat(tower_predictions, 0)
-        label_loss = tf.reduce_mean(tf.stack(tower_label_losses))
-
-        tf.summary.scalar("label_loss", label_loss)
-        if params.regularization_penalty != 0:
-            reg_loss = tf.reduce_mean(tf.stack(tower_reg_losses))
-            tf.summary.scalar("reg_loss", reg_loss)
         merged_gradients = utils.combine_gradients(tower_gradients)
-
         if params.clip_gradient_norm > 0:
             with tf.name_scope('clip_grads'):
                 merged_gradients = utils.clip_gradient_norms(merged_gradients, params.clip_gradient_norm)
-
         train_op = optimizer.apply_gradients(merged_gradients, global_step=global_step)
-
     else:
         train_op = None
-
 
     eval_metric_ops = {}
     if mode == learn.ModeKeys.EVAL:
@@ -304,7 +298,6 @@ def model_fn(features,labels,mode,params):
                                             stateful=False,
                                             )
 
-
     #  tf.add_to_collection("global_step", global_step)
     #  tf.add_to_collection("loss", label_loss)
     tf.add_to_collection("predictions", tf.concat(tower_predictions, 0))
@@ -313,13 +306,13 @@ def model_fn(features,labels,mode,params):
     #  tf.add_to_collection("num_frames", num_frames)
     tf.add_to_collection("labels", tf.cast(labels, tf.float32))
     #  tf.add_to_collection("train_op", train_op)
-
-    return model_fn_lib.ModelFnOps(mode=mode,
-                                   predictions=tf.concat(tower_predictions, 0),
-                                   loss=label_loss,
-                                   train_op=train_op,
-                                   eval_metric_ops=eval_metric_ops,
-                                   )
+    tf.summary.scalar("loss", label_loss)
+    return learn.ModelFnOps(mode=mode,
+                            predictions=predictions,
+                            loss=label_loss,
+                            train_op=train_op,
+                            eval_metric_ops=eval_metric_ops,
+                            )
 
 def get_reader():
   # Convert feature_names and feature_sizes to lists of values.
