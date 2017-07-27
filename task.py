@@ -282,21 +282,22 @@ def model_fn(features, labels, mode, params):
 
     eval_metric_ops = {}
     if mode == learn.ModeKeys.EVAL:
-        eval_metric_ops['hit_at_one'] = tf.py_func(lambda x,y: np.float32(eval_util.calculate_hit_at_one(x,y)),
+
+        eval_metric_ops['hit_at_one'] = metrics.streaming_mean(tf.py_func(lambda x,y: np.float32(eval_util.calculate_hit_at_one(x,y)),
                                                    [predictions, labels],
                                                    tf.float32,
                                                    stateful=False,
-                                                   )
-        eval_metric_ops['perr'] = tf.py_func(lambda x,y: np.float32(eval_util.calculate_precision_at_equal_recall_rate(x,y)),
+                                                   ))
+        eval_metric_ops['perr'] = metrics.streaming_mean(tf.py_func(lambda x,y: np.float32(eval_util.calculate_precision_at_equal_recall_rate(x,y)),
                                              [predictions, labels],
                                              tf.float32,
                                              stateful=False,
-                                             )
-        eval_metric_ops['gap'] = tf.py_func(lambda x,y: np.float32(eval_util.calculate_gap(x,y)),
+                                             ))
+        eval_metric_ops['gap'] = metrics.streaming_mean(tf.py_func(lambda x,y: np.float32(eval_util.calculate_gap(x,y)),
                                             [predictions, labels],
                                             tf.float32,
                                             stateful=False,
-                                            )
+                                            ))
 
     #  tf.add_to_collection("global_step", global_step)
     #  tf.add_to_collection("loss", label_loss)
