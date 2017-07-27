@@ -433,6 +433,6 @@ def dist_setup():
 
 if __name__ == '__main__':
     task_type, _ = dist_setup()
-    if task_type == 'master' and FLAGS.start_new_model:
+    if task_type in [None, 'master'] and FLAGS.start_new_model:
         remove_training_directory(FLAGS.train_dir)
     tf.app.run()
