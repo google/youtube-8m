@@ -1,3 +1,6 @@
+# Data files
+*.tfrecords
+
 # Mac OSX files
 .*[Dd][Ss]_[Ss]tore
 
