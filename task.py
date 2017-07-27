@@ -179,6 +179,8 @@ def model_fn(features, labels, mode, params):
 
     optimizer_class = find_class_by_name(params.optimizer, [tf.train])
     label_loss_fn = find_class_by_name(params.label_loss, [losses])()
+    model = find_class_by_name(params.model,
+                               [frame_level_models, video_level_models])()
 
     global_step = tf.train.get_or_create_global_step()
     learning_rate = tf.train.exponential_decay(
@@ -217,7 +219,7 @@ def model_fn(features, labels, mode, params):
         with tf.device(params.device_string % i):
             with (tf.variable_scope(("tower"), reuse=True if i > 0 else None)):
                 with (slim.arg_scope([slim.model_variable, slim.variable], device="/cpu:0" if params.num_gpus!=1 else "/gpu:0")):
-                     result = params.model.create_model(
+                     result = model.create_model(
                        tower_inputs[i],
                        num_frames=tower_num_frames[i],
                        vocab_size=params.reader.num_classes,
@@ -384,8 +386,7 @@ def main(argv=None):
         learning_rate_decay_examples=FLAGS.learning_rate_decay_examples,
         optimizer=FLAGS.optimizer,
         label_loss=FLAGS.label_loss,
-        model=find_class_by_name(FLAGS.model,
-                                 [frame_level_models, video_level_models])(),
+        model=FLAGS.model,
         base_learning_rate=FLAGS.base_learning_rate,
         reader=get_reader(),
         num_towers=num_towers,
