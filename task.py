@@ -282,17 +282,17 @@ def model_fn(features, labels, mode, params):
 
     eval_metric_ops = {}
     if mode == learn.ModeKeys.EVAL:
-        eval_metric_ops['hit_at_one'] = tf.py_func(lambda x: eval_util.calculate_hit_at_one(*x),
+        eval_metric_ops['hit_at_one'] = tf.py_func(lambda x,y: np.float32(eval_util.calculate_hit_at_one(x,y)),
                                                    [predictions, labels],
                                                    tf.float32,
                                                    stateful=False,
                                                    )
-        eval_metric_ops['perr'] = tf.py_func(lambda x: eval_util.calculate_precision_at_equal_recall_rate(*x),
+        eval_metric_ops['perr'] = tf.py_func(lambda x,y: np.float32(eval_util.calculate_precision_at_equal_recall_rate(x,y)),
                                              [predictions, labels],
                                              tf.float32,
                                              stateful=False,
                                              )
-        eval_metric_ops['gap'] = tf.py_func(lambda x: eval_util.calculate_gap(*x),
+        eval_metric_ops['gap'] = tf.py_func(lambda x,y: np.float32(eval_util.calculate_gap(x,y)),
                                             [predictions, labels],
                                             tf.float32,
                                             stateful=False,
@@ -358,6 +358,7 @@ def _experiment_fn(run_config, hparams):
             estimator=estimator,
             train_input_fn=lambda: train_input_fn(hparams),
             eval_input_fn=lambda: train_input_fn(hparams),
+            train_steps = 10000
             #train_monitors = [eval_hook]
             )
 
