@@ -82,7 +82,7 @@ def get_input_evaluation_tensors(reader,
 
   Args:
     reader: A class which parses the training data.
-    data_pattern: A 'glob' style path to the data files.
+    data_pattern: A 'glob' styxle path to the data files.
     batch_size: How many examples to process at a time.
     num_readers: How many I/O threads to use.
 
@@ -330,4 +330,3 @@ def main(unused_argv):
 
 if __name__ == "__main__":
   app.run()
-

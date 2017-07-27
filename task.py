@@ -33,6 +33,11 @@ if __name__ == '__main__':
     flags.DEFINE_string("train_dir", "/tmp/yt8m_model/",
                         "The directory to save the model files in.")
     flags.DEFINE_string(
+        "eval_data_pattern", "",
+        "File glob defining the evaluation dataset in tensorflow.SequenceExample "
+        "format. The SequenceExamples are expected to have an 'rgb' byte array "
+        "sequence feature as well as a 'labels' int64 context feature.")
+    flags.DEFINE_string(
         "train_data_pattern", "",
         "File glob for the training dataset. If the files refer to Frame Level "
         "features (i.e. tensorflow.SequenceExample), then set --reader_type "
@@ -332,6 +337,45 @@ def get_reader():
   return reader
 
 
+
+def get_input_evaluation_tensors(reader,
+                                 data_pattern,
+                                 batch_size=1024,
+                                 num_readers=1):
+  """Creates the section of the graph which reads the evaluation data.
+
+  Args:
+    reader: A class which parses the training data.
+    data_pattern: A 'glob' styxle path to the data files.
+    batch_size: How many examples to process at a time.
+    num_readers: How many I/O threads to use.
+
+  Returns:
+    A tuple containing the features tensor, labels tensor, and optionally a
+    tensor containing the number of frames per video. The exact dimensions
+    depend on the reader being used.
+
+  Raises:
+    IOError: If no files matching the given pattern were found.
+  """
+  logging.info("Using batch size of " + str(batch_size) + " for evaluation.")
+  with tf.name_scope("eval_input"):
+    files = gfile.Glob(data_pattern)
+    if not files:
+      raise IOError("Unable to find the evaluation files.")
+    logging.info("number of evaluation files: " + str(len(files)))
+    filename_queue = tf.train.string_input_producer(
+        files, shuffle=False, num_epochs=1)
+    eval_data = [
+        reader.prepare_reader(filename_queue) for _ in range(num_readers)
+    ]
+    return tf.train.batch_join(
+        eval_data,
+        batch_size=batch_size,
+        capacity=3 * batch_size,
+        allow_smaller_final_batch=True,
+        enqueue_many=True)
+
 def train_input_fn(params):
 
     unused_video_id, model_input_raw, labels_batch, num_frames = (
@@ -347,6 +391,17 @@ def train_input_fn(params):
     features['num_frames'] = num_frames
     return [features, labels_batch]
 
+def eval_input_fn(params):
+    video_id_batch, model_input_raw, labels_batch, num_frames = get_input_evaluation_tensors(  # pylint: disable=g-line-too-long
+        params.reader,
+        params.eval_data_pattern,
+        batch_size=params.batch_size,
+        num_readers=params.num_readers)
+    features = {}
+
+    features['model_input'] = model_input_raw
+    features['num_frames'] = num_frames
+    return [features, labels_batch]
 
 def _experiment_fn(run_config, hparams):
     # Create Estimator
@@ -360,7 +415,7 @@ def _experiment_fn(run_config, hparams):
     return tf.contrib.learn.Experiment(
             estimator=estimator,
             train_input_fn=lambda: train_input_fn(hparams),
-            eval_input_fn=lambda: train_input_fn(hparams),
+            eval_input_fn=lambda: eval_input_fn(hparams),
             train_steps = 10000
             #train_monitors = [eval_hook]
             )
@@ -394,6 +449,7 @@ def main(argv=None):
         num_readers=FLAGS.num_readers,
         num_epochs=FLAGS.num_epochs,
         train_data_pattern=FLAGS.train_data_pattern,
+        eval_data_pattern=FLAGS.eval_data_pattern,
         num_gpus = num_gpus,
         regularization_penalty=FLAGS.regularization_penalty,
         clip_gradient_norm = FLAGS.clip_gradient_norm)
