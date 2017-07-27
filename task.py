@@ -364,7 +364,7 @@ def _experiment_fn(run_config, hparams):
     return tf.contrib.learn.Experiment(
             estimator=estimator,
             train_input_fn=lambda: train_input_fn(hparams),
-            eval_input_fn=None,
+            eval_input_fn=lambda: train_input_fn(hparams),
             #train_monitors = [eval_hook]
             )
 
@@ -407,11 +407,12 @@ def main(argv=None):
     config = learn.RunConfig(save_checkpoints_secs=15 * 60,
                              save_summary_steps=1000,
                              model_dir=FLAGS.train_dir,
-                             gpu_memory_fraction=1)
+                             gpu_memory_fraction=1,
+                             )
     learn_runner.run(experiment_fn = _experiment_fn,
                       run_config = config,
                       hparams = hparams,
-                      schedule = 'train')
+                      schedule = 'train_and_evaluate')
 if __name__ == '__main__':
 
     tf.app.run()
