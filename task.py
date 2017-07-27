@@ -398,8 +398,6 @@ def main(argv=None):
         regularization_penalty=FLAGS.regularization_penalty,
         clip_gradient_norm = FLAGS.clip_gradient_norm)
 
-    output_dir= 'test'
-
     config = learn.RunConfig(save_checkpoints_secs=15 * 60,
                              save_summary_steps=1000,
                              model_dir=FLAGS.train_dir,
@@ -409,6 +407,32 @@ def main(argv=None):
                       run_config = config,
                       hparams = hparams,
                       schedule = 'train_and_evaluate')
-if __name__ == '__main__':
 
+
+def remove_training_directory(train_dir):
+    """Removes the training directory."""
+    try:
+        logging.info("Removing existing train directory.")
+        gfile.DeleteRecursively(train_dir)
+    except:
+        logging.error("Failed to delete directory " + train_dir
+                      + " when starting a new model; please delete it "
+                      + "manually and try again.")
+
+
+def dist_setup():
+    config = json.loads(os.environ.get('TF_CONFIG') or '{}')
+    task_env = config.get('task', {})
+    task_type = None
+    task_index = None
+    if task_env:
+        task_type = task_env.get('type').encode('ascii')
+        task_index = task_env.get('index')
+    return task_type, task_index
+
+
+if __name__ == '__main__':
+    task_type, _ = dist_setup()
+    if task_type == 'master' and FLAGS.start_new_model:
+        remove_training_directory(FLAGS.train_dir)
     tf.app.run()
