@@ -253,8 +253,6 @@ def model_fn(features, labels, mode, params):
 
                      tower_reg_losses.append(reg_loss)
 
-
-
                      # Adds update_ops (e.g., moving average updates in batch normalization) as
                      # a dependency to the train_op.
                      update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
@@ -268,6 +266,11 @@ def model_fn(features, labels, mode, params):
 
                      tower_label_losses.append(label_loss)
 
+                     final_loss = params.regularization_penalty * reg_loss + label_loss
+                     gradients = optimizer.compute_gradients(
+                         final_loss, colocate_gradients_with_ops=False)
+                     tower_gradients.append(gradients)
+
     label_loss = tf.reduce_mean(tf.stack(tower_label_losses))
     predictions = tf.concat(tower_predictions, 0)
     tf.summary.scalar("label_loss", label_loss)
@@ -277,10 +280,7 @@ def model_fn(features, labels, mode, params):
 
     if mode == learn.ModeKeys.TRAIN:
         # Incorporate the L2 weight penalties, etc.
-        final_loss = params.regularization_penalty * reg_loss + label_loss
-        gradients = optimizer.compute_gradients(
-            final_loss, colocate_gradients_with_ops=False)
-        tower_gradients.append(gradients)
+
         merged_gradients = utils.combine_gradients(tower_gradients)
         if params.clip_gradient_norm > 0:
             with tf.name_scope('clip_grads'):
@@ -307,12 +307,12 @@ def model_fn(features, labels, mode, params):
                                             tf.float32,
                                             stateful=False,
                                             ))
-    
+
     #add eval summaries and update ops for training
     for key,val in eval_metric_ops.items():
         tf.summary.scalar(key,val[0]) #create summary for each eval op
         tf.add_to_collection(tf.GraphKeys.UPDATE_OPS,val[1]) # add the update op for each eval up to update ops collection, so that it will be run every train_op call
-    
+
     #  tf.add_to_collection("global_step", global_step)
     #  tf.add_to_collection("loss", label_loss)
     tf.add_to_collection("predictions", tf.concat(tower_predictions, 0))
