@@ -21,6 +21,6 @@ submit training $JOB_NAME \
 --runtime-version 1.2 \
 --staging-bucket=$BUCKET_NAME --region=us-east1 \
 --config=youtube-8m/cloudml-gpu-distributed.yaml \
--- --train_data_pattern='gs://youtube8m-ml-us-east1/1/video_level/train/train*.tfrecord' \
---model=MoeModel \
---train_dir=$BUCKET_NAME/yt8m_train_video_level_moe_model_experiment_task
+-- --train_data_pattern='gs://youtube8m-ml-us east1/1/frame_level/train/train*.tfrecord' \
+--model=FrameLevelLogisticModel \
+--train_dir=$BUCKET_NAME/$JOB_NAME
