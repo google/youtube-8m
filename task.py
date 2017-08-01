@@ -288,7 +288,7 @@ def model_fn(features, labels, mode, params):
         train_op = None
 
     eval_metric_ops = {}
-    if mode == learn.ModeKeys.EVAL:
+    if mode == learn.ModeKeys.EVAL or mode == learn.ModeKeys.TRAIN:
 
         eval_metric_ops['hit_at_one'] = metrics.streaming_mean(tf.py_func(lambda x,y: np.float32(eval_util.calculate_hit_at_one(x,y)),
                                                    [predictions, labels],
@@ -305,7 +305,12 @@ def model_fn(features, labels, mode, params):
                                             tf.float32,
                                             stateful=False,
                                             ))
-
+    
+    #add eval summaries and update ops for training
+    for key,val in eval_metric_ops.items():
+        tf.summary.scalar(key,val[0]) #create summary for each eval op
+        tf.add_to_collection(tf.GraphKeys.UPDATE_OPS,val[1]) # add the update op for each eval up to update ops collection, so that it will be run every train_op call
+    
     #  tf.add_to_collection("global_step", global_step)
     #  tf.add_to_collection("loss", label_loss)
     tf.add_to_collection("predictions", tf.concat(tower_predictions, 0))
@@ -454,7 +459,7 @@ def main(argv=None):
         regularization_penalty=FLAGS.regularization_penalty,
         clip_gradient_norm = FLAGS.clip_gradient_norm)
 
-    config = learn.RunConfig(save_checkpoints_secs=15 * 60,
+    config = learn.RunConfig(save_checkpoints_secs= 60,
                              save_summary_steps=1000,
                              model_dir=FLAGS.train_dir,
                              gpu_memory_fraction=1,
