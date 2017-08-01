@@ -27,7 +27,7 @@ import utils
 import hooks
 FLAGS = flags.FLAGS
 
-tf.logging.set_verbosity(tf.logging.INFO)  # enables training error print out during training
+tf.logging.set_verbosity(tf.logging.DEBUG)  # enables training error print out during training
 
 if __name__ == '__main__':
     flags.DEFINE_string("train_dir", "/tmp/yt8m_model/",
@@ -160,6 +160,7 @@ def get_input_data_tensors(reader,
     logging.info("Number of training files: %s.", str(len(files)))
     filename_queue = tf.train.string_input_producer(
         files, num_epochs=num_epochs, shuffle=True)
+
     training_data = [
         reader.prepare_reader(filename_queue) for _ in range(num_readers)
     ]
@@ -233,6 +234,7 @@ def model_fn(features, labels, mode, params):
                        tf.summary.histogram(variable.op.name, variable)
 
                      predictions = result["predictions"]
+
                      tower_predictions.append(predictions)
 
                      if "loss" in result.keys():
@@ -328,6 +330,7 @@ def get_reader():
       FLAGS.feature_names, FLAGS.feature_sizes)
 
   if FLAGS.frame_features:
+
     reader = readers.YT8MFrameFeatureReader(
         feature_names=feature_names, feature_sizes=feature_sizes)
   else:
@@ -422,6 +425,7 @@ def _experiment_fn(run_config, hparams):
 
 
 def main(argv=None):
+
     local_device_protos = device_lib.list_local_devices()
     gpus = [x.name for x in local_device_protos if x.device_type == 'GPU']
     num_gpus = len(gpus)
@@ -462,7 +466,7 @@ def main(argv=None):
     learn_runner.run(experiment_fn = _experiment_fn,
                       run_config = config,
                       hparams = hparams,
-                      schedule = 'train_and_evaluate')
+                      schedule = 'train')
 
 
 def remove_training_directory(train_dir):
@@ -491,4 +495,5 @@ if __name__ == '__main__':
     task_type, _ = dist_setup()
     if task_type in [None, 'master'] and FLAGS.start_new_model:
         remove_training_directory(FLAGS.train_dir)
-    tf.app.run()
+
+    app.run()

@@ -559,6 +559,7 @@ class Trainer(object):
 
 
 def get_reader():
+
   # Convert feature_names and feature_sizes to lists of values.
   feature_names, feature_sizes = utils.GetListOfFeatureNamesAndSizes(
       FLAGS.feature_names, FLAGS.feature_sizes)
