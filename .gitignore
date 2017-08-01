@@ -1,3 +1,9 @@
+# Tensorflow summary and checkpoint files
+checkpoints
+events.out.*
+graph.pbtxt
+model.ckpt-*
+
 # Data files
 *.tfrecord
 
