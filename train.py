@@ -214,8 +214,9 @@ def build_graph(reader,
     num_readers: How many threads to use for I/O operations.
     num_epochs: How many passes to make over the data. 'None' means an
                 unlimited number of passes.
+    with tf.device("/job:ps/task:0"):
   """
-
+ 
   global_step = tf.Variable(0, trainable=False, name="global_step")
 
   local_device_protos = device_lib.list_local_devices()
@@ -533,7 +534,7 @@ class Trainer(object):
   def recover_model(self, meta_filename):
     logging.info("%s: Restoring from meta graph file %s",
                  task_as_string(self.task), meta_filename)
-    return tf.train.import_meta_graph(meta_filename)
+    return tf.train.import_meta_graph(meta_filename,clear_devices = True)
 
   def build_model(self, model, reader):
     """Find the model and build the graph."""
