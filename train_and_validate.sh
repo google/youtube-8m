@@ -6,6 +6,10 @@ else
 fi
 
 REGION=us-east1
+MODEL="MoeModel"
+FEATURE_NAMES="mean_rgb"
+FEATURE_SIZES=1024
+BATCH_SIZE=1024
 
 # (One Time) Create a storage bucket to store training logs and checkpoints.
 gsutil mb -l $REGION $BUCKET_NAME
@@ -18,10 +22,12 @@ gcloud --verbosity=debug ml-engine jobs submit training $TRAIN_JOB_NAME \
 --config=youtube-8m/train.yaml \
 -- \
 --train_data_pattern='gs://isaacoutputfinal/train*' \
---model=MoeModel \
+--model=$MODEL \
 --train_dir=$BUCKET_NAME/$TRAIN_JOB_NAME \
---feature_names="mean_rgb" \
---feature_sizes="1024" \
+--feature_names=$FEATURE_NAMES \
+--feature_sizes=$FEATURE_NAMES \
+--batch_size=$BATCH_SIZE \
+--num_epochs=5
 --start_new_model = True
 
 
@@ -33,8 +39,9 @@ gcloud --verbosity=debug ml-engine jobs submit training $VAL_JOB_NAME \
 --config=youtube-8m/validate.yaml \
 -- \
 --eval_data_pattern='gs://youtube8m-ml-us-east1/1/video_level/validate/validate*.tfrecord' \
---model=MoeModel \
+--model=$MODEL \
 --train_dir=$BUCKET_NAME/$TRAIN_JOB_NAME \
---feature_names="mean_rgb" \
---feature_sizes="1024" \
+--feature_names=$FEATURE_NAMES \
+--feature_sizes=$FEATURE_SIZES \
+--batch_size=$BATCH_SIZE \
 --run_once=False
