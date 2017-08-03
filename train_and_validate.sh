@@ -7,9 +7,9 @@ fi
 
 REGION=us-east1
 MODEL="MoeModel"
-FEATURE_NAMES="mean_rgb"
-FEATURE_SIZES=1024
-BATCH_SIZE=1024
+FEATURE_NAMES="mean_rgb, mean_audio"
+FEATURE_SIZES=1024, 128
+BATCH_SIZE=256
 
 # (One Time) Create a storage bucket to store training logs and checkpoints.
 gsutil mb -l $REGION $BUCKET_NAME

@@ -67,7 +67,7 @@ if __name__ == "__main__":
                        "How many threads to use for reading input files.")
   flags.DEFINE_boolean("run_once", False, "Whether to run eval only once.")
   flags.DEFINE_integer("top_k", 20, "How many predictions to output per video.")
-  flags.DEFINE_integer('wait_time_sec',30,'Seconds to wait before starting eval')
+  #flags.DEFINE_integer('wait_time_sec',30,'Seconds to wait before starting eval')
 
 
 def find_class_by_name(name, modules):
@@ -190,7 +190,7 @@ def evaluation_loop(video_id_batch, prediction_batch, label_batch, loss,
     The global_step used in the latest model.
   """
 
-  time.sleep(FLAGS.wait_time_sec)
+  #time.sleep(FLAGS.wait_time_sec)
   global_step_val = -1
   with tf.Session() as sess:
     latest_checkpoint = tf.train.latest_checkpoint(FLAGS.train_dir)
