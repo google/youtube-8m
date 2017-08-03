@@ -13,6 +13,7 @@
 # limitations under the License.
 """Binary for evaluating Tensorflow models on the YouTube-8M dataset."""
 
+import os
 import time
 
 import eval_util
@@ -236,11 +237,10 @@ def evaluation_loop(video_id_batch, prediction_batch, label_batch, loss,
                                                      labels_val, loss_val)
         iteration_info_dict["examples_per_second"] = example_per_second
 
-        iterinfo = utils.AddGlobalStepSummary(
-            summary_writer,
-            global_step_val,
-            iteration_info_dict,
-            summary_scope="Eval")
+        iterinfo = utils.AddGlobalStepSummary(summary_writer,
+                                              global_step_val,
+                                              iteration_info_dict,
+                                              )
         logging.info("examples_processed: %d | %s", examples_processed,
                      iterinfo)
 
@@ -308,7 +308,7 @@ def evaluate():
 
     saver = tf.train.Saver(tf.global_variables())
     summary_writer = tf.summary.FileWriter(
-        FLAGS.train_dir, graph=tf.get_default_graph())
+        os.path.join(FLAGS.train_dir, 'eval'), graph=tf.get_default_graph())
 
     evl_metrics = eval_util.EvaluationMetrics(reader.num_classes, FLAGS.top_k)
 

@@ -433,17 +433,16 @@ class Trainer(object):
               ("%.2f" % hit_at_one) + " PERR: " + ("%.2f" % perr) +
               " GAP: " + ("%.2f" % gap))
 
-            sv.summary_writer.add_summary(
-                utils.MakeSummary("model/Training_Hit@1", hit_at_one),
-                global_step_val)
-            sv.summary_writer.add_summary(
-                utils.MakeSummary("model/Training_Perr", perr), global_step_val)
-            sv.summary_writer.add_summary(
-                utils.MakeSummary("model/Training_GAP", gap), global_step_val)
-            sv.summary_writer.add_summary(
-                utils.MakeSummary("global_step/Examples/Second",
-                                  examples_per_second), global_step_val)
-            sv.summary_writer.flush()
+            info_dict = {"hit_at_one": hit_at_one,
+                         "perr": perr,
+                         "gap": gap,
+                         "loss": loss_val,
+                         "examples_per_second": examples_per_second,
+                         }
+
+            utils.AddGlobalStepSummary(sv.summary_writer,
+                                       global_step_val,
+                                       info_dict)
 
             # Exporting the model every x steps
             time_to_export = ((self.last_model_export_step == 0) or
