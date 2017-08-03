@@ -27,7 +27,7 @@ import utils
 import hooks
 FLAGS = flags.FLAGS
 
-tf.logging.set_verbosity(tf.logging.INFO)  # enables training error print out during training
+tf.logging.set_verbosity(tf.logging.DEBUG)  # enables training error print out during training
 
 if __name__ == '__main__':
     flags.DEFINE_string("train_dir", "/tmp/yt8m_model/",
@@ -160,6 +160,7 @@ def get_input_data_tensors(reader,
     logging.info("Number of training files: %s.", str(len(files)))
     filename_queue = tf.train.string_input_producer(
         files, num_epochs=num_epochs, shuffle=True)
+
     training_data = [
         reader.prepare_reader(filename_queue) for _ in range(num_readers)
     ]
@@ -233,6 +234,7 @@ def model_fn(features, labels, mode, params):
                        tf.summary.histogram(variable.op.name, variable)
 
                      predictions = result["predictions"]
+
                      tower_predictions.append(predictions)
 
                      if "loss" in result.keys():
@@ -251,8 +253,6 @@ def model_fn(features, labels, mode, params):
 
                      tower_reg_losses.append(reg_loss)
 
-
-
                      # Adds update_ops (e.g., moving average updates in batch normalization) as
                      # a dependency to the train_op.
                      update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
@@ -266,6 +266,11 @@ def model_fn(features, labels, mode, params):
 
                      tower_label_losses.append(label_loss)
 
+                     final_loss = params.regularization_penalty * reg_loss + label_loss
+                     gradients = optimizer.compute_gradients(
+                         final_loss, colocate_gradients_with_ops=False)
+                     tower_gradients.append(gradients)
+
     label_loss = tf.reduce_mean(tf.stack(tower_label_losses))
     predictions = tf.concat(tower_predictions, 0)
     tf.summary.scalar("label_loss", label_loss)
@@ -275,10 +280,7 @@ def model_fn(features, labels, mode, params):
 
     if mode == learn.ModeKeys.TRAIN:
         # Incorporate the L2 weight penalties, etc.
-        final_loss = params.regularization_penalty * reg_loss + label_loss
-        gradients = optimizer.compute_gradients(
-            final_loss, colocate_gradients_with_ops=False)
-        tower_gradients.append(gradients)
+
         merged_gradients = utils.combine_gradients(tower_gradients)
         if params.clip_gradient_norm > 0:
             with tf.name_scope('clip_grads'):
@@ -305,12 +307,12 @@ def model_fn(features, labels, mode, params):
                                             tf.float32,
                                             stateful=False,
                                             ))
-    
+
     #add eval summaries and update ops for training
     for key,val in eval_metric_ops.items():
         tf.summary.scalar(key,val[0]) #create summary for each eval op
         tf.add_to_collection(tf.GraphKeys.UPDATE_OPS,val[1]) # add the update op for each eval up to update ops collection, so that it will be run every train_op call
-    
+
     #  tf.add_to_collection("global_step", global_step)
     #  tf.add_to_collection("loss", label_loss)
     tf.add_to_collection("predictions", tf.concat(tower_predictions, 0))
@@ -333,6 +335,7 @@ def get_reader():
       FLAGS.feature_names, FLAGS.feature_sizes)
 
   if FLAGS.frame_features:
+
     reader = readers.YT8MFrameFeatureReader(
         feature_names=feature_names, feature_sizes=feature_sizes)
   else:
@@ -427,6 +430,7 @@ def _experiment_fn(run_config, hparams):
 
 
 def main(argv=None):
+
     local_device_protos = device_lib.list_local_devices()
     gpus = [x.name for x in local_device_protos if x.device_type == 'GPU']
     num_gpus = len(gpus)
@@ -467,7 +471,7 @@ def main(argv=None):
     learn_runner.run(experiment_fn = _experiment_fn,
                       run_config = config,
                       hparams = hparams,
-                      schedule = 'train_and_evaluate')
+                      schedule = 'train')
 
 
 def remove_training_directory(train_dir):
@@ -496,4 +500,5 @@ if __name__ == '__main__':
     task_type, _ = dist_setup()
     if task_type in [None, 'master'] and FLAGS.start_new_model:
         remove_training_directory(FLAGS.train_dir)
-    tf.app.run()
+
+    app.run()
