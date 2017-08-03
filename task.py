@@ -28,7 +28,7 @@ import hooks
 FLAGS = flags.FLAGS
 
 tf.logging.set_verbosity(tf.logging.DEBUG)  # enables training error print out during training
-
+_TOP_PREDICTIONS_IN_OUTPUT = 20
 if __name__ == '__main__':
     flags.DEFINE_string("train_dir", "/tmp/yt8m_model/",
                         "The directory to save the model files in.")
@@ -271,8 +271,10 @@ def model_fn(features, labels, mode, params):
                          final_loss, colocate_gradients_with_ops=False)
                      tower_gradients.append(gradients)
 
+    pred_dict = {}
     label_loss = tf.reduce_mean(tf.stack(tower_label_losses))
     predictions = tf.concat(tower_predictions, 0)
+    pred_dict['predictions'] = predictions
     tf.summary.scalar("label_loss", label_loss)
     if params.regularization_penalty != 0:
         reg_loss = tf.reduce_mean(tf.stack(tower_reg_losses))
@@ -308,6 +310,14 @@ def model_fn(features, labels, mode, params):
                                             stateful=False,
                                             ))
 
+    else:
+        pass
+    top_predictions, top_indices = tf.nn.top_k(predictions,
+        _TOP_PREDICTIONS_IN_OUTPUT)
+
+    pred_dict['top_predictions'] = top_predictions
+    pred_dict['top_indices'] = top_indices
+
     #add eval summaries and update ops for training
     for key,val in eval_metric_ops.items():
         tf.summary.scalar(key,val[0]) #create summary for each eval op
@@ -323,11 +333,11 @@ def model_fn(features, labels, mode, params):
     #  tf.add_to_collection("train_op", train_op)
     tf.summary.scalar("loss", label_loss)
     return learn.ModelFnOps(mode=mode,
-                            predictions=predictions,
+                            predictions=pred_dict,
                             loss=label_loss,
                             train_op=train_op,
                             eval_metric_ops=eval_metric_ops,
-                            )
+                            output_alternatives = {'vid_level_test1': (learn.ProblemType.CLASSIFICATION, pred_dict)})
 
 def get_reader():
   # Convert feature_names and feature_sizes to lists of values.
@@ -411,6 +421,53 @@ def eval_input_fn(params):
     features['num_frames'] = num_frames
     return [features, labels_batch]
 
+def serving_input_fn(params):
+
+    serialized_examples = tf.placeholder(tf.string, shape=(None,))
+    video_id, model_input_raw, labels_batch, num_frames = (
+        params.reader.prepare_serialized_examples(serialized_examples))
+
+    features = {'model_input': model_input_raw,'num_frames':num_frames}
+
+    return tf.contrib.learn.InputFnOps(
+          features,
+          None,  # labels
+           {'example_bytes': serialized_examples})
+
+
+# def example_serving_input_fn():
+#   """Build the serving inputs."""
+#   example_bytestring = tf.placeholder(
+#       shape=[None],
+#       dtype=tf.string,
+#   )
+#   feature_scalars = tf.parse_example(
+#       example_bytestring,
+#       tf.feature_column.make_parse_example_spec(INPUT_COLUMNS)
+#   )
+#   features = {
+#       key: tf.expand_dims(tensor, -1)
+#       for key, tensor in feature_scalars.iteritems()
+#   }
+#   return tf.contrib.learn.InputFnOps(
+#       features,
+#       None,  # labels
+#       {'example_proto': example_bytestring}
+#   )
+
+
+# def json_serving_input_fn(feature_names):
+#   """Build the serving inputs."""
+#   inputs = {}
+#   for feat in INPUT_COLUMNS:
+#     inputs[feat.name] = tf.placeholder(shape=[None], dtype=feat.dtype)
+#
+#   features = {
+#       key: tf.expand_dims(tensor, -1)
+#       for key, tensor in inputs.iteritems()
+#   }
+#   return tf.contrib.learn.InputFnOps(features, None, inputs)
+
 def _experiment_fn(run_config, hparams):
     # Create Estimator
      # seems to be the only way to stop CUDA_OUT_MEMORY_ERRORs
@@ -418,13 +475,23 @@ def _experiment_fn(run_config, hparams):
                                 config=run_config,
                                 params=hparams,
                                 )
+    #import ipdb; ipdb.set_trace()
     #eval_hook = hooks.EvalMetricsHook(FLAGS.train_dir)
-
-    return tf.contrib.learn.Experiment(
+    # export_strategies=[saved_model_export_utils.make_export_strategy(
+    #           model.SERVING_FUNCTIONS[args.export_format],
+    #           exports_to_keep=1,
+    #           default_output_alternative_key=None,
+    #       )]
+    export_strategy = learn.make_export_strategy(lambda: serving_input_fn(hparams),
+                                                 default_output_alternative_key='vid_level_test1',
+                                                 )
+    return learn.Experiment(
             estimator=estimator,
             train_input_fn=lambda: train_input_fn(hparams),
             eval_input_fn=lambda: eval_input_fn(hparams),
-            train_steps = 10000
+            train_steps = 10000,
+            eval_steps = 5,
+            export_strategies = [export_strategy]
             #train_monitors = [eval_hook]
             )
 
@@ -463,7 +530,8 @@ def main(argv=None):
         regularization_penalty=FLAGS.regularization_penalty,
         clip_gradient_norm = FLAGS.clip_gradient_norm)
 
-    config = learn.RunConfig(save_checkpoints_secs= 60,
+
+    config = learn.RunConfig(save_checkpoints_secs= 5,
                              save_summary_steps=1000,
                              model_dir=FLAGS.train_dir,
                              gpu_memory_fraction=1,
@@ -471,7 +539,7 @@ def main(argv=None):
     learn_runner.run(experiment_fn = _experiment_fn,
                       run_config = config,
                       hparams = hparams,
-                      schedule = 'train')
+                      schedule = 'train_and_evaluate')
 
 
 def remove_training_directory(train_dir):
