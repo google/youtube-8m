@@ -21,7 +21,7 @@ gcloud --verbosity=debug ml-engine jobs submit training $TRAIN_JOB_NAME \
 --staging-bucket=$BUCKET_NAME --region=$REGION \
 --config=youtube-8m/train.yaml \
 -- \
---train_data_pattern='gs://isaacoutputfinal/train*' \
+--train_data_pattern="gs://isaacoutputfinal/train*" \
 --model=$MODEL \
 --train_dir=$BUCKET_NAME/$TRAIN_JOB_NAME \
 --feature_names=$FEATURE_NAMES \
