@@ -495,7 +495,6 @@ def _experiment_fn(run_config, hparams):
             #train_monitors = [eval_hook]
             )
 
-
 def main(argv=None):
 
     local_device_protos = device_lib.list_local_devices()

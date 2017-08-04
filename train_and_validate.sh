@@ -7,8 +7,9 @@ fi
 
 REGION=us-east1
 MODEL="MoeModel"
-FEATURE_NAMES="mean_rgb, mean_audio"
-FEATURE_SIZES=1024, 128
+
+FEATURE_NAMES="mean_rgb,mean_audio"
+FEATURE_SIZES="1024,128"
 BATCH_SIZE=256
 
 # (One Time) Create a storage bucket to store training logs and checkpoints.
@@ -27,7 +28,8 @@ gcloud --verbosity=debug ml-engine jobs submit training $TRAIN_JOB_NAME \
 --feature_names=$FEATURE_NAMES \
 --feature_sizes=$FEATURE_SIZES \
 --batch_size=$BATCH_SIZE \
---num_epochs=5
+--num_epochs=10 \
+--moe_num_mixtures=8 \
 --start_new_model = True
 
 
