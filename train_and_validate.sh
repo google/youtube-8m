@@ -8,6 +8,8 @@ fi
 REGION=us-east1
 MODEL="MoeModel"
 
+MOE_NUM_MIXTURES=2
+
 FEATURE_NAMES="mean_rgb,mean_audio"
 FEATURE_SIZES="1024,128"
 BATCH_SIZE=256
@@ -24,6 +26,7 @@ gcloud --verbosity=debug ml-engine jobs submit training $TRAIN_JOB_NAME \
 -- \
 --train_data_pattern="gs://isaacoutputfinal/train*" \
 --model=$MODEL \
+--moe_num_mixtures=$MOE_NUM_MIXTURES \
 --train_dir=$BUCKET_NAME/$TRAIN_JOB_NAME \
 --feature_names=$FEATURE_NAMES \
 --feature_sizes=$FEATURE_SIZES \
@@ -42,6 +45,7 @@ gcloud --verbosity=debug ml-engine jobs submit training $VAL_JOB_NAME \
 -- \
 --eval_data_pattern='gs://youtube8m-ml-us-east1/1/video_level/validate/validate*.tfrecord' \
 --model=$MODEL \
+--moe_num_mixtures=$MOE_NUM_MIXTURES \
 --train_dir=$BUCKET_NAME/$TRAIN_JOB_NAME \
 --feature_names=$FEATURE_NAMES \
 --feature_sizes=$FEATURE_SIZES \

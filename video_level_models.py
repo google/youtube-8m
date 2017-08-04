@@ -102,7 +102,10 @@ class MoeModel(models.BaseModel):
                                      [-1, vocab_size])
     return {"predictions": final_probabilities}
 
-class DerKorinthenkacker(models.BaseModel):
+
+
+class DeepMoeModel(models.BaseModel):
+
   """A softmax over a mixture of logistic models (with L2 regularization)."""
 
   def create_model(self,
@@ -130,134 +133,193 @@ class DerKorinthenkacker(models.BaseModel):
       batch_size x num_classes.
     """
     num_mixtures = num_mixtures or FLAGS.moe_num_mixtures
-    with tf.name_scope('Feature_XForm'):
-        hidden = slim.fully_connected(
-            model_input,
-            1024,
-            activation_fn=tf.nn.relu,
-            biases_initializer=None,
-            weights_regularizer=slim.l2_regularizer(l2_penalty),
-            scope="hidden")
+    hidden1 = slim.fully_connected(
+        model_input,
+        1024,
+        activation_fn=tf.nn.relu,
+        biases_initializer=None,
+        weights_regularizer=slim.l2_regularizer(l2_penalty),
+        scope="hidden1")
+    hidden = slim.fully_connected(
+        hidden1,
+        1024,
+        activation_fn=tf.nn.relu,
+        biases_initializer=None,
+        weights_regularizer=slim.l2_regularizer(l2_penalty),
+        scope="hidden")
 
-    with tf.name_scope('Gate_Mrudula'):
-        gate_activations_mru = slim.fully_connected(
-            hidden,
-            vocab_size * (num_mixtures + 1),
-            activation_fn=None,
-            biases_initializer=None,
-            weights_regularizer=slim.l2_regularizer(l2_penalty),
-            scope="gates_mru")
+    gate_activations = slim.fully_connected(
+        hidden,
+        vocab_size * (num_mixtures + 1),
+        activation_fn=None,
+        biases_initializer=None,
+        weights_regularizer=slim.l2_regularizer(l2_penalty),
+        scope="gates")
 
-        gating_distribution_mru = tf.nn.softmax(tf.reshape(
-            gate_activations_mru,
-            [-1, num_mixtures + 1]))  # (Batch * #Labels) x (num_mixtures + 1)
+    expert_activations_lvl1 = slim.fully_connected(
+        hidden,
+        vocab_size * num_mixtures,
+        activation_fn=tf.nn.relu,
+        weights_regularizer=slim.l2_regularizer(l2_penalty),
+        scope="experts_lvl1")
 
+    expert_activations = slim.fully_connected(
+        expert_activations_lvl1,
+        vocab_size * num_mixtures,
+        activation_fn=None,
+        weights_regularizer=slim.l2_regularizer(l2_penalty),
+        scope="experts")
 
-    with tf.name_scope('Expert_Mrudula'):
-        expert_activations_lvl1_mru = slim.fully_connected(
-            hidden,
-            vocab_size * num_mixtures,
-            activation_fn=tf.nn.relu,
-            weights_regularizer=slim.l2_regularizer(l2_penalty),
-            scope="experts_lvl1_mru")
-        expert_activations_mru = slim.fully_connected(
-            expert_activations_lvl1_mru,
-            vocab_size * num_mixtures,
-            activation_fn=None,
-            weights_regularizer=slim.l2_regularizer(l2_penalty),
-            scope="experts_mru")
-        expert_distribution_mru = tf.nn.sigmoid(tf.reshape(
-            expert_activations_mru,
-            [-1, num_mixtures]))  # (Batch * #Labels) x num_mixtures
+    gating_distribution = tf.nn.softmax(tf.reshape(
+        gate_activations,
+        [-1, num_mixtures + 1]))  # (Batch * #Labels) x (num_mixtures + 1)
+    expert_distribution = tf.nn.sigmoid(tf.reshape(
+        expert_activations,
+        [-1, num_mixtures]))  # (Batch * #Labels) x num_mixtures
 
-    with tf.name_scope('Gate_Luke'):
-        gate_activations_luke = slim.fully_connected(
-            hidden,
-            vocab_size * (num_mixtures + 1),
-            activation_fn=None,
-            biases_initializer=None,
-            weights_regularizer=slim.l2_regularizer(l2_penalty),
-            scope="gates_luke")
-        gating_distribution_luke = tf.nn.softmax(tf.reshape(
-            gate_activations_luke,
-            [-1, num_mixtures + 1]))  # (Batch * #Labels) x (num_mixtures + 1)
-    with tf.name_scope('Expert_Luke'):
-        expert_activations_lvl1_luke = slim.fully_connected(
-            hidden,
-            vocab_size * num_mixtures,
-            activation_fn=tf.nn.relu,
-            weights_regularizer=slim.l2_regularizer(l2_penalty),
-            scope="experts_lvl1_luke")
+    final_probabilities_by_class_and_batch = tf.reduce_sum(
+        gating_distribution[:, :num_mixtures] * expert_distribution, 1)
+    final_probabilities = tf.reshape(final_probabilities_by_class_and_batch,
+                                     [-1, vocab_size])
+    return {"predictions": final_probabilities}
 
-        expert_activations_luke = slim.fully_connected(
-            expert_activations_lvl1_luke,
-            vocab_size * num_mixtures,
-            activation_fn=None,
-            weights_regularizer=slim.l2_regularizer(l2_penalty),
-            scope="experts_luke")
+class DerKorinthenkacker(models.BaseModel):
+    num_mixtures = num_mixtures or FLAGS.moe_num_mixtures
+    def create_model(self,
+                     model_input,
+                     vocab_size,
+                     num_mixtures=None,
+                     l2_penalty=1e-8,
+                     **unused_params):
+        with tf.name_scope('Feature_XForm'):
+            hidden = slim.fully_connected(
+                model_input,
+                1024,
+                activation_fn=tf.nn.relu,
+                biases_initializer=None,
+                weights_regularizer=slim.l2_regularizer(l2_penalty),
+                scope="hidden")
 
-        expert_distribution_luke = tf.nn.sigmoid(tf.reshape(
-            expert_activations_luke,
-            [-1, num_mixtures]))  # (Batch * #Labels) x num_mixtures
+        with tf.name_scope('Gate_Mrudula'):
+            gate_activations_mru = slim.fully_connected(
+                hidden,
+                vocab_size * (num_mixtures + 1),
+                activation_fn=None,
+                biases_initializer=None,
+                weights_regularizer=slim.l2_regularizer(l2_penalty),
+                scope="gates_mru")
 
-    with tf.name_scope('Gate_Amir'):
-        gate_activations_amir = slim.fully_connected(
-            hidden,
-            vocab_size * (num_mixtures + 1),
-            activation_fn=None,
-            biases_initializer=None,
-            weights_regularizer=slim.l2_regularizer(l2_penalty),
-            scope="gates_amir")
-        gating_distribution_amir = tf.nn.softmax(tf.reshape(
-            gate_activations_amir,
-            [-1, num_mixtures + 1]))  # (Batch * #Labels) x (num_mixtures + 1)
-    with tf.name_scope('Expert_Amir'):
-        expert_activations_lvl1_amir = slim.fully_connected(
-            hidden,
-            vocab_size * num_mixtures,
-            activation_fn=tf.nn.relu,
-            weights_regularizer=slim.l2_regularizer(l2_penalty),
-            scope="experts_lvl1_amir")
-
-        expert_activations_amir = slim.fully_connected(
-            expert_activations_lvl1_amir,
-            vocab_size * num_mixtures,
-            activation_fn=None,
-            weights_regularizer=slim.l2_regularizer(l2_penalty),
-            scope="experts_amir")
-
-        expert_distribution_amir = tf.nn.sigmoid(tf.reshape(
-            expert_activations_amir,
-            [-1, num_mixtures]))  # (Batch * #Labels) x num_mixtures
+            gating_distribution_mru = tf.nn.softmax(tf.reshape(
+                gate_activations_mru,
+                [-1, num_mixtures + 1]))  # (Batch * #Labels) x (num_mixtures + 1)
 
 
-    with tf.name_scope('Mrudula'):
-        final_probabilities_by_class_and_batch_mru = tf.reshape(tf.reduce_sum(
-            gating_distribution_mru[:, :num_mixtures] * expert_distribution_mru, 1),[-1,1])
-    with tf.name_scope('Luke'):
-        final_probabilities_by_class_and_batch_luke = tf.reshape(tf.reduce_sum(
-            gating_distribution_luke[:, :num_mixtures] * expert_distribution_luke, 1),[-1,1])
-    with tf.name_scope('Amir'):
-        final_probabilities_by_class_and_batch_amir = tf.reshape(tf.reduce_sum(
-            gating_distribution_amir[:, :num_mixtures] * expert_distribution_amir, 1),[-1,1])
-    import ipdb; ipdb.set_trace()
-    handshaking = tf.concat([final_probabilities_by_class_and_batch_mru,final_probabilities_by_class_and_batch_luke,final_probabilities_by_class_and_batch_amir], axis = 1)
-    with tf.name_scope('Das_Korinthenkacker'):
-        gate_activations_das_korinthenkacker = slim.fully_connected(
-            hidden,
-            vocab_size * (4),
-            activation_fn=None,
-            biases_initializer=None,
-            weights_regularizer=slim.l2_regularizer(l2_penalty),
-            scope="gates_das_korinthenkacker")
+        with tf.name_scope('Expert_Mrudula'):
+            expert_activations_lvl1_mru = slim.fully_connected(
+                hidden,
+                vocab_size * num_mixtures,
+                activation_fn=tf.nn.relu,
+                weights_regularizer=slim.l2_regularizer(l2_penalty),
+                scope="experts_lvl1_mru")
+            expert_activations_mru = slim.fully_connected(
+                expert_activations_lvl1_mru,
+                vocab_size * num_mixtures,
+                activation_fn=None,
+                weights_regularizer=slim.l2_regularizer(l2_penalty),
+                scope="experts_mru")
+            expert_distribution_mru = tf.nn.sigmoid(tf.reshape(
+                expert_activations_mru,
+                [-1, num_mixtures]))  # (Batch * #Labels) x num_mixtures
 
-        gate_activations_das_korinthenkacker= tf.reshape(
-            gate_activations_das_korinthenkacker,
-            [-1, 4])
-        das_korinthenkacker = tf.nn.softmax(gate_activations_das_korinthenkacker)
+        with tf.name_scope('Gate_Luke'):
+            gate_activations_luke = slim.fully_connected(
+                hidden,
+                vocab_size * (num_mixtures + 1),
+                activation_fn=None,
+                biases_initializer=None,
+                weights_regularizer=slim.l2_regularizer(l2_penalty),
+                scope="gates_luke")
+            gating_distribution_luke = tf.nn.softmax(tf.reshape(
+                gate_activations_luke,
+                [-1, num_mixtures + 1]))  # (Batch * #Labels) x (num_mixtures + 1)
+        with tf.name_scope('Expert_Luke'):
+            expert_activations_lvl1_luke = slim.fully_connected(
+                hidden,
+                vocab_size * num_mixtures,
+                activation_fn=tf.nn.relu,
+                weights_regularizer=slim.l2_regularizer(l2_penalty),
+                scope="experts_lvl1_luke")
 
-        final_probabilities_by_class_and_batch = tf.reduce_sum(
-            das_korinthenkacker[:, :3] * handshaking, 1)
-        final_probabilities = tf.reshape(final_probabilities_by_class_and_batch,
-                                         [-1, vocab_size])
+            expert_activations_luke = slim.fully_connected(
+                expert_activations_lvl1_luke,
+                vocab_size * num_mixtures,
+                activation_fn=None,
+                weights_regularizer=slim.l2_regularizer(l2_penalty),
+                scope="experts_luke")
+
+            expert_distribution_luke = tf.nn.sigmoid(tf.reshape(
+                expert_activations_luke,
+                [-1, num_mixtures]))  # (Batch * #Labels) x num_mixtures
+
+        with tf.name_scope('Gate_Amir'):
+            gate_activations_amir = slim.fully_connected(
+                hidden,
+                vocab_size * (num_mixtures + 1),
+                activation_fn=None,
+                biases_initializer=None,
+                weights_regularizer=slim.l2_regularizer(l2_penalty),
+                scope="gates_amir")
+            gating_distribution_amir = tf.nn.softmax(tf.reshape(
+                gate_activations_amir,
+                [-1, num_mixtures + 1]))  # (Batch * #Labels) x (num_mixtures + 1)
+        with tf.name_scope('Expert_Amir'):
+            expert_activations_lvl1_amir = slim.fully_connected(
+                hidden,
+                vocab_size * num_mixtures,
+                activation_fn=tf.nn.relu,
+                weights_regularizer=slim.l2_regularizer(l2_penalty),
+                scope="experts_lvl1_amir")
+
+            expert_activations_amir = slim.fully_connected(
+                expert_activations_lvl1_amir,
+                vocab_size * num_mixtures,
+                activation_fn=None,
+                weights_regularizer=slim.l2_regularizer(l2_penalty),
+                scope="experts_amir")
+
+            expert_distribution_amir = tf.nn.sigmoid(tf.reshape(
+                expert_activations_amir,
+                [-1, num_mixtures]))  # (Batch * #Labels) x num_mixtures
+
+
+        with tf.name_scope('Mrudula'):
+            final_probabilities_by_class_and_batch_mru = tf.reshape(tf.reduce_sum(
+                gating_distribution_mru[:, :num_mixtures] * expert_distribution_mru, 1),[-1,1])
+        with tf.name_scope('Luke'):
+            final_probabilities_by_class_and_batch_luke = tf.reshape(tf.reduce_sum(
+                gating_distribution_luke[:, :num_mixtures] * expert_distribution_luke, 1),[-1,1])
+        with tf.name_scope('Amir'):
+            final_probabilities_by_class_and_batch_amir = tf.reshape(tf.reduce_sum(
+                gating_distribution_amir[:, :num_mixtures] * expert_distribution_amir, 1),[-1,1])
+        import ipdb; ipdb.set_trace()
+        handshaking = tf.concat([final_probabilities_by_class_and_batch_mru,final_probabilities_by_class_and_batch_luke,final_probabilities_by_class_and_batch_amir], axis = 1)
+        with tf.name_scope('Das_Korinthenkacker'):
+            gate_activations_das_korinthenkacker = slim.fully_connected(
+                hidden,
+                vocab_size * (4),
+                activation_fn=None,
+                biases_initializer=None,
+                weights_regularizer=slim.l2_regularizer(l2_penalty),
+                scope="gates_das_korinthenkacker")
+
+            gate_activations_das_korinthenkacker= tf.reshape(
+                gate_activations_das_korinthenkacker,
+                [-1, 4])
+            das_korinthenkacker = tf.nn.softmax(gate_activations_das_korinthenkacker)
+
+            final_probabilities_by_class_and_batch = tf.reduce_sum(
+                das_korinthenkacker[:, :3] * handshaking, 1)
+            final_probabilities = tf.reshape(final_probabilities_by_class_and_batch,
+                                             [-1, vocab_size])
+
     return {"predictions": final_probabilities}
