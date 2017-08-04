@@ -184,13 +184,14 @@ class DeepMoeModel(models.BaseModel):
     return {"predictions": final_probabilities}
 
 class DerKorinthenkacker(models.BaseModel):
-    num_mixtures = num_mixtures or FLAGS.moe_num_mixtures
+
     def create_model(self,
                      model_input,
                      vocab_size,
                      num_mixtures=None,
                      l2_penalty=1e-8,
                      **unused_params):
+        num_mixtures = num_mixtures or FLAGS.moe_num_mixtures
         with tf.name_scope('Feature_XForm'):
             hidden = slim.fully_connected(
                 model_input,
@@ -322,4 +323,4 @@ class DerKorinthenkacker(models.BaseModel):
             final_probabilities = tf.reshape(final_probabilities_by_class_and_batch,
                                              [-1, vocab_size])
 
-    return {"predictions": final_probabilities}
+        return {"predictions": final_probabilities}
