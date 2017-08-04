@@ -67,7 +67,7 @@ def AddGlobalStepSummary(summary_writer,
   this_perr = global_step_info_dict["perr"]
   this_loss = global_step_info_dict["loss"]
   if "gap" in global_step_info_dict:
-      gap = epoch_info_dict["gap"]
+      gap = global_step_info_dict["gap"]
   else:
       gap = None
   examples_per_second = global_step_info_dict.get("examples_per_second", -1)
@@ -78,9 +78,10 @@ def AddGlobalStepSummary(summary_writer,
   summary_writer.add_summary(
       MakeSummary("GlobalStep/" + summary_scope + "_Perr", this_perr),
       global_step_val)
-  summary_writer.add_summary(
-      MakeSummary("GlobalStep/" + summary_scope + "_GAP", gap),
-      global_step_val)
+  if gap is not None:
+    summary_writer.add_summary(
+        MakeSummary("GlobalStep/" + summary_scope + "_GAP", gap),
+        global_step_val)
   summary_writer.add_summary(
       MakeSummary("GlobalStep/" + summary_scope + "_Loss", this_loss),
       global_step_val)
