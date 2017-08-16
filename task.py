@@ -357,7 +357,8 @@ def model_fn(features, labels, mode, params):
         predictions=pred_dict,
         loss=label_loss,
         train_op=train_op,
-        export_outputs=export_outputs)
+        export_outputs=export_outputs,
+        eval_metric_ops=eval_metric_ops)
 def get_reader():
   # Convert feature_names and feature_sizes to lists of values.
   feature_names, feature_sizes = utils.GetListOfFeatureNamesAndSizes(
@@ -512,7 +513,7 @@ def _experiment_fn(run_config, hparams):
             eval_steps = 5,
             export_strategies = [export_strategy],
             min_eval_frequency = 100,
-            #train_monitors = [eval_hook]
+            #eval_hooks = [eval_hook]
             )
 
 def main(argv=None):
