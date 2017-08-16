@@ -224,7 +224,7 @@ class YT8MFrameFeatureReader(BaseReader):
             feature_name : tf.FixedLenSequenceFeature([], dtype=tf.string)
             for feature_name in self.feature_names
         })
-
+    import ipdb; ipdb.set_trace()
     # read ground truth labels
     labels = (tf.cast(
         tf.sparse_to_dense(contexts["labels"].values, (self.num_classes,), 1,

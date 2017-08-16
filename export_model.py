@@ -85,12 +85,13 @@ class ModelExporter(object):
     return inputs, outputs
 
   def build_prediction_graph(self, serialized_examples):
+    import ipdb; ipdb.set_trace()
     video_id, model_input_raw, labels_batch, num_frames = (
         self.reader.prepare_serialized_examples(serialized_examples))
 
     feature_dim = len(model_input_raw.get_shape()) - 1
     model_input = tf.nn.l2_normalize(model_input_raw, feature_dim)
-
+    import ipdb; ipdb.set_trace()
     with tf.variable_scope("tower"):
       result = self.model.create_model(
           model_input,

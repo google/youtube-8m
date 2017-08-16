@@ -182,7 +182,7 @@ def find_class_by_name(name, modules):
 
 def model_fn(features, labels, mode, params):
 
-
+    is_training = mode == learn.ModeKeys.TRAIN
     optimizer_class = find_class_by_name(params.optimizer, [tf.train])
     label_loss_fn = find_class_by_name(params.label_loss, [losses])()
     model = find_class_by_name(params.model,
@@ -201,7 +201,6 @@ def model_fn(features, labels, mode, params):
 
     optimizer = optimizer_class(learning_rate)
 
-
     tf.summary.histogram("model/input_raw", features['model_input'])
 
     feature_dim = len(features['model_input'].get_shape()) - 1
@@ -209,7 +208,21 @@ def model_fn(features, labels, mode, params):
     model_input = tf.nn.l2_normalize(features['model_input'], feature_dim)
 
     tower_inputs = tf.split(model_input, params.num_towers)
+
+    if mode == learn.ModeKeys.INFER:
+        # ***
+        #  this is a quick hack so that the existing model_fn code,
+        #  taken from train.py, doesn't break in inference (or serving) mode.
+        #  Normally, we would write model_fn such that the 'labels' input arg
+        #  can be None in inference mode, but this existing model code was not written this
+        #  way.  See the serving_input_fn() defined below, to see where 'labels_batch'
+        # is added to the features dict, just to make this code work properly
+        labels = features['labels_batch']
+
     tower_labels = tf.split(labels, params.num_towers)
+
+
+
     tower_num_frames = tf.split(features['num_frames'], params.num_towers)
     tower_gradients = []
     tower_predictions = []
@@ -229,7 +242,8 @@ def model_fn(features, labels, mode, params):
                        tower_inputs[i],
                        num_frames=tower_num_frames[i],
                        vocab_size=params.reader.num_classes,
-                       labels=tower_labels[i])
+                       labels=tower_labels[i],
+                       is_training=is_training)
                      for variable in slim.get_model_variables():
                        tf.summary.histogram(variable.op.name, variable)
 
@@ -280,7 +294,7 @@ def model_fn(features, labels, mode, params):
         reg_loss = tf.reduce_mean(tf.stack(tower_reg_losses))
         tf.summary.scalar("reg_loss", reg_loss)
 
-    if mode == learn.ModeKeys.TRAIN:
+    if is_training:
         # Incorporate the L2 weight penalties, etc.
 
         merged_gradients = utils.combine_gradients(tower_gradients)
@@ -292,7 +306,7 @@ def model_fn(features, labels, mode, params):
         train_op = None
 
     eval_metric_ops = {}
-    if mode == learn.ModeKeys.EVAL or mode == learn.ModeKeys.TRAIN:
+    if mode == learn.ModeKeys.EVAL or is_training:
 
         eval_metric_ops['hit_at_one'] = metrics.streaming_mean(tf.py_func(lambda x,y: np.float32(eval_util.calculate_hit_at_one(x,y)),
                                                    [predictions, labels],
@@ -332,13 +346,18 @@ def model_fn(features, labels, mode, params):
     tf.add_to_collection("labels", tf.cast(labels, tf.float32))
     #  tf.add_to_collection("train_op", train_op)
     tf.summary.scalar("loss", label_loss)
-    return learn.ModelFnOps(mode=mode,
-                            predictions=pred_dict,
-                            loss=label_loss,
-                            train_op=train_op,
-                            eval_metric_ops=eval_metric_ops,
-                            output_alternatives = {'vid_level_test1': (learn.ProblemType.CLASSIFICATION, pred_dict)})
 
+    export_outputs = {
+      tf.saved_model.signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY:
+        tf.estimator.export.PredictOutput(pred_dict)}
+
+
+    return tf.estimator.EstimatorSpec(
+        mode=mode,
+        predictions=pred_dict,
+        loss=label_loss,
+        train_op=train_op,
+        export_outputs=export_outputs)
 def get_reader():
   # Convert feature_names and feature_sizes to lists of values.
   feature_names, feature_sizes = utils.GetListOfFeatureNamesAndSizes(
@@ -427,12 +446,11 @@ def serving_input_fn(params):
     video_id, model_input_raw, labels_batch, num_frames = (
         params.reader.prepare_serialized_examples(serialized_examples))
 
-    features = {'model_input': model_input_raw,'num_frames':num_frames}
+    features = {'model_input': model_input_raw,'num_frames':num_frames,
+                'labels_batch':labels_batch}
 
-    return tf.contrib.learn.InputFnOps(
-          features,
-          None,  # labels
-           {'example_bytes': serialized_examples})
+    receiver_tensors = {'examples': serialized_examples}
+    return tf.estimator.export.ServingInputReceiver(features,receiver_tensors)
 
 
 # def example_serving_input_fn():
@@ -471,7 +489,7 @@ def serving_input_fn(params):
 def _experiment_fn(run_config, hparams):
     # Create Estimator
      # seems to be the only way to stop CUDA_OUT_MEMORY_ERRORs
-    estimator = learn.Estimator(model_fn=model_fn,
+    estimator = tf.estimator.Estimator(model_fn=model_fn,
                                 config=run_config,
                                 params=hparams,
                                 )
@@ -482,8 +500,9 @@ def _experiment_fn(run_config, hparams):
     #           exports_to_keep=1,
     #           default_output_alternative_key=None,
     #       )]
+
     export_strategy = learn.make_export_strategy(lambda: serving_input_fn(hparams),
-                                                 default_output_alternative_key='vid_level_test1',
+                                                 default_output_alternative_key=None,
                                                  )
     return learn.Experiment(
             estimator=estimator,
@@ -491,7 +510,8 @@ def _experiment_fn(run_config, hparams):
             eval_input_fn=lambda: eval_input_fn(hparams),
             train_steps = 10000,
             eval_steps = 5,
-            export_strategies = [export_strategy]
+            export_strategies = [export_strategy],
+            min_eval_frequency = 100,
             #train_monitors = [eval_hook]
             )
 
@@ -530,11 +550,11 @@ def main(argv=None):
         clip_gradient_norm = FLAGS.clip_gradient_norm)
 
 
-    config = learn.RunConfig(save_checkpoints_secs= 5,
+    config = learn.RunConfig(save_checkpoints_secs= 10,
                              save_summary_steps=1000,
-                             model_dir=FLAGS.train_dir,
-                             gpu_memory_fraction=1,
+                             model_dir=FLAGS.train_dir
                              )
+
     learn_runner.run(experiment_fn = _experiment_fn,
                       run_config = config,
                       hparams = hparams,

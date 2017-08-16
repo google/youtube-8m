@@ -302,7 +302,7 @@ class DerKorinthenkacker(models.BaseModel):
         with tf.name_scope('Amir'):
             final_probabilities_by_class_and_batch_amir = tf.reshape(tf.reduce_sum(
                 gating_distribution_amir[:, :num_mixtures] * expert_distribution_amir, 1),[-1,1])
-        import ipdb; ipdb.set_trace()
+        #import ipdb; ipdb.set_trace()
         handshaking = tf.concat([final_probabilities_by_class_and_batch_mru,final_probabilities_by_class_and_batch_luke,final_probabilities_by_class_and_batch_amir], axis = 1)
         with tf.name_scope('Das_Korinthenkacker'):
             gate_activations_das_korinthenkacker = slim.fully_connected(
