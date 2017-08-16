@@ -13,19 +13,16 @@
 # limitations under the License.
 
 """Contains model definitions."""
-import math
-
-import models
 import tensorflow as tf
-import utils
-
 from tensorflow import flags
 import tensorflow.contrib.slim as slim
+import models
 
 FLAGS = flags.FLAGS
 flags.DEFINE_integer(
     "moe_num_mixtures", 2,
     "The number of mixtures (excluding the dummy 'expert') used for MoeModel.")
+
 
 class LogisticModel(models.BaseModel):
   """Logistic model with L2 regularization."""
@@ -45,6 +42,7 @@ class LogisticModel(models.BaseModel):
         model_input, vocab_size, activation_fn=tf.nn.sigmoid,
         weights_regularizer=slim.l2_regularizer(l2_penalty))
     return {"predictions": output}
+
 
 class MoeModel(models.BaseModel):
   """A softmax over a mixture of logistic models (with L2 regularization)."""
@@ -105,7 +103,6 @@ class MoeModel(models.BaseModel):
 
 
 class DeepMoeModel(models.BaseModel):
-
   """A softmax over a mixture of logistic models (with L2 regularization)."""
 
   def create_model(self,
@@ -183,8 +180,8 @@ class DeepMoeModel(models.BaseModel):
                                      [-1, vocab_size])
     return {"predictions": final_probabilities}
 
-class DerKorinthenkacker(models.BaseModel):
 
+class DerKorinthenkacker(models.BaseModel):
     def create_model(self,
                      model_input,
                      vocab_size,
@@ -213,7 +210,6 @@ class DerKorinthenkacker(models.BaseModel):
             gating_distribution_mru = tf.nn.softmax(tf.reshape(
                 gate_activations_mru,
                 [-1, num_mixtures + 1]))  # (Batch * #Labels) x (num_mixtures + 1)
-
 
         with tf.name_scope('Expert_Mrudula'):
             expert_activations_lvl1_mru = slim.fully_connected(
@@ -292,18 +288,24 @@ class DerKorinthenkacker(models.BaseModel):
                 expert_activations_amir,
                 [-1, num_mixtures]))  # (Batch * #Labels) x num_mixtures
 
-
         with tf.name_scope('Mrudula'):
             final_probabilities_by_class_and_batch_mru = tf.reshape(tf.reduce_sum(
-                gating_distribution_mru[:, :num_mixtures] * expert_distribution_mru, 1),[-1,1])
+                gating_distribution_mru[:, :num_mixtures] * expert_distribution_mru, 1),
+                [-1, 1])
         with tf.name_scope('Luke'):
             final_probabilities_by_class_and_batch_luke = tf.reshape(tf.reduce_sum(
-                gating_distribution_luke[:, :num_mixtures] * expert_distribution_luke, 1),[-1,1])
+                gating_distribution_luke[:, :num_mixtures] * expert_distribution_luke, 1),
+                [-1, 1])
         with tf.name_scope('Amir'):
             final_probabilities_by_class_and_batch_amir = tf.reshape(tf.reduce_sum(
-                gating_distribution_amir[:, :num_mixtures] * expert_distribution_amir, 1),[-1,1])
-        #import ipdb; ipdb.set_trace()
-        handshaking = tf.concat([final_probabilities_by_class_and_batch_mru,final_probabilities_by_class_and_batch_luke,final_probabilities_by_class_and_batch_amir], axis = 1)
+                gating_distribution_amir[:, :num_mixtures] * expert_distribution_amir, 1),
+                [-1, 1])
+
+        handshaking = tf.concat([final_probabilities_by_class_and_batch_mru,
+                                 final_probabilities_by_class_and_batch_luke,
+                                 final_probabilities_by_class_and_batch_amir],
+                                axis=1)
+
         with tf.name_scope('Das_Korinthenkacker'):
             gate_activations_das_korinthenkacker = slim.fully_connected(
                 hidden,
@@ -313,7 +315,7 @@ class DerKorinthenkacker(models.BaseModel):
                 weights_regularizer=slim.l2_regularizer(l2_penalty),
                 scope="gates_das_korinthenkacker")
 
-            gate_activations_das_korinthenkacker= tf.reshape(
+            gate_activations_das_korinthenkacker = tf.reshape(
                 gate_activations_das_korinthenkacker,
                 [-1, 4])
             das_korinthenkacker = tf.nn.softmax(gate_activations_das_korinthenkacker)
