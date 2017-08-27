@@ -19,6 +19,11 @@ import numpy
 import tensorflow as tf
 from tensorflow import logging
 
+try:
+  xrange          # Python 2
+except NameError:
+  xrange = range  # Python 3
+
 
 def Dequantize(feat_vector, max_quantized_value=2, min_quantized_value=-2):
   """Dequantize the feature from the byte format to the float format.
