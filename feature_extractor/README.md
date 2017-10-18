@@ -43,7 +43,12 @@ Then, you can create the `tfrecord` by calling the binary:
         --output_tfrecords_file /path/to/output.tfrecord
 
 Now, you can use the output file for training and/or inference using our starter
-code!
+code. However `extract_tfrecords_main.py` requires OpenCV python bindings to be
+installed and linked with ffmpeg. In other words, running this command should
+print `True`:
+
+    python -c 'import cv2; print cv2.VideoCapture().open("/path/to/some/video.mp4")'
+
 
 ### Using the library to extract features from images
 
