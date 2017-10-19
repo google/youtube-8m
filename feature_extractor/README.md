@@ -26,12 +26,15 @@ There are two ways to use this code:
 
 ### Using the Binary to create `tfrecords` from videos
 
-Assume that you have two videos `/path/to/vid1` and `/path/to/vid2`,
-respectively, with multi-integer labels of `(52, 10)` and `(7, 67)`. To create
-`tfrecord` containing features and labels for those videos, you must first
-create a CSV file (e.g. on `/path/to/vid_dataset.csv`) with contents:
+You can use binary `extract_tfrecords_main.py` to create `tfrecord` files.
+However, this binary assumes that you have OpenCV properly installed (see end
+of subsection). Assume that you have two videos `/path/to/vid1` and
+`/path/to/vid2`, respectively, with multi-integer labels of `(52, 3, 10)` and
+`(7, 67)`. To create `tfrecord` containing features and labels for those videos,
+you must first create a CSV file (e.g. on `/path/to/vid_dataset.csv`) with
+contents:
 
-    /path/to/vid1,52;10
+    /path/to/vid1,52;3;10
     /path/to/vid2,7;67
 
 Note that the CSV is comma-separated but the label-field is semi-colon separated
@@ -43,7 +46,14 @@ Then, you can create the `tfrecord` by calling the binary:
         --output_tfrecords_file /path/to/output.tfrecord
 
 Now, you can use the output file for training and/or inference using our starter
-code!
+code.
+
+`extract_tfrecords_main.py` requires OpenCV python bindings to be
+installed and linked with ffmpeg. In other words, running this command should
+print `True`:
+
+    python -c 'import cv2; print cv2.VideoCapture().open("/path/to/some/video.mp4")'
+
 
 ### Using the library to extract features from images
 
