@@ -460,7 +460,7 @@ This sample code contains implementations of the models given in the
 
 ## Create Your Own Dataset Files
 You can create your dataset files from your own videos. Our
-[feature extractor](./blob/master/feature_extractor) code creates `tfrecord`
+[feature extractor](./feature_extractor) code creates `tfrecord`
 files, identical to our dataset files. You can use our starter code to train on
 the `tfrecord` files output by the feature extractor. In addition, you can
 fine-tune your YouTube-8M models on your new dataset. 
