@@ -32,6 +32,7 @@ or on your own machine. This README provides instructions for both.
 * [Overview of Models](#overview-of-models)
    * [Video-Level Models](#video-level-models)
    * [Frame-Level Models](#frame-level-models)
+* [Create Your Own Dataset Files](#create-your-own-dataset-files)
 * [Overview of Files](#overview-of-files)
    * [Training](#training)
    * [Evaluation](#evaluation)
@@ -456,6 +457,13 @@ This sample code contains implementations of the models given in the
 * `FrameLevelLogisticModel`: Equivalent to 'LogisticModel', but performs
                              average-pooling on the fly over frame-level
                              features rather than using pre-aggregated features.
+
+## Create Your Own Dataset Files
+You can create your dataset files from your own videos. Our
+[feature extractor](./blob/master/feature_extractor) code creates `tfrecord`
+files, identical to our dataset files. You can use our starter code to train on
+the `tfrecord` files output by the feature extractor. In addition, you can
+fine-tune your YouTube-8M models on your new dataset. 
 
 ## Overview of Files
 

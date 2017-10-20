@@ -1,14 +1,11 @@
 # YouTube8M Feature Extractor
 This directory contains binary and library code that can extract YouTube8M
 features from images and videos.
-The code requires the Inception TensorFlow model ([tutorial]
-(https://www.tensorflow.org/tutorials/image_recognition)) and our PCA matrix, as
+The code requires the Inception TensorFlow model ([tutorial](https://www.tensorflow.org/tutorials/image_recognition)) and our PCA matrix, as
 outlined in Section 3.3 of our [paper](https://arxiv.org/abs/1609.08675). The
 first time you use our code, it will **automatically** download the inception
-model (75 Megabytes, tensorflow [GraphDef proto]
-(https://www.tensorflow.org/api_docs/python/tf/GraphDef),
-[download link]
-(http://download.tensorflow.org/models/image/imagenet/inception-2015-12-05.tgz))
+model (75 Megabytes, tensorflow [GraphDef proto](https://www.tensorflow.org/api_docs/python/tf/GraphDef),
+[download link](http://download.tensorflow.org/models/image/imagenet/inception-2015-12-05.tgz))
 and the PCA matrix (25 Megabytes, Numpy arrays,
 [download link](http://data.yt8m.org/yt8m_pca.tgz)).
 
