@@ -34,7 +34,7 @@ class ModelExporter(object):
     with tf.Graph().as_default() as graph:
       self.inputs, self.outputs = self.build_inputs_and_outputs()
       self.graph = graph
-      self.saver = tf.train.Saver(tf.trainable_variables(), sharded=True)
+      self.saver = tf.train.Saver(sharded=True)
 
   def export_model(self, model_dir, global_step_val, last_checkpoint):
     """Exports the model so that it can used for batch predictions."""
