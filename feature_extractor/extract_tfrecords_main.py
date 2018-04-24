@@ -183,8 +183,8 @@ def main(unused_argv):
 
     example = tf.train.SequenceExample(
         context=tf.train.Features(feature={
-            FLAGS.labels_feature_key:
-                _int64_list_feature(sorted(map(int, labels.split(';')))),
+            #FLAGS.labels_feature_key:
+            #    _int64_list_feature(sorted(map(int, labels.split(';')))),
             FLAGS.video_file_key_feature_key:
                 _bytes_feature(_make_bytes(map(ord, video_file))),
         }),
