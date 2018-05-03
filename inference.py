@@ -75,8 +75,8 @@ def format_lines(video_ids, predictions, top_k):
     line = [(class_index, predictions[video_index][class_index])
             for class_index in top_indices]
     line = sorted(line, key=lambda p: -p[1])
-    yield video_ids[video_index].decode('utf-8') + "," + " ".join("%i %f" % pair
-                                                  for pair in line) + "\n"
+    yield video_ids[video_index].decode('utf-8') + "," + " ".join(
+        "%i" % label for (label, _) in line) + "\n"
 
 
 def get_input_data_tensors(reader, data_pattern, batch_size, num_readers=1):
@@ -152,7 +152,7 @@ def inference(reader, checkpoint_file, train_dir, data_pattern, out_file_locatio
     threads = tf.train.start_queue_runners(sess=sess, coord=coord)
     num_examples_processed = 0
     start_time = time.time()
-    out_file.write("VideoId,LabelConfidencePairs\n")
+    out_file.write("VideoId,Labels\n")
 
     try:
       while not coord.should_stop():
