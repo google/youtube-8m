@@ -12,6 +12,14 @@ It is possible to train and evaluate on YouTube-8M in two ways: on Google Cloud
 or on your own machine. This README provides instructions for both.
 
 ## Table of Contents
+* [Running on Your Own Machine](#running-on-your-own-machine)
+   * [Requirements](#requirements-1)
+   * [Training on Video-Level Features](#training-on-video-level-features-1)
+   * [Evaluation and Inference](#evaluation-and-inference-1)
+   * [Using Frame-Level Features](#using-frame-level-features-1)
+   * [Using Audio Features](#using-audio-features-1)
+   * [Using GPUs](#using-gpus)
+   * [Ground-Truth Label Files](#ground-truth-label-files)
 * [Running on Google's Cloud Machine Learning Platform](#running-on-googles-cloud-machine-learning-platform)
    * [Requirements](#requirements)
    * [Testing Locally](#testing-locally)
@@ -21,14 +29,6 @@ or on your own machine. This README provides instructions for both.
    * [Using Frame-Level Features](#using-frame-level-features)
    * [Using Audio Features](#using-audio-features)
    * [Using Larger Machine Types](#using-larger-machine-types)
-* [Running on Your Own Machine](#running-on-your-own-machine)
-   * [Requirements](#requirements-1)
-   * [Training on Video-Level Features](#training-on-video-level-features-1)
-   * [Evaluation and Inference](#evaluation-and-inference-1)
-   * [Using Frame-Level Features](#using-frame-level-features-1)
-   * [Using Audio Features](#using-audio-features-1)
-   * [Using GPUs](#using-gpus)
-   * [Ground-Truth Label Files](#ground-truth-label-files)
 * [Overview of Models](#overview-of-models)
    * [Video-Level Models](#video-level-models)
    * [Frame-Level Models](#frame-level-models)
@@ -39,6 +39,252 @@ or on your own machine. This README provides instructions for both.
    * [Inference](#inference)
    * [Misc](#misc)
 * [About This Project](#about-this-project)
+
+
+## Running on Your Own Machine
+
+### Requirements
+
+The starter code requires Tensorflow. If you haven't installed it yet, follow
+the instructions on [tensorflow.org](https://www.tensorflow.org/install/).
+This code has been tested with Tensorflow 1.3.0. Going forward, we will continue
+to target the latest released version of Tensorflow.
+
+Please verify that you have Python 2.7+ and Tensorflow 1.3.0 or higher
+installed by running the following commands:
+
+```sh
+python --version
+python -c 'import tensorflow as tf; print(tf.__version__)'
+```
+
+### Downloading a fraction of the dataset
+You can find complete instructions for downloading the dataset on the
+[YouTube-8M website](https://research.google.com/youtube8m/download.html).
+We recommend you start with a small subset of the dataset, and download more as
+you need. For example, you can download 100th of the video-level and frame-level
+features as:
+
+```
+# Video-level
+mkdir -p ~/yt8m/v2/video
+cd ~/yt8m/v2/video
+curl data.yt8m.org/download.py | shard=1,100 partition=2/video/train mirror=us python
+curl data.yt8m.org/download.py | shard=1,100 partition=2/video/validate mirror=us python
+curl data.yt8m.org/download.py | shard=1,100 partition=2/video/test mirror=us python
+
+# Frame-level
+mkdir -p ~/yt8m/v2/frame
+cd ~/yt8m/v2/frame
+curl data.yt8m.org/download.py | shard=1,100 partition=2/frame/train mirror=us python
+curl data.yt8m.org/download.py | shard=1,100 partition=2/frame/validate mirror=us python
+curl data.yt8m.org/download.py | shard=1,100 partition=2/frame/test mirror=us python
+
+```
+
+Note: this readme will assume the directory `~/yt8m` for storing the dataset,
+code, and trained models. However, you can use another directory path.
+Nonetheless, you might find it convenient to simlink that directory to `~/yt8m`
+so that you can copy the commands from this page onto your terminal.
+
+### Try the starter code
+
+Clone this git repo:
+```
+mkdir -p ~/yt8m/code
+cd ~/yt8m/code
+git clone https://github.com/google/youtube-8m.git
+```
+
+#### Train video-level model
+```
+python train.py --feature_names='mean_rgb,mean_audio' --feature_size='1024,128' --train_data_pattern ~/yt8m/v2/video/train*.tfrecord --train_dir ~/yt8m/v2/models/video/sample_model --start_new_model
+```
+The `--start_new_model` flag will re-train from scratch. If you want to continue
+training from the `train_dir`, drop this flag. After training, you can evaluate
+the model on the validation split:
+```
+python eval.py --feature_names='mean_rgb,mean_audio' --feature_size='1024,128' --eval_data_pattern ~/yt8m/v2/video/validate*.tfrecord --train_dir ~/yt8m/v2/models/video/sample_model
+```
+
+Note: Above binary runs "forever" (i.e. keeps watching for updated model
+checkpoint and re-runs evals). To run once, pass flag `--run_once` It should
+print lines like:
+```
+INFO:tensorflow:examples_processed: 298 | global_step 10 | Batch Hit@1: 0.513 | Batch PERR: 0.359 | Batch Loss: 2452.698 | Examples_per_sec: 2708.994
+```
+
+If you are competing on Kaggle, you should do inference outputing a CSV (e.g.
+naming file as `kaggle_solution.csv`):
+
+```
+python inference.py  --feature_names='mean_rgb,mean_audio' --feature_size='1024,128' --train_dir ~/yt8m/v2/models/video/sample_model  --output_file=kaggle_solution.csv --input_data_pattern ~/yt8m/v2/video/test*.tfrecord
+```
+Then, upload `kaggle_solution.csv` to Kaggle!
+
+
+#### Train Frame-level model
+Train using `train.py`, selecting a frame-level model (e.g.
+`FrameLevelLogisticModel`), and instructing the trainer to use
+`--frame_features`. TLDR - frame-level features are compressed, and this flag
+uncompresses them.
+```
+python train.py --frame_features --model=FrameLevelLogisticModel --feature_names='rgb,audio' --feature_size='1024,128' --train_data_pattern ~/yt8m/v2/frame/train*.tfrecord --train_dir ~/yt8m/v2/models/frame/sample_model --start_new_model
+```
+
+Evaluate the model
+```
+python eval.py --frame_features  --model=FrameLevelLogisticModel --feature_names='rgb,audio' --feature_size='1024,128' --eval_data_pattern ~/yt8m/v2/frame/validate*.tfrecord --train_dir ~/yt8m/v2/models/frame/sample_model
+```
+
+Produce CSV by doing inference:
+```
+python inference.py --frame_features --feature_names='rgb,audio' --feature_size='1024,128' --train_dir ~/yt8m/v2/models/frame/sample_model  --output_file=kaggle_solution.csv --input_data_pattern ~/yt8m/v2/frame/test*.tfrecord
+```
+
+
+### Downloading the entire dataset
+Now that you've downloaded a fraction and the code works, you are all set to
+download the entire dataset and come up with the next best video classification
+model!
+
+To download the entire dataset, repeat the above download.py commands, dropping
+the `shard` variable. You can download the video-level training set with:
+
+
+This will download all of the video-level training set from the US mirror,
+occupying 18GB of space. If you are located outside of North America, you should
+change the flag 'mirror' to 'eu' for Europe or 'asia' for Asia to speed up the
+transfer of the files.
+
+Change 'train' to 'validate'/'test' and re-run the command to download the
+other splits of the dataset. Change 'video' to 'frame' to download the
+frame-level features. The complete frame-level features take about 1.53TB of
+space. You can set the environment variable 'shard' to 'm,n' to download only
+m/n-th of the data.
+
+
+### Tensorboard
+
+You can use Tensorboard to compare your frame-level or video-level models, like:
+
+```sh
+MODELS_DIR=~/yt8m/v2/models
+tensorboard --logdir frame:${MODELS_DIR}/frame,video:${MODELS_DIR}/video
+```
+We find it useful to keep the tensorboard instance always running, as we train
+and evaluate different models.
+
+### Training Details
+
+You can specify a model by using the `--model` flag. For example, you can
+utilize the `LogisticModel` (the default) by:
+
+```sh
+YT8M_DIR=~/yt8m/v2
+python train.py --train_data_pattern=${YT8M_DIR}/v2/video/train*.tfrecord --model=LogisticModel --train_dir ~/yt8m/v2/models/logistic
+```
+
+Since the dataset is sharded into 3844 individual files, we use a wildcard (\*)
+to represent all of those files.
+
+By default, the training code will frequently write _checkpoint_ files (i.e.
+values of all trainable parameters, at the current training iteration). These
+will be written to the `--train_dir`. If you re-use a `--train_dir`, the trainer
+will first restore the latest checkpoint written in that directory. This only
+works if the architecture of the checkpoint matches the graph created by the
+training code. If you are in active development/debugging phase, consider
+adding `--start_new_model` flag to your run configuration.
+
+### Evaluation and Inference
+
+To evaluate the model, run
+
+```sh
+python eval.py --eval_data_pattern=${YT8M_DIR}/v2/video/validate*.tfrecord --model=LogisticModel --train_dir ~/yt8m/v2/models/logistic --run_once=True
+```
+
+Note that the `--model`, `--train_dir`, `--feature_names`, `--feature_size`, and
+`--frame_features` must match across `eval.py` and `train.py`.
+
+When you are happy with your model, you can generate a csv file of predictions
+from it by running
+
+```sh
+python inference.py --output_file predictions.csv --input_data_pattern=${YT8M_DIR}/v2/video/test*.tfrecord' --train_dir ~/yt8m/v2/models/logistic
+```
+
+This will output the top 20 predicted labels from the model for every example
+to `predictions.csv`.
+
+### Using Frame-Level Features
+
+Follow the same instructions as above, appending
+`--frame_features=True --model=FrameLevelLogisticModel --feature_names="rgb"
+--feature_sizes="1024" --train_dir=$MODEL_DIR/frame_level_logistic_model`
+for the 'train.py', 'eval.py', and 'inference.py' scripts.
+
+The 'FrameLevelLogisticModel' is designed to provide equivalent results to a
+logistic model trained over the video-level features. Please look at the
+'models.py' file to see how to implement your own models.
+
+### Using Audio Features
+
+See [Using Audio Features](#using-audio-features) section above.
+
+### Using GPUs
+
+If your Tensorflow installation has GPU support, this code will make use of all
+of your compatible GPUs. You can verify your installation by running
+
+```
+python -c 'import tensorflow as tf; tf.Session()'
+```
+
+This will print out something like the following for each of your compatible
+GPUs.
+
+```
+I tensorflow/core/common_runtime/gpu/gpu_init.cc:102] Found device 0 with properties:
+name: Tesla M40
+major: 5 minor: 2 memoryClockRate (GHz) 1.112
+pciBusID 0000:04:00.0
+Total memory: 11.25GiB
+Free memory: 11.09GiB
+...
+```
+
+If at least one GPU was found, the forward and backward passes will be computed
+with the GPUs, whereas the CPU will be used primarily for the input and output
+pipelines. If you have multiple GPUs, each of them will be given a full batch
+of examples, and the resulting gradients will be summed together before being
+applied. This will increase your effective batch size. For example, if you set
+`batch_size=128` and you have 4 GPUs, this will result in 512 examples being
+evaluated every training step.
+
+### Ground-Truth Label Files
+
+We also provide CSV files containing the ground-truth label information of the
+'train' and 'validation' partitions of the dataset. These files can be
+downloaded using 'gsutil' command:
+
+```
+gsutil cp gs://us.data.yt8m.org/2/ground_truth_labels/train_labels.csv /destination/folder/
+gsutil cp gs://us.data.yt8m.org/2/ground_truth_labels/validate_labels.csv /destination/folder/
+```
+
+or directly using the following links:
+
+*   [http://us.data.yt8m.org/2/ground_truth_labels/train_labels.csv](http://us.data.yt8m.org/2/ground_truth_labels/train_labels.csv)
+*   [http://us.data.yt8m.org/2/ground_truth_labels/validate_labels.csv](http://us.data.yt8m.org/2/ground_truth_labels/validate_labels.csv)
+
+Each line in the files starts with the video id and is followed by the list of
+ground-truth labels corresponding to that video. For example, for a video with
+id 'VIDEO_ID' and two labels 'LABEL1' and 'LABEL2' we store the following line:
+
+```
+VIDEO_ID,LABEL1 LABEL2
+```
 
 ## Running on Google's Cloud Machine Learning Platform
 
@@ -72,7 +318,7 @@ Here is an example command line for video-level training:
 ```sh
 gcloud ml-engine local train \
 --package-path=youtube-8m --module-name=youtube-8m.train -- \
---train_data_pattern='gs://youtube8m-ml/1/video_level/train/train*.tfrecord' \
+--train_data_pattern='gs://youtube8m-ml/2/video/train/train*.tfrecord' \
 --train_dir=/tmp/yt8m_train --model=LogisticModel --start_new_model
 ```
 
@@ -81,11 +327,11 @@ allow you to work offline. The command below will copy 10 out of the 4096
 training data files to the current directory.
 
 ```sh
-# Downloads 55MB of data.
-gsutil cp gs://us.data.yt8m.org/1/video_level/train/traina[0-9].tfrecord .
+# Downloads a portion of the data.
+gsutil cp gs://us.data.yt8m.org/2/video/train/traina[0-9].tfrecord .
 ```
 Once you download the files, you can point the job to them using the
-'train_data_pattern' argument (i.e. instead of pointing to the "gs://..."
+`train_data_pattern` argument (i.e. instead of pointing to the "gs://..."
 files, you point to the local files).
 
 Once your model is working locally, you can scale up on the Cloud
@@ -106,7 +352,7 @@ submit training $JOB_NAME \
 --package-path=youtube-8m --module-name=youtube-8m.train \
 --staging-bucket=$BUCKET_NAME --region=us-east1 \
 --config=youtube-8m/cloudml-gpu.yaml \
--- --train_data_pattern='gs://youtube8m-ml-us-east1/1/video_level/train/train*.tfrecord' \
+-- --train_data_pattern='gs://youtube8m-ml-us-east1/2/video/train/train*.tfrecord' \
 --model=LogisticModel \
 --train_dir=$BUCKET_NAME/yt8m_train_video_level_logistic_model
 ```
@@ -153,7 +399,7 @@ submit training $JOB_NAME \
 --package-path=youtube-8m --module-name=youtube-8m.eval \
 --staging-bucket=$BUCKET_NAME --region=us-east1 \
 --config=youtube-8m/cloudml-gpu.yaml \
--- --eval_data_pattern='gs://youtube8m-ml-us-east1/1/video_level/validate/validate*.tfrecord' \
+-- --eval_data_pattern='gs://youtube8m-ml-us-east1/2/video/validate/validate*.tfrecord' \
 --model=LogisticModel \
 --train_dir=$BUCKET_NAME/${JOB_TO_EVAL} --run_once=True
 ```
@@ -167,7 +413,7 @@ submit training $JOB_NAME \
 --package-path=youtube-8m --module-name=youtube-8m.inference \
 --staging-bucket=$BUCKET_NAME --region=us-east1 \
 --config=youtube-8m/cloudml-gpu.yaml \
--- --input_data_pattern='gs://youtube8m-ml/1/video_level/test/test*.tfrecord' \
+-- --input_data_pattern='gs://youtube8m-ml/2/video/test/test*.tfrecord' \
 --train_dir=$BUCKET_NAME/${JOB_TO_EVAL} \
 --output_file=$BUCKET_NAME/${JOB_TO_EVAL}/predictions.csv
 ```
@@ -249,13 +495,13 @@ The two flags take a comma-separated list of values in string. For example, to
 use audio-visual Video-Level features the flags must be set as follows:
 
 ```
---feature_names="mean_rgb, mean_audio" --feature_sizes="1024, 128"
+--feature_names="mean_rgb,mean_audio" --feature_sizes="1024,128"
 ```
 
 Similarly, to use audio-visual Frame-Level features use:
 
 ```
---feature_names="rgb, audio" --feature_sizes="1024, 128"
+--feature_names="rgb,audio" --feature_sizes="1024,128"
 ```
 
 **NOTE:** Make sure the set of features and the order in which the appear in the
@@ -270,167 +516,6 @@ powerful machine types which have additional GPUs. To use a configuration with
 4 GPUs, replace the argument to `--config` with `youtube-8m/cloudml-4gpu.yaml`.
 Be careful with this argument as it will also increase the rate you are charged
 by a factor of 4 as well.
-
-## Running on Your Own Machine
-
-### Requirements
-
-The starter code requires Tensorflow. If you haven't installed it yet, follow
-the instructions on [tensorflow.org](https://www.tensorflow.org/install/).
-This code has been tested with Tensorflow 1.0.0. Going forward, we will continue
-to target the latest released version of Tensorflow.
-
-Please verify that you have Python 2.7+ and Tensorflow 1.0.0 or higher
-installed by running the following commands:
-
-```sh
-python --version
-python -c 'import tensorflow as tf; print(tf.__version__)'
-```
-
-You can find complete instructions for downloading the dataset on the
-[YouTube-8M website](https://research.google.com/youtube8m/download.html).
-We recommend downloading the smaller video-level features dataset first when
-getting started. To do that, run:
-
-```
-mkdir -p features; cd features
-curl data.yt8m.org/download.py | partition=1/video_level/train mirror=us python
-```
-
-This will download the full set of video level features, which takes up 31GB
-of space.
-If you are located outside of North America, you should change the flag 'mirror'
-to 'eu' for Europe or 'asia' for Asia to speed up the transfer of the files.
-
-Change 'train' to 'validate'/'test' and re-run the command to download the
-other splits of the dataset.
-
-Change 'video_level' to 'frame_level' to download the frame-level features. The
-complete frame-level features take about 1.71TB of space. You can set the
-environment variable 'shard' to 'm,n' to download only m/n-th of the data. For
-example, to download 1/100-th of the frame-level features from the training set,
-run:
-
-```
-curl data.yt8m.org/download.py | shard=1,100 partition=1/frame_level/train mirror=us python
-```
-
-### Training on Video-Level Features
-
-To start training a logistic model on the video-level features, run
-
-```sh
-MODEL_DIR=/tmp/yt8m
-python train.py --train_data_pattern='/path/to/features/train*.tfrecord' --model=LogisticModel --train_dir=$MODEL_DIR/video_level_logistic_model
-```
-
-Since the dataset is sharded into 4096 individual files, we use a wildcard (\*)
-to represent all of those files.
-
-By default, the training code will frequently write _checkpoint_ files (i.e.
-values of all trainable parameters, at the current training iteration). These
-will be written to the `--train_dir`. If you re-use a `--train_dir`, the trainer
-will first restore the latest checkpoint written in that directory. This only
-works if the architecture of the checkpoint matches the graph created by the
-training code. If you are in active development/debugging phase, consider
-adding `--start_new_model` flag to your run configuration.
-
-### Evaluation and Inference
-
-To evaluate the model, run
-
-```sh
-python eval.py --eval_data_pattern='/path/to/features/validate*.tfrecord' --model=LogisticModel --train_dir=$MODEL_DIR/video_level_logistic_model --run_once=True
-```
-
-As the model is training or evaluating, you can view the results on tensorboard
-by running
-
-```sh
-tensorboard --logdir=$MODEL_DIR
-```
-
-and navigating to http://localhost:6006 in your web browser.
-
-When you are happy with your model, you can generate a csv file of predictions
-from it by running
-
-```sh
-python inference.py --output_file=$MODEL_DIR/video_level_logistic_model/predictions.csv --input_data_pattern='/path/to/features/test*.tfrecord' --train_dir=$MODEL_DIR/video_level_logistic_model
-```
-
-This will output the top 20 predicted labels from the model for every example
-to 'predictions.csv'.
-
-### Using Frame-Level Features
-
-Follow the same instructions as above, appending
-`--frame_features=True --model=FrameLevelLogisticModel --feature_names="rgb"
---feature_sizes="1024" --train_dir=$MODEL_DIR/frame_level_logistic_model`
-for the 'train.py', 'eval.py', and 'inference.py' scripts.
-
-The 'FrameLevelLogisticModel' is designed to provide equivalent results to a
-logistic model trained over the video-level features. Please look at the
-'models.py' file to see how to implement your own models.
-
-### Using Audio Features
-
-See [Using Audio Features](#using-audio-features) section above.
-
-### Using GPUs
-
-If your Tensorflow installation has GPU support, this code will make use of all
-of your compatible GPUs. You can verify your installation by running
-
-```
-python -c 'import tensorflow as tf; tf.Session()'
-```
-
-This will print out something like the following for each of your compatible
-GPUs.
-
-```
-I tensorflow/core/common_runtime/gpu/gpu_init.cc:102] Found device 0 with properties:
-name: Tesla M40
-major: 5 minor: 2 memoryClockRate (GHz) 1.112
-pciBusID 0000:04:00.0
-Total memory: 11.25GiB
-Free memory: 11.09GiB
-...
-```
-
-If at least one GPU was found, the forward and backward passes will be computed
-with the GPUs, whereas the CPU will be used primarily for the input and output
-pipelines. If you have multiple GPUs, each of them will be given a full batch
-of examples, and the resulting gradients will be summed together before being
-applied. This will increase your effective batch size. For example, if you set
-`batch_size=128` and you have 4 GPUs, this will result in 512 examples being
-evaluated every training step.
-
-### Ground-Truth Label Files
-
-We also provide CSV files containing the ground-truth label information of the
-'train' and 'validation' partitions of the dataset. These files can be
-downloaded using 'gsutil' command:
-
-```
-gsutil cp gs://us.data.yt8m.org/1/ground_truth_labels/train_labels.csv /destination/folder/
-gsutil cp gs://us.data.yt8m.org/1/ground_truth_labels/validate_labels.csv /destination/folder/
-```
-
-or directly using the following links:
-
-*   [http://us.data.yt8m.org/1/ground_truth_labels/train_labels.csv](http://us.data.yt8m.org/1/ground_truth_labels/train_labels.csv)
-*   [http://us.data.yt8m.org/1/ground_truth_labels/validate_labels.csv](http://us.data.yt8m.org/1/ground_truth_labels/validate_labels.csv)
-
-Each line in the files starts with the video id and is followed by the list of
-ground-truth labels corresponding to that video. For example, for a video with
-id 'VIDEO_ID' and two labels 'LABEL1' and 'LABEL2' we store the following line:
-
-```
-VIDEO_ID,LABEL1 LABEL2
-```
 
 ## Overview of Models
 
