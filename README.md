@@ -93,7 +93,7 @@ Clone this git repo:
 ```
 mkdir -p ~/yt8m/code
 cd ~/yt8m/code
-git clone https://github.com/google/youtube-8m.git
+git clone https://github.com/samihaija/youtube-8m.git
 ```
 
 #### Train video-level model
