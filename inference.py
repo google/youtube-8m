@@ -15,6 +15,9 @@
 """Binary for generating predictions over a set of videos."""
 
 import os
+import glob
+import json
+import tarfile
 import time
 
 import numpy
@@ -33,19 +36,27 @@ import utils
 FLAGS = flags.FLAGS
 
 if __name__ == '__main__':
+  # Input
   flags.DEFINE_string("train_dir", "/tmp/yt8m_model/",
                       "The directory to load the model files from.")
   flags.DEFINE_string("checkpoint_file", "",
                       "If provided, this specific checkpoint file will be "
                       "used for inference. Otherwise, the latest checkpoint "
                       "from the train_dir' argument will be used instead.")
-  flags.DEFINE_string("output_file", "",
-                      "The file to save the predictions to.")
   flags.DEFINE_string(
       "input_data_pattern", "",
       "File glob defining the evaluation dataset in tensorflow.SequenceExample "
       "format. The SequenceExamples are expected to have an 'rgb' byte array "
       "sequence feature as well as a 'labels' int64 context feature.")
+
+  # Output
+  flags.DEFINE_string("output_file", "",
+                      "The file to save the predictions to.")
+  flags.DEFINE_string("model_tgz", "",
+                      "If given, should be a filename with a .tgz extension, "
+                      "the model graph and checkpoint will be bundled in this "
+                      "gzip tar. This file can be uploaded to Kaggle for the "
+                      "top 10 participants.")
 
   # Model flags.
   flags.DEFINE_bool(
@@ -60,7 +71,6 @@ if __name__ == '__main__':
   flags.DEFINE_string("feature_names", "mean_rgb", "Name of the feature "
                       "to use for training.")
   flags.DEFINE_string("feature_sizes", "1024", "Length of the feature vectors.")
-
 
   # Other flags.
   flags.DEFINE_integer("num_readers", 1,
@@ -128,6 +138,23 @@ def inference(reader, checkpoint_file, train_dir, data_pattern, out_file_locatio
     else:
       meta_graph_location = latest_checkpoint + ".meta"
       logging.info("loading meta-graph: " + meta_graph_location)
+
+    if FLAGS.model_tgz:
+      # Write json of flags
+      flags_dict = {
+          "feature_sizes": FLAGS.feature_sizes,
+          "feature_names": FLAGS.feature_names,
+          "frame_features": FLAGS.frame_features,
+      }
+      json_file = FLAGS.model_tgz + '.flags.json'
+      with open(json_file, 'w') as fout:
+        fout.write(json.dumps(flags_dict))
+      with tarfile.open(FLAGS.model_tgz, "w:gz") as tar:
+        for model_file in glob.glob(latest_checkpoint + '.*'):
+          tar.add(model_file, arcname=os.path.basename(model_file))
+        tar.add(json_file, arcname='flags.json')
+      print('Tarred model onto ' + FLAGS.model_tgz)
+
     saver = tf.train.import_meta_graph(meta_graph_location, clear_devices=True)
     logging.info("restoring variables from " + latest_checkpoint)
     saver.restore(sess, latest_checkpoint)

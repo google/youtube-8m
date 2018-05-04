@@ -120,8 +120,16 @@ naming file as `kaggle_solution.csv`):
 ```
 python inference.py  --feature_names='mean_rgb,mean_audio' --feature_size='1024,128' --train_dir ~/yt8m/v2/models/video/sample_model  --output_file=kaggle_solution.csv --input_data_pattern ~/yt8m/v2/video/test*.tfrecord
 ```
-Then, upload `kaggle_solution.csv` to Kaggle!
-
+Then, upload `kaggle_solution.csv` to Kaggle. In addition, if you would like to
+be considered for the prize, then your model checkpoint must be under 1
+Gigabyte. We ask the top 10 competitors (based on the public leaderboard) to
+upload their model files (only the graph and checkpoint, without code) as we
+want to verify that their model is small. You can bundle your model in a `.tgz`
+file by passing the `--model_tgz` flag. For example
+```
+python inference.py --feature_names='mean_rgb,mean_audio' --feature_size='1024,128' --train_dir ~/yt8m/v2/models/video/sample_model  --output_file=kaggle_solution.csv --input_data_pattern ~/yt8m/v2/video/test*.tfrecord --model_tgz=my_model.tgz
+```
+then upload `my_model.tgz` to Kaggle.
 
 #### Train Frame-level model
 Train using `train.py`, selecting a frame-level model (e.g.
@@ -137,10 +145,12 @@ Evaluate the model
 python eval.py --frame_features  --model=FrameLevelLogisticModel --feature_names='rgb,audio' --feature_size='1024,128' --eval_data_pattern ~/yt8m/v2/frame/validate*.tfrecord --train_dir ~/yt8m/v2/models/frame/sample_model
 ```
 
-Produce CSV by doing inference:
+Produce CSV (`kaggle_solution.csv`) by doing inference:
 ```
 python inference.py --frame_features --feature_names='rgb,audio' --feature_size='1024,128' --train_dir ~/yt8m/v2/models/frame/sample_model  --output_file=kaggle_solution.csv --input_data_pattern ~/yt8m/v2/frame/test*.tfrecord
 ```
+Similar to above, you can tar your model by appending flag
+`--model_tgz=my_model.tgz`.
 
 
 ### Downloading the entire dataset
