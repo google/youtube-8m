@@ -38,11 +38,9 @@ FLAGS = flags.FLAGS
 if __name__ == '__main__':
   # Input
   flags.DEFINE_string("train_dir", "/tmp/yt8m_model/",
-                      "The directory to load the model files from.")
-  flags.DEFINE_string("checkpoint_file", "",
-                      "If provided, this specific checkpoint file will be "
-                      "used for inference. Otherwise, the latest checkpoint "
-                      "from the train_dir' argument will be used instead.")
+                      "The directory to load the model files from. We assume "
+                      "that you have already run eval.py onto this, such that "
+                      "inference_model.* files already exist.")
   flags.DEFINE_string(
       "input_data_pattern", "",
       "File glob defining the evaluation dataset in tensorflow.SequenceExample "
@@ -57,26 +55,15 @@ if __name__ == '__main__':
                       "the model graph and checkpoint will be bundled in this "
                       "gzip tar. This file can be uploaded to Kaggle for the "
                       "top 10 participants.")
+  flags.DEFINE_integer("top_k", 20,
+                       "How many predictions to output per video.")
 
-  # Model flags.
-  flags.DEFINE_bool(
-      "frame_features", False,
-      "If set, then --input_data_pattern must be frame-level features. "
-      "Otherwise, --input_data_pattern must be aggregated video-level "
-      "features. The model must also be set appropriately (i.e. to read 3D "
-      "batches VS 4D batches.")
+  # Other flags.
   flags.DEFINE_integer(
       "batch_size", 8192,
       "How many examples to process per batch.")
-  flags.DEFINE_string("feature_names", "mean_rgb", "Name of the feature "
-                      "to use for training.")
-  flags.DEFINE_string("feature_sizes", "1024", "Length of the feature vectors.")
-
-  # Other flags.
   flags.DEFINE_integer("num_readers", 1,
                        "How many threads to use for reading input files.")
-  flags.DEFINE_integer("top_k", 20,
-                       "How many predictions to output per video.")
 
 def format_lines(video_ids, predictions, top_k):
   batch_size = len(video_ids)
@@ -124,40 +111,26 @@ def get_input_data_tensors(reader, data_pattern, batch_size, num_readers=1):
                             enqueue_many=True))
     return video_id_batch, video_batch, num_frames_batch
 
-def inference(reader, checkpoint_file, train_dir, data_pattern, out_file_location, batch_size, top_k):
+def inference(reader, train_dir, data_pattern, out_file_location, batch_size, top_k):
   with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as sess, gfile.Open(out_file_location, "w+") as out_file:
     video_id_batch, video_batch, num_frames_batch = get_input_data_tensors(reader, data_pattern, batch_size)
-    if checkpoint_file:
-      if not gfile.Exists(checkpoint_file + ".meta"):
-        logging.fatal("Unable to find checkpoint file at provided location '%s'" % checkpoint_file)
-      latest_checkpoint = checkpoint_file
-    else:
-      latest_checkpoint = tf.train.latest_checkpoint(train_dir)
-    if latest_checkpoint is None:
-      raise Exception("unable to find a checkpoint at location: %s" % train_dir)
-    else:
-      meta_graph_location = latest_checkpoint + ".meta"
-      logging.info("loading meta-graph: " + meta_graph_location)
+    checkpoint_file = os.path.join(FLAGS.train_dir, "inference_model")
+    if not gfile.Exists(checkpoint_file + ".meta"):
+      raise IOError("Cannot find %s. Did you run eval.py?" % checkpoint_file)
+    meta_graph_location = checkpoint_file + ".meta"
+    logging.info("loading meta-graph: " + meta_graph_location)
 
     if FLAGS.model_tgz:
-      # Write json of flags
-      flags_dict = {
-          "feature_sizes": FLAGS.feature_sizes,
-          "feature_names": FLAGS.feature_names,
-          "frame_features": FLAGS.frame_features,
-      }
-      json_file = FLAGS.model_tgz + '.flags.json'
-      with open(json_file, 'w') as fout:
-        fout.write(json.dumps(flags_dict))
       with tarfile.open(FLAGS.model_tgz, "w:gz") as tar:
-        for model_file in glob.glob(latest_checkpoint + '.*'):
+        for model_file in glob.glob(checkpoint_file + '.*'):
           tar.add(model_file, arcname=os.path.basename(model_file))
-        tar.add(json_file, arcname='flags.json')
+        tar.add(os.path.join(FLAGS.train_dir, "model_flags.json"),
+                arcname="model_flags.json")
       print('Tarred model onto ' + FLAGS.model_tgz)
 
     saver = tf.train.import_meta_graph(meta_graph_location, clear_devices=True)
-    logging.info("restoring variables from " + latest_checkpoint)
-    saver.restore(sess, latest_checkpoint)
+    logging.info("restoring variables from " + checkpoint_file)
+    saver.restore(sess, checkpoint_file)
     input_tensor = tf.get_collection("input_batch_raw")[0]
     num_frames_tensor = tf.get_collection("num_frames")[0]
     predictions_tensor = tf.get_collection("predictions")[0]
@@ -205,12 +178,16 @@ def inference(reader, checkpoint_file, train_dir, data_pattern, out_file_locatio
 
 def main(unused_argv):
   logging.set_verbosity(tf.logging.INFO)
+  flags_dict_file = os.path.join(FLAGS.train_dir, "model_flags.json")
+  if not os.path.exists(flags_dict_file):
+    raise IOError("Cannot find %s. Did you run eval.py?" % flags_dict_file)
+  flags_dict = json.loads(open(flags_dict_file).read())
 
   # convert feature_names and feature_sizes to lists of values
   feature_names, feature_sizes = utils.GetListOfFeatureNamesAndSizes(
-      FLAGS.feature_names, FLAGS.feature_sizes)
+      flags_dict["feature_names"], flags_dict["feature_sizes"])
 
-  if FLAGS.frame_features:
+  if flags_dict["frame_features"]:
     reader = readers.YT8MFrameFeatureReader(feature_names=feature_names,
                                             feature_sizes=feature_sizes)
   else:
@@ -225,7 +202,7 @@ def main(unused_argv):
     raise ValueError("'input_data_pattern' was not specified. "
       "Unable to continue with inference.")
 
-  inference(reader, FLAGS.checkpoint_file, FLAGS.train_dir, FLAGS.input_data_pattern,
+  inference(reader, FLAGS.train_dir, FLAGS.input_data_pattern,
     FLAGS.output_file, FLAGS.batch_size, FLAGS.top_k)
 
 

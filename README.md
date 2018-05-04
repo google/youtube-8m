@@ -14,20 +14,20 @@ or on your own machine. This README provides instructions for both.
 ## Table of Contents
 * [Running on Your Own Machine](#running-on-your-own-machine)
    * [Requirements](#requirements-1)
-   * [Training on Video-Level Features](#training-on-video-level-features-1)
-   * [Evaluation and Inference](#evaluation-and-inference-1)
-   * [Using Frame-Level Features](#using-frame-level-features-1)
-   * [Using Audio Features](#using-audio-features-1)
+   * [Training on Video-Level Features](#training-on-video-level-features)
+   * [Evaluation and Inference](#evaluation-and-inference)
+   * [Using Frame-Level Features](#using-frame-level-features)
+   * [Using Audio Features](#using-audio-features)
    * [Using GPUs](#using-gpus)
    * [Ground-Truth Label Files](#ground-truth-label-files)
 * [Running on Google's Cloud Machine Learning Platform](#running-on-googles-cloud-machine-learning-platform)
    * [Requirements](#requirements)
    * [Testing Locally](#testing-locally)
-   * [Training on the Cloud over Video-Level Features](#training-on-video-level-features)
-   * [Evaluation and Inference](#evaluation-and-inference)
+   * [Training on the Cloud over Video-Level Features](#training-on-video-level-features-1)
+   * [Evaluation and Inference](#evaluation-and-inference-1)
    * [Accessing Files on Google Cloud](#accessing-files-on-google-cloud)
-   * [Using Frame-Level Features](#using-frame-level-features)
-   * [Using Audio Features](#using-audio-features)
+   * [Using Frame-Level Features](#using-frame-level-features-1)
+   * [Using Audio Features](#using-audio-features-1)
    * [Using Larger Machine Types](#using-larger-machine-types)
 * [Overview of Models](#overview-of-models)
    * [Video-Level Models](#video-level-models)
@@ -104,7 +104,7 @@ The `--start_new_model` flag will re-train from scratch. If you want to continue
 training from the `train_dir`, drop this flag. After training, you can evaluate
 the model on the validation split:
 ```
-python eval.py --feature_names='mean_rgb,mean_audio' --feature_size='1024,128' --eval_data_pattern ~/yt8m/v2/video/validate*.tfrecord --train_dir ~/yt8m/v2/models/video/sample_model
+python eval.py --eval_data_pattern ~/yt8m/v2/video/validate*.tfrecord --train_dir ~/yt8m/v2/models/video/sample_model
 ```
 
 Note: Above binary runs "forever" (i.e. keeps watching for updated model
@@ -118,7 +118,7 @@ If you are competing on Kaggle, you should do inference outputing a CSV (e.g.
 naming file as `kaggle_solution.csv`):
 
 ```
-python inference.py  --feature_names='mean_rgb,mean_audio' --feature_size='1024,128' --train_dir ~/yt8m/v2/models/video/sample_model  --output_file=kaggle_solution.csv --input_data_pattern ~/yt8m/v2/video/test*.tfrecord
+python inference.py --train_dir ~/yt8m/v2/models/video/sample_model  --output_file=kaggle_solution.csv --input_data_pattern ~/yt8m/v2/video/test*.tfrecord
 ```
 Then, upload `kaggle_solution.csv` to Kaggle. In addition, if you would like to
 be considered for the prize, then your model checkpoint must be under 1
@@ -127,7 +127,7 @@ upload their model files (only the graph and checkpoint, without code) as we
 want to verify that their model is small. You can bundle your model in a `.tgz`
 file by passing the `--model_tgz` flag. For example
 ```
-python inference.py --feature_names='mean_rgb,mean_audio' --feature_size='1024,128' --train_dir ~/yt8m/v2/models/video/sample_model  --output_file=kaggle_solution.csv --input_data_pattern ~/yt8m/v2/video/test*.tfrecord --model_tgz=my_model.tgz
+python inference.py --train_dir ~/yt8m/v2/models/video/sample_model  --output_file=kaggle_solution.csv --input_data_pattern ~/yt8m/v2/video/test*.tfrecord --model_tgz=my_model.tgz
 ```
 then upload `my_model.tgz` to Kaggle.
 
@@ -142,12 +142,12 @@ python train.py --frame_features --model=FrameLevelLogisticModel --feature_names
 
 Evaluate the model
 ```
-python eval.py --frame_features  --model=FrameLevelLogisticModel --feature_names='rgb,audio' --feature_size='1024,128' --eval_data_pattern ~/yt8m/v2/frame/validate*.tfrecord --train_dir ~/yt8m/v2/models/frame/sample_model
+python eval.py --eval_data_pattern ~/yt8m/v2/frame/validate*.tfrecord --train_dir ~/yt8m/v2/models/frame/sample_model
 ```
 
 Produce CSV (`kaggle_solution.csv`) by doing inference:
 ```
-python inference.py --frame_features --feature_names='rgb,audio' --feature_size='1024,128' --train_dir ~/yt8m/v2/models/frame/sample_model  --output_file=kaggle_solution.csv --input_data_pattern ~/yt8m/v2/frame/test*.tfrecord
+python inference.py --train_dir ~/yt8m/v2/models/frame/sample_model --output_file=kaggle_solution.csv --input_data_pattern ~/yt8m/v2/frame/test*.tfrecord
 ```
 Similar to above, you can tar your model by appending flag
 `--model_tgz=my_model.tgz`.
@@ -187,6 +187,13 @@ and evaluate different models.
 
 ### Training Details
 
+The binaries `train.py`, `evaluate.py`, and `inference.py` use the flag
+`--train_dir`. The `train.py` outputs to `--train_dir` the  TensorFlow graph as
+well as the model checkpoint, as the model is training. It will also output a
+JSON file, `model_flags.json`, which is used by `evaluate.py` and `inference.py`
+to setup the model and know what type of data to feed (frame-level VS
+video-level, as determined by the flags passed to `train.py`).
+
 You can specify a model by using the `--model` flag. For example, you can
 utilize the `LogisticModel` (the default) by:
 
@@ -211,11 +218,8 @@ adding `--start_new_model` flag to your run configuration.
 To evaluate the model, run
 
 ```sh
-python eval.py --eval_data_pattern=${YT8M_DIR}/v2/video/validate*.tfrecord --model=LogisticModel --train_dir ~/yt8m/v2/models/logistic --run_once=True
+python eval.py --eval_data_pattern=${YT8M_DIR}/v2/video/validate*.tfrecord --train_dir ~/yt8m/v2/models/logistic --run_once=True
 ```
-
-Note that the `--model`, `--train_dir`, `--feature_names`, `--feature_size`, and
-`--frame_features` must match across `eval.py` and `train.py`.
 
 When you are happy with your model, you can generate a csv file of predictions
 from it by running
@@ -231,16 +235,36 @@ to `predictions.csv`.
 
 Follow the same instructions as above, appending
 `--frame_features=True --model=FrameLevelLogisticModel --feature_names="rgb"
---feature_sizes="1024" --train_dir=$MODEL_DIR/frame_level_logistic_model`
-for the 'train.py', 'eval.py', and 'inference.py' scripts.
+--feature_sizes="1024"` for `train.py` and changing `--train_dir`.
 
-The 'FrameLevelLogisticModel' is designed to provide equivalent results to a
+The `FrameLevelLogisticModel` is designed to provide equivalent results to a
 logistic model trained over the video-level features. Please look at the
-'models.py' file to see how to implement your own models.
+`models.py` file to see how to implement your own models.
 
 ### Using Audio Features
 
-See [Using Audio Features](#using-audio-features) section above.
+The feature files (both Frame-Level and Video-Level) contain two sets of
+features: 1) visual and 2) audio. The code defaults to using the visual
+features only, but it is possible to use audio features instead of (or besides)
+visual features. To specify the (combination of) features to use you must set
+`--feature_names` and `--feature_sizes` flags. The visual and audio features are
+called 'rgb' and 'audio' and have 1024 and 128 dimensions, respectively.
+The two flags take a comma-separated list of values in string. For example, to
+use audio-visual Video-Level features the flags must be set as follows:
+
+```
+--feature_names="mean_rgb,mean_audio" --feature_sizes="1024,128"
+```
+
+Similarly, to use audio-visual Frame-Level features use:
+
+```
+--feature_names="rgb,audio" --feature_sizes="1024,128"
+```
+
+**NOTE:** Make sure the set of features and the order in which the appear in the
+lists provided to the two flags above match.
+
 
 ### Using GPUs
 
@@ -329,7 +353,7 @@ Here is an example command line for video-level training:
 gcloud ml-engine local train \
 --package-path=youtube-8m --module-name=youtube-8m.train -- \
 --train_data_pattern='gs://youtube8m-ml/2/video/train/train*.tfrecord' \
---train_dir=/tmp/yt8m_train --model=LogisticModel --start_new_model
+--/rain_dir=/tmp/yt8m_train --model=LogisticModel --start_new_model
 ```
 
 You might want to download some training shards locally to speed things up and
@@ -495,28 +519,7 @@ your own models.
 
 ### Using Audio Features
 
-The feature files (both Frame-Level and Video-Level) contain two sets of
-features: 1) visual and 2) audio. The code defaults to using the visual
-features only, but it is possible to use audio features instead of (or besides)
-visual features. To specify the (combination of) features to use you must set
-`--feature_names` and `--feature_sizes` flags. The visual and audio features are
-called 'rgb' and 'audio' and have 1024 and 128 dimensions, respectively.
-The two flags take a comma-separated list of values in string. For example, to
-use audio-visual Video-Level features the flags must be set as follows:
-
-```
---feature_names="mean_rgb,mean_audio" --feature_sizes="1024,128"
-```
-
-Similarly, to use audio-visual Frame-Level features use:
-
-```
---feature_names="rgb,audio" --feature_sizes="1024,128"
-```
-
-**NOTE:** Make sure the set of features and the order in which the appear in the
-lists provided to the two flags above match. Also, the order must match when
-running training, evaluation, or inference.
+See [Using Audio Features](#using-audio-features) section above.
 
 ### Using Larger Machine Types
 

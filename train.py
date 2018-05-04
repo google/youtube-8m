@@ -375,12 +375,37 @@ class Trainer(object):
     if self.is_master and start_new_model:
       self.remove_training_directory(self.train_dir)
 
+    if not os.path.exists(self.train_dir):
+      os.makedirs(self.train_dir)
+
+    model_flags_dict = {
+        "model": FLAGS.model,
+        "feature_sizes": FLAGS.feature_sizes,
+        "feature_names": FLAGS.feature_names,
+        "frame_features": FLAGS.frame_features,
+        "label_loss": FLAGS.label_loss,
+    }
+    flags_json_path = os.path.join(FLAGS.train_dir, "model_flags.json")
+    if os.path.exists(flags_json_path):
+      existing_flags = json.parse(open(flags_json_path).read())
+      if existing_flags != model_flags_dict:
+        logging.error("Model flags do not match existing file %s. Please "
+                      "delete the file, change --train_dir, or pass flag "
+                      "--start_new_model",
+                      flags_json_path)
+        logging.error("Ran model with flags: %s", str(model_flags_dict))
+        logging.error("Previously ran with flags: %s", str(existing_flags))
+        exit(1)
+    else:
+      # Write the file.
+      with open(flags_json_path, "w") as fout:
+        fout.write(json.dumps(model_flags_dict))
+
     target, device_fn = self.start_server_if_distributed()
 
     meta_filename = self.get_meta_filename(start_new_model, self.train_dir)
 
     with tf.Graph().as_default() as graph:
-
       if meta_filename:
         saver = self.recover_model(meta_filename)
 
