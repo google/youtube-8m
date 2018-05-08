@@ -113,9 +113,9 @@ be considered for the prize, then your model checkpoint must be under 1
 Gigabyte. We ask the top 10 competitors (based on the public leaderboard) to
 upload their model files (only the graph and checkpoint, without code) as we
 want to verify that their model is small. You can bundle your model in a `.tgz`
-file by passing the `--model_tgz` flag. For example
+file by passing the `--output_model_tgz` flag. For example
 ```
-python inference.py --train_dir ~/yt8m/v2/models/video/sample_model  --output_file=kaggle_solution.csv --input_data_pattern ~/yt8m/v2/video/test*.tfrecord --model_tgz=my_model.tgz
+python inference.py --train_dir ~/yt8m/v2/models/video/sample_model  --output_file=kaggle_solution.csv --input_data_pattern ~/yt8m/v2/video/test*.tfrecord --output_model_tgz=my_model.tgz
 ```
 then upload `my_model.tgz` to Kaggle.
 
@@ -138,7 +138,7 @@ Produce CSV (`kaggle_solution.csv`) by doing inference:
 python inference.py --train_dir ~/yt8m/v2/models/frame/sample_model --output_file=kaggle_solution.csv --input_data_pattern ~/yt8m/v2/frame/test*.tfrecord
 ```
 Similar to above, you can tar your model by appending flag
-`--model_tgz=my_model.tgz`.
+`--output_model_tgz=my_model.tgz`.
 
 
 ### Downloading the entire dataset

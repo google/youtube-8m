@@ -37,7 +37,7 @@ FLAGS = flags.FLAGS
 
 if __name__ == '__main__':
   # Input
-  flags.DEFINE_string("train_dir", "/tmp/yt8m_model/",
+  flags.DEFINE_string("train_dir", "",
                       "The directory to load the model files from. We assume "
                       "that you have already run eval.py onto this, such that "
                       "inference_model.* files already exist.")
@@ -46,11 +46,21 @@ if __name__ == '__main__':
       "File glob defining the evaluation dataset in tensorflow.SequenceExample "
       "format. The SequenceExamples are expected to have an 'rgb' byte array "
       "sequence feature as well as a 'labels' int64 context feature.")
+  flags.DEFINE_string("input_model_tgz", "",
+                      "If given, must be path to a .tgz file that was written "
+                      "by this binary using fllag --output_model_tgz. In this "
+                      "case, the .tgz file will be untarred to "
+                      "--untar_model_dir and the model will be used for "
+                      "inference.")
+  flags.DEFINE_string("untar_model_dir", "/tmp/yt8m-model",
+                      "If --input_model_tgz is given, then this directory will "
+                      "be created and the contents of the .tgz file will be "
+                      "untarred here.")
 
   # Output
   flags.DEFINE_string("output_file", "",
                       "The file to save the predictions to.")
-  flags.DEFINE_string("model_tgz", "",
+  flags.DEFINE_string("output_model_tgz", "",
                       "If given, should be a filename with a .tgz extension, "
                       "the model graph and checkpoint will be bundled in this "
                       "gzip tar. This file can be uploaded to Kaggle for the "
@@ -120,13 +130,13 @@ def inference(reader, train_dir, data_pattern, out_file_location, batch_size, to
     meta_graph_location = checkpoint_file + ".meta"
     logging.info("loading meta-graph: " + meta_graph_location)
 
-    if FLAGS.model_tgz:
-      with tarfile.open(FLAGS.model_tgz, "w:gz") as tar:
+    if FLAGS.output_model_tgz:
+      with tarfile.open(FLAGS.output_model_tgz, "w:gz") as tar:
         for model_file in glob.glob(checkpoint_file + '.*'):
           tar.add(model_file, arcname=os.path.basename(model_file))
         tar.add(os.path.join(FLAGS.train_dir, "model_flags.json"),
                 arcname="model_flags.json")
-      print('Tarred model onto ' + FLAGS.model_tgz)
+      print('Tarred model onto ' + FLAGS.output_model_tgz)
 
     saver = tf.train.import_meta_graph(meta_graph_location, clear_devices=True)
     logging.info("restoring variables from " + checkpoint_file)
@@ -178,6 +188,17 @@ def inference(reader, train_dir, data_pattern, out_file_location, batch_size, to
 
 def main(unused_argv):
   logging.set_verbosity(tf.logging.INFO)
+  if FLAGS.input_model_tgz:
+    if FLAGS.train_dir:
+      raise ValueError("You cannot supply --train_dir if supplying "
+                       "--input_model_tgz")
+    # Untar.
+    if os.path.exists(FLAGS.untar_model_dir):
+      os.rmdir(FLAGS.untar_model_dir)
+    os.makedirs(FLAGS.untar_model_dir)
+    tarfile.open(FLAGS.input_model_tgz).extractall(FLAGS.untar_model_dir)
+    FLAGS.train_dir = FLAGS.untar_model_dir
+
   flags_dict_file = os.path.join(FLAGS.train_dir, "model_flags.json")
   if not os.path.exists(flags_dict_file):
     raise IOError("Cannot find %s. Did you run eval.py?" % flags_dict_file)
