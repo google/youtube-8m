@@ -87,7 +87,7 @@ git clone https://github.com/samihaija/youtube-8m.git
 
 #### Train video-level model
 ```
-python train.py --feature_names='mean_rgb,mean_audio' --feature_size='1024,128' --train_data_pattern ~/yt8m/v2/video/train*.tfrecord --train_dir ~/yt8m/v2/models/video/sample_model --start_new_model
+python train.py --feature_names='mean_rgb,mean_audio' --feature_sizes='1024,128' --train_data_pattern ~/yt8m/v2/video/train*.tfrecord --train_dir ~/yt8m/v2/models/video/sample_model --start_new_model
 ```
 The `--start_new_model` flag will re-train from scratch. If you want to continue
 training from the `train_dir`, drop this flag. After training, you can evaluate
@@ -126,7 +126,7 @@ Train using `train.py`, selecting a frame-level model (e.g.
 `--frame_features`. TLDR - frame-level features are compressed, and this flag
 uncompresses them.
 ```
-python train.py --frame_features --model=FrameLevelLogisticModel --feature_names='rgb,audio' --feature_size='1024,128' --train_data_pattern ~/yt8m/v2/frame/train*.tfrecord --train_dir ~/yt8m/v2/models/frame/sample_model --start_new_model
+python train.py --frame_features --model=FrameLevelLogisticModel --feature_names='rgb,audio' --feature_sizes='1024,128' --train_data_pattern ~/yt8m/v2/frame/train*.tfrecord --train_dir ~/yt8m/v2/models/frame/sample_model --start_new_model
 ```
 
 Evaluate the model
