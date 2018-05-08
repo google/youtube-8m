@@ -48,7 +48,7 @@ if __name__ == '__main__':
       "sequence feature as well as a 'labels' int64 context feature.")
   flags.DEFINE_string("input_model_tgz", "",
                       "If given, must be path to a .tgz file that was written "
-                      "by this binary using fllag --output_model_tgz. In this "
+                      "by this binary using flag --output_model_tgz. In this "
                       "case, the .tgz file will be untarred to "
                       "--untar_model_dir and the model will be used for "
                       "inference.")
