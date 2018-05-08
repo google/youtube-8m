@@ -26,6 +26,7 @@ your own custom-defined models.
    * [Evaluation](#evaluation)
    * [Inference](#inference)
    * [Misc](#misc)
+* [Training without this Starter Code](#training-without-this-starter-code)
 * [About This Project](#about-this-project)
 
 
@@ -339,7 +340,7 @@ You can create your dataset files from your own videos. Our
 [feature extractor](./feature_extractor) code creates `tfrecord`
 files, identical to our dataset files. You can use our starter code to train on
 the `tfrecord` files output by the feature extractor. In addition, you can
-fine-tune your YouTube-8M models on your new dataset. 
+fine-tune your YouTube-8M models on your new dataset.
 
 ## Overview of Files
 
@@ -367,14 +368,39 @@ fine-tune your YouTube-8M models on your new dataset.
                                             average precision.
 
 ### Inference
-*   `inference.py`: Generates an output file containing predictions of
-                    the model over a set of videos.
+*   `inference.py`: Generates an output CSV file containing predictions of
+                    the model over a set of videos. It optionally generates a
+                    tarred file of the model.
 
 ### Misc
 *   `README.md`: This documentation.
 *   `utils.py`: Common functions.
 *   `convert_prediction_from_json_to_csv.py`: Converts the JSON output of
         batch prediction into a CSV file for submission.
+
+## Training without this Starter Code
+
+You are welcome to use our dataset without using our starter code. However, if
+you'd like to compete on Kaggle, then you must make sure that you are able to
+produce a prediction CSV file, as well as a model `.tgz` file that match what
+gets produced by our `inference.py`. In particular, the [predictions
+CSV file](https://www.kaggle.com/c/youtube8m-2018#evaluation) 
+must have two fields: `Id,Labels` where `Id` is stored as `id` in the each test
+example and `Labels` is a space-delimited list of integer label IDs. The `.tgz`
+must contain these 4 files at minumum:
+
+* `model_flags.json`: a JSON file with keys `feature_sizes`, `frame_features`,
+   and `feature_names`. These must be set to values that would match what can
+   be set in `train.py`. For example, if your model is a frame-level model and
+   expects vision and audio features (in that order), then the contents of
+   `model_flags.json` can be:
+
+       {"feature_sizes":"1024,128", "frame_features":true, "feature_names":"rgb,audio"}
+
+* files `inference_model.data-00000-of-00001`, `inference_model.index`, and
+  `inference_model.meta`, which should be loadable as a
+  [TensorFlow
+  MetaGraph](https://www.tensorflow.org/api_guides/python/meta_graph).
 
 ## About This Project
 This project is meant help people quickly get started working with the
