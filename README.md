@@ -279,11 +279,8 @@ Free memory: 11.09GiB
 
 If at least one GPU was found, the forward and backward passes will be computed
 with the GPUs, whereas the CPU will be used primarily for the input and output
-pipelines. If you have multiple GPUs, each of them will be given a full batch
-of examples, and the resulting gradients will be summed together before being
-applied. This will increase your effective batch size. For example, if you set
-`batch_size=128` and you have 4 GPUs, this will result in 512 examples being
-evaluated every training step.
+pipelines. If you have multiple GPUs, the current default behavior is to use
+only one of them.
 
 ### Ground-Truth Label Files
 
