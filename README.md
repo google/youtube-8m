@@ -87,13 +87,13 @@ git clone https://github.com/samihaija/youtube-8m.git
 
 #### Train video-level model
 ```
-python train.py --feature_names='mean_rgb,mean_audio' --feature_sizes='1024,128' --train_data_pattern ~/yt8m/v2/video/train*.tfrecord --train_dir ~/yt8m/v2/models/video/sample_model --start_new_model
+python train.py --feature_names='mean_rgb,mean_audio' --feature_sizes='1024,128' --train_data_pattern=${HOME}/yt8m/v2/video/train*.tfrecord --train_dir ~/yt8m/v2/models/video/sample_model --start_new_model
 ```
 The `--start_new_model` flag will re-train from scratch. If you want to continue
 training from the `train_dir`, drop this flag. After training, you can evaluate
 the model on the validation split:
 ```
-python eval.py --eval_data_pattern ~/yt8m/v2/video/validate*.tfrecord --train_dir ~/yt8m/v2/models/video/sample_model
+python eval.py --eval_data_pattern=${HOME}/yt8m/v2/video/validate*.tfrecord --train_dir ~/yt8m/v2/models/video/sample_model
 ```
 
 Note: Above binary runs "forever" (i.e. keeps watching for updated model
@@ -107,7 +107,7 @@ If you are competing on Kaggle, you should do inference outputing a CSV (e.g.
 naming file as `kaggle_solution.csv`):
 
 ```
-python inference.py --train_dir ~/yt8m/v2/models/video/sample_model  --output_file=kaggle_solution.csv --input_data_pattern ~/yt8m/v2/video/test*.tfrecord
+python inference.py --train_dir ~/yt8m/v2/models/video/sample_model  --output_file=kaggle_solution.csv --input_data_pattern=${HOME}/yt8m/v2/video/test*.tfrecord
 ```
 Then, upload `kaggle_solution.csv` to Kaggle. In addition, if you would like to
 be considered for the prize, then your model checkpoint must be under 1
@@ -116,7 +116,7 @@ upload their model files (only the graph and checkpoint, without code) as we
 want to verify that their model is small. You can bundle your model in a `.tgz`
 file by passing the `--output_model_tgz` flag. For example
 ```
-python inference.py --train_dir ~/yt8m/v2/models/video/sample_model  --output_file=kaggle_solution.csv --input_data_pattern ~/yt8m/v2/video/test*.tfrecord --output_model_tgz=my_model.tgz
+python inference.py --train_dir ~/yt8m/v2/models/video/sample_model  --output_file=kaggle_solution.csv --input_data_pattern=${HOME}/yt8m/v2/video/test*.tfrecord --output_model_tgz=my_model.tgz
 ```
 then upload `my_model.tgz` to Kaggle.
 
@@ -126,17 +126,17 @@ Train using `train.py`, selecting a frame-level model (e.g.
 `--frame_features`. TLDR - frame-level features are compressed, and this flag
 uncompresses them.
 ```
-python train.py --frame_features --model=FrameLevelLogisticModel --feature_names='rgb,audio' --feature_sizes='1024,128' --train_data_pattern ~/yt8m/v2/frame/train*.tfrecord --train_dir ~/yt8m/v2/models/frame/sample_model --start_new_model
+python train.py --frame_features --model=FrameLevelLogisticModel --feature_names='rgb,audio' --feature_sizes='1024,128' --train_data_pattern=${HOME}/yt8m/v2/frame/train*.tfrecord --train_dir ~/yt8m/v2/models/frame/sample_model --start_new_model
 ```
 
 Evaluate the model
 ```
-python eval.py --eval_data_pattern ~/yt8m/v2/frame/validate*.tfrecord --train_dir ~/yt8m/v2/models/frame/sample_model
+python eval.py --eval_data_pattern=${HOME}/yt8m/v2/frame/validate*.tfrecord --train_dir ~/yt8m/v2/models/frame/sample_model
 ```
 
 Produce CSV (`kaggle_solution.csv`) by doing inference:
 ```
-python inference.py --train_dir ~/yt8m/v2/models/frame/sample_model --output_file=kaggle_solution.csv --input_data_pattern ~/yt8m/v2/frame/test*.tfrecord
+python inference.py --train_dir ~/yt8m/v2/models/frame/sample_model --output_file=kaggle_solution.csv --input_data_pattern=${HOME}/yt8m/v2/frame/test*.tfrecord
 ```
 Similar to above, you can tar your model by appending flag
 `--output_model_tgz=my_model.tgz`.
