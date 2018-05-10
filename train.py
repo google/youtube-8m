@@ -65,6 +65,9 @@ if __name__ == "__main__":
       " new model instance.")
 
   # Training flags.
+  flags.DEFINE_integer("num_gpu", 1,
+                       "The maximum number of GPU devices to use for training. "
+                       "Flag only applies if GPUs are installed")
   flags.DEFINE_integer("batch_size", 1024,
                        "How many examples to process per batch for training.")
   flags.DEFINE_string("label_loss", "CrossEntropyLoss",
@@ -220,6 +223,7 @@ def build_graph(reader,
 
   local_device_protos = device_lib.list_local_devices()
   gpus = [x.name for x in local_device_protos if x.device_type == 'GPU']
+  gpus = gpus[:FLAGS.num_gpu]
   num_gpus = len(gpus)
 
   if num_gpus > 0:
