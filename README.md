@@ -150,6 +150,9 @@ model!
 To download the entire dataset, repeat the above download.py commands, dropping
 the `shard` variable. You can download the video-level training set with:
 
+```
+curl data.yt8m.org/download.py | partition=2/video/train mirror=us python
+```
 
 This will download all of the video-level training set from the US mirror,
 occupying 18GB of space. If you are located outside of North America, you should
