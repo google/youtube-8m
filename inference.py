@@ -193,9 +193,7 @@ def main(unused_argv):
       raise ValueError("You cannot supply --train_dir if supplying "
                        "--input_model_tgz")
     # Untar.
-    if os.path.exists(FLAGS.untar_model_dir):
-      os.rmdir(FLAGS.untar_model_dir)
-    os.makedirs(FLAGS.untar_model_dir)
+    os.makedirs(FLAGS.untar_model_dir, exist_ok=True)
     tarfile.open(FLAGS.input_model_tgz).extractall(FLAGS.untar_model_dir)
     FLAGS.train_dir = FLAGS.untar_model_dir
 
