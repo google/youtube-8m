@@ -51,7 +51,7 @@ python -c 'import tensorflow as tf; print(tf.__version__)'
 You can find complete instructions for downloading the dataset on the
 [YouTube-8M website](https://research.google.com/youtube8m/download.html).
 We recommend you start with a small subset of the dataset, and download more as
-you need. For example, you can download 100th of the video-level and frame-level
+you need. For example, you can download 1/100th of the video-level and frame-level
 features as:
 
 ```
