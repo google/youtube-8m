@@ -402,6 +402,15 @@ must contain these 4 files at minumum:
   [TensorFlow
   MetaGraph](https://www.tensorflow.org/api_guides/python/meta_graph).
 
+To verify that you correctly generated the `.tgz` file, run it with
+inference.py:
+
+```
+python inference.py --input_model_tgz=/path/to/your.tgz --output_file=kaggle_solution.csv --input_data_pattern=${HOME}/yt8m/v2/video/test*.tfrecord
+```
+
+Make sure to replace `video` with `frame`, if your model is a frame-level model.
+
 ## About This Project
 This project is meant help people quickly get started working with the
 [YouTube-8M](https://research.google.com/youtube8m/) dataset.
