@@ -1,4 +1,4 @@
-# Copyright 2016 Google Inc. All Rights Reserved.
+# Copyright 2017 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -83,7 +83,7 @@ def format_lines(video_ids, predictions, top_k):
             for class_index in top_indices]
     line = sorted(line, key=lambda p: -p[1])
     yield video_ids[video_index].decode('utf-8') + "," + " ".join(
-        "%i" % label for (label, _) in line) + "\n"
+        "%i:%g" % (label, score) for (label, score) in line) + "\n"
 
 
 def get_input_data_tensors(reader, data_pattern, batch_size, num_readers=1):
@@ -162,7 +162,7 @@ def inference(reader, train_dir, data_pattern, out_file_location, batch_size, to
     threads = tf.train.start_queue_runners(sess=sess, coord=coord)
     num_examples_processed = 0
     start_time = time.time()
-    out_file.write("VideoId,Labels\n")
+    out_file.write("VideoId,LabelScorePairs\n")
 
     try:
       while not coord.should_stop():
@@ -193,7 +193,8 @@ def main(unused_argv):
       raise ValueError("You cannot supply --train_dir if supplying "
                        "--input_model_tgz")
     # Untar.
-    os.makedirs(FLAGS.untar_model_dir, exist_ok=True)
+    if not os.path.exists(FLAGS.untar_model_dir):
+      os.makedirs(FLAGS.untar_model_dir)
     tarfile.open(FLAGS.input_model_tgz).extractall(FLAGS.untar_model_dir)
     FLAGS.train_dir = FLAGS.untar_model_dir
 
