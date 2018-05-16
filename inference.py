@@ -162,7 +162,7 @@ def inference(reader, train_dir, data_pattern, out_file_location, batch_size, to
     threads = tf.train.start_queue_runners(sess=sess, coord=coord)
     num_examples_processed = 0
     start_time = time.time()
-    out_file.write("VideoId,LabelScorePairs\n")
+    out_file.write("VideoId,LabelConfidencePairs\n")
 
     try:
       while not coord.should_stop():
