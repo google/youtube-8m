@@ -120,7 +120,7 @@ python inference.py --train_dir ~/yt8m/v2/models/video/sample_model  --output_fi
 ```
 Then, upload `kaggle_solution.csv` to Kaggle. In addition, if you would like to
 be considered for the prize, then your model checkpoint must be under 1
-Gigabyte. We ask the top 10 competitors (based on the public leaderboard) to
+Gigabyte. We ask all competitors to
 upload their model files (only the graph and checkpoint, without code) as we
 want to verify that their model is small. You can bundle your model in a `.tgz`
 file by passing the `--output_model_tgz` flag. For example
