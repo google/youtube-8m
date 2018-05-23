@@ -67,16 +67,16 @@ features as:
 # Video-level
 mkdir -p ~/yt8m/v2/video
 cd ~/yt8m/v2/video
-curl data.yt8m.org/download.py | shard=1,100 partition=2/video/train mirror=us python
-curl data.yt8m.org/download.py | shard=1,100 partition=2/video/validate mirror=us python
-curl data.yt8m.org/download.py | shard=1,100 partition=2/video/test mirror=us python
+curl storage.googleapis.com/data.yt8m.org/download_fix.py | shard=1,100 partition=2/video/train mirror=us python
+curl storage.googleapis.com/data.yt8m.org/download_fix.py | shard=1,100 partition=2/video/validate mirror=us python
+curl storage.googleapis.com/data.yt8m.org/download_fix.py | shard=1,100 partition=2/video/test mirror=us python
 
 # Frame-level
 mkdir -p ~/yt8m/v2/frame
 cd ~/yt8m/v2/frame
-curl data.yt8m.org/download.py | shard=1,100 partition=2/frame/train mirror=us python
-curl data.yt8m.org/download.py | shard=1,100 partition=2/frame/validate mirror=us python
-curl data.yt8m.org/download.py | shard=1,100 partition=2/frame/test mirror=us python
+curl storage.googleapis.com/data.yt8m.org/download_fix.py | shard=1,100 partition=2/frame/train mirror=us python
+curl storage.googleapis.com/data.yt8m.org/download_fix.py | shard=1,100 partition=2/frame/validate mirror=us python
+curl storage.googleapis.com/data.yt8m.org/download_fix.py | shard=1,100 partition=2/frame/test mirror=us python
 
 ```
 
@@ -160,7 +160,7 @@ To download the entire dataset, repeat the above download.py commands, dropping
 the `shard` variable. You can download the video-level training set with:
 
 ```
-curl data.yt8m.org/download.py | partition=2/video/train mirror=us python
+curl storage.googleapis.com/data.yt8m.org/download_fix.py | partition=2/video/train mirror=us python
 ```
 
 This will download all of the video-level training set from the US mirror,
