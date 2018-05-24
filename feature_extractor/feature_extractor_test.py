@@ -13,12 +13,12 @@
 # limitations under the License.
 """Tests for feature_extractor."""
 
-import pickle
 import json
 import os
 import feature_extractor
 import numpy
 from PIL import Image
+from six.moves import cPickle
 from tensorflow.python.platform import googletest
 
 
