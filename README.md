@@ -156,7 +156,7 @@ Now that you've downloaded a fraction and the code works, you are all set to
 download the entire dataset and come up with the next best video classification
 model!
 
-To download the entire dataset, repeat the above download.py commands, dropping
+To download the entire dataset, repeat the above `download.py` commands, dropping
 the `shard` variable. You can download the video-level training set with:
 
 ```
@@ -298,7 +298,7 @@ only one of them.
 
 We also provide CSV files containing the ground-truth label information of the
 'train' and 'validation' partitions of the dataset. These files can be
-downloaded using 'gsutil' command:
+downloaded using `gsutil` command:
 
 ```
 gsutil cp gs://us.data.yt8m.org/2/ground_truth_labels/train_labels.csv /destination/folder/
@@ -337,7 +337,7 @@ python -c 'import tensorflow as tf; print(tf.__version__)'
 ### Testing Locally
 All gcloud commands should be done from the directory *immediately above* the
 source code. You should be able to see the source code directory if you
-run 'ls'.
+run `ls`.
 
 As you are developing your own models, you will want to test them
 quickly to flush out simple problems without having to submit them to the cloud.
@@ -361,7 +361,7 @@ training data files to the current directory.
 gsutil cp gs://us.data.yt8m.org/2/video/train/traina[0-9].tfrecord .
 ```
 Once you download the files, you can point the job to them using the
-'train_data_pattern' argument (i.e. instead of pointing to the "gs://..."
+`train_data_pattern` argument (i.e. instead of pointing to the "gs://..."
 files, you point to the local files).
 
 Once your model is working locally, you can scale up on the Cloud
@@ -387,8 +387,8 @@ submit training $JOB_NAME \
 --train_dir=$BUCKET_NAME/yt8m_train_video_level_logistic_model
 ```
 
-In the 'gsutil' command above, the 'package-path' flag refers to the directory
-containing the 'train.py' script and more generally the python package which
+In the `gsutil` command above, the 'package-path' flag refers to the directory
+containing the `train.py` script and more generally the python package which
 should be deployed to the cloud worker. The module-name refers to the specific
 python script which should be executed (in this case the train module).
 
@@ -415,8 +415,8 @@ tensorboard --logdir=$BUCKET_NAME --port=8080
 
 Once tensorboard is running, you can access it at the following url:
 [http://localhost:8080](http://localhost:8080).
-If you are using Google Cloud Shell, you can instead click the Web Preview button
-on the upper left corner of the Cloud Shell window and select "Preview on port 8080".
+If you are using Google Cloud Shell, you can instead click the `Web Preview` button
+on the upper left corner of the Cloud Shell window and select `Preview on port 8080`.
 This will bring up a new browser tab with the Tensorboard view.
 
 ### Evaluation and Inference
@@ -448,8 +448,8 @@ submit training $JOB_NAME \
 --output_file=$BUCKET_NAME/${JOB_TO_EVAL}/predictions.csv
 ```
 
-Note the confusing use of 'training' in the above gcloud commands. Despite the
-name, the 'training' argument really just offers a cloud hosted
+Note the confusing use of `training` in the above gcloud commands. Despite the
+name, the `training` argument really just offers a cloud hosted
 python/tensorflow service. From the point of view of the Cloud Platform, there
 is no distinction between our training and inference jobs. The Cloud ML platform
 also offers specialized functionality for prediction with
@@ -474,7 +474,7 @@ You can browse the storage buckets you created on Google Cloud, for example, to
 access the trained models, prediction CSV files, etc. by visiting the
 [Google Cloud storage browser](https://console.cloud.google.com/storage/browser).
 
-Alternatively, you can use the 'gsutil' command to download the files directly.
+Alternatively, you can use the `gsutil` command to download the files directly.
 For example, to download the output of the inference code from the previous
 section to your local machine, run:
 
@@ -492,7 +492,7 @@ Append
 --train_dir=$BUCKET_NAME/yt8m_train_frame_level_logistic_model
 ```
 
-to the 'gcloud' training command given above, and change 'video' in paths to
+to the `gcloud` training command given above, and change 'video' in paths to
 'frame'. Here is a sample command to kick-off a frame-level job:
 
 ```sh
@@ -509,7 +509,7 @@ submit training $JOB_NAME \
 
 The 'FrameLevelLogisticModel' is designed to provide equivalent results to a
 logistic model trained over the video-level features. Please look at the
-'video_level_models.py' or 'frame_level_models.py' files to see how to implement
+`video_level_models.py` or `frame_level_models.py` files to see how to implement
 your own models.
 
 
