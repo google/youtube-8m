@@ -94,7 +94,7 @@ cd ~/yt8m/code
 git clone https://github.com/google/youtube-8m.git
 ```
 
-#### Train video-level model
+#### Training on Video-Level Features
 ```
 python train.py --feature_names='mean_rgb,mean_audio' --feature_sizes='1024,128' --train_data_pattern=${HOME}/yt8m/v2/video/train*.tfrecord --train_dir ~/yt8m/v2/models/video/sample_model --start_new_model
 ```
