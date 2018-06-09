@@ -19,7 +19,6 @@ import tarfile
 import numpy
 from six.moves import urllib
 import tensorflow as tf
-import time
 
 INCEPTION_TF_GRAPH = 'http://download.tensorflow.org/models/image/imagenet/inception-2015-12-05.tgz'
 YT8M_PCA_MAT = 'http://data.yt8m.org/yt8m_pca.tgz'
@@ -152,8 +151,7 @@ class YouTube8MFeatureExtractor(object):
       Pca_Eigenvals = tf.constant(value=self.pca_eigenvals, dtype=tf.float32)
       Feats = Frame_Features[0] - Pca_Mean
       Feats = tf.reshape(tf.matmul(tf.reshape(Feats, [1, 2048]), Pca_Eigenvecs), [1024, ])
-      Feats = tf.divide(Feats, tf.sqrt(Pca_Eigenvals + 1e-4), name='pca_final_feature')
-      print Feats.name
+      tf.divide(Feats, tf.sqrt(Pca_Eigenvals + 1e-4), name='pca_final_feature')
 
   def _load_pca(self):
     self.pca_mean = numpy.load(
