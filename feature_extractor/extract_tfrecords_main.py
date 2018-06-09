@@ -25,8 +25,11 @@ The binary only processes the video stream (images) and not the audio stream.
 """
 
 import csv
+import io
 import os
+import re
 import sys
+import tempfile
 
 import cv2
 import feature_extractor
@@ -34,6 +37,9 @@ import numpy
 import tensorflow as tf
 from tensorflow import app
 from tensorflow import flags
+
+from apis import GoogleCloudStorageClient
+import tempfile
 
 FLAGS = flags.FLAGS
 
@@ -47,7 +53,8 @@ if __name__ == '__main__':
                       'File containing tfrecords will be written at this path.')
   flags.DEFINE_string('input_videos_csv', None,
                       'CSV file with lines "<video_file>,<labels>", where '
-                      '<video_file> must be a path of a video and <labels> '
+                      '<video_file> must be a path of a video with format '
+                      'gs://<bucket>/<object_name> and <labels> '
                       'must be an integer list joined with semi-colon ";"')
   # Optional flags.
   flags.DEFINE_string('model_dir', os.path.join(os.getenv('HOME'), 'yt8m'),
@@ -74,6 +81,9 @@ if __name__ == '__main__':
                        'pre-trained model.')
 
 
+gs_path_ptn = re.compile(r"gs://([^/]+)/(.+)")
+
+
 def frame_iterator(filename, every_ms=1000, max_num_frames=300):
   """Uses OpenCV to iterate over all frames of filename at a given frequency.
 
@@ -86,25 +96,37 @@ def frame_iterator(filename, every_ms=1000, max_num_frames=300):
   Yields:
     RGB frame with shape (image height, image width, channels)
   """
-  video_capture = cv2.VideoCapture()
-  if not video_capture.open(filename):
-    print >> sys.stderr, 'Error: Cannot open video file ' + filename
+  path = gs_path_ptn.findall(filename)
+
+  if not path:
     return
-  last_ts = -99999  # The timestamp of last retrieved frame.
-  num_retrieved = 0
+  
+  bucket, name = path[0]
 
-  while num_retrieved < max_num_frames:
-    # Skip frames
-    while video_capture.get(CAP_PROP_POS_MSEC) < every_ms + last_ts:
-      if not video_capture.read()[0]:
-        return
+  with tempfile.NamedTemporaryFile() as tmp:
+    media = GoogleCloudStorageClient.get_client().get_media(bucket, name)
+    tmp.write(media)
+    tmp.flush()
 
-    last_ts = video_capture.get(CAP_PROP_POS_MSEC)
-    has_frames, frame = video_capture.read()
-    if not has_frames:
-      break
-    yield frame
-    num_retrieved += 1
+    video_capture = cv2.VideoCapture()
+    if not video_capture.open(tmp.name):
+      print >> sys.stderr, 'Error: Cannot open video file ' + filename
+      return
+    last_ts = -99999  # The timestamp of last retrieved frame.
+    num_retrieved = 0
+
+    while num_retrieved < max_num_frames:
+      # Skip frames
+      while video_capture.get(CAP_PROP_POS_MSEC) < every_ms + last_ts:
+        if not video_capture.read()[0]:
+          return
+
+      last_ts = video_capture.get(CAP_PROP_POS_MSEC)
+      has_frames, frame = video_capture.read()
+      if not has_frames:
+        break
+      yield frame
+      num_retrieved += 1
 
 
 def _int64_list_feature(int64_list):
@@ -161,8 +183,8 @@ def main(unused_argv):
 
     example = tf.train.SequenceExample(
         context=tf.train.Features(feature={
-            FLAGS.labels_feature_key:
-                _int64_list_feature(sorted(map(int, labels.split(';')))),
+            #FLAGS.labels_feature_key:
+            #    _int64_list_feature(sorted(map(int, labels.split(';')))),
             FLAGS.video_file_key_feature_key:
                 _bytes_feature(_make_bytes(map(ord, video_file))),
         }),
