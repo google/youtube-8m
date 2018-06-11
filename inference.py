@@ -19,10 +19,15 @@ import glob
 import json
 import tarfile
 import time
+import sys
+
+# Explicitly add the file's directory to the path list.
+file_dir = os.path.dirname(__file__)
+sys.path.append(file_dir)
 
 import numpy
 import tensorflow as tf
-
+from tensorflow.python.lib.io import file_io
 from tensorflow import app
 from tensorflow import flags
 from tensorflow import gfile
@@ -83,7 +88,7 @@ def format_lines(video_ids, predictions, top_k):
             for class_index in top_indices]
     line = sorted(line, key=lambda p: -p[1])
     yield video_ids[video_index].decode('utf-8') + "," + " ".join(
-        "%i %g" % (label, score) for (label, score) in line) + "\n"
+        "%i:%g" % (label, score) for (label, score) in line) + "\n"
 
 
 def get_input_data_tensors(reader, data_pattern, batch_size, num_readers=1):
@@ -199,9 +204,9 @@ def main(unused_argv):
     FLAGS.train_dir = FLAGS.untar_model_dir
 
   flags_dict_file = os.path.join(FLAGS.train_dir, "model_flags.json")
-  if not os.path.exists(flags_dict_file):
+  if not file_io.get_matching_files(flags_dict_file):
     raise IOError("Cannot find %s. Did you run eval.py?" % flags_dict_file)
-  flags_dict = json.loads(open(flags_dict_file).read())
+  flags_dict = json.loads(file_io.FileIO(flags_dict_file, "r").read())
 
   # convert feature_names and feature_sizes to lists of values
   feature_names, feature_sizes = utils.GetListOfFeatureNamesAndSizes(
