@@ -24,7 +24,7 @@ import frame_level_models
 import video_level_models
 import readers
 import tensorflow as tf
-import tensorflow.python.lib.io.file_io as file_io
+from tensorflow.python.lib.io import file_io
 from tensorflow import app
 from tensorflow import flags
 from tensorflow import gfile
