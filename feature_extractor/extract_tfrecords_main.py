@@ -63,7 +63,7 @@ if __name__ == '__main__':
                       'Image features will be written to sequence feature with '
                       'this key, as bytes list feature, with only one entry, '
                       'containing quantized feature string.')
-  flags.DEFINE_string('video_file_key_feature_key', 'video_id',
+  flags.DEFINE_string('video_file_feature_key', 'id',
                       'Input <video_file> will be written to context feature '
                       'with this key, as bytes list feature, with only one '
                       'entry, containing the file path of the video. This '
@@ -163,7 +163,7 @@ def main(unused_argv):
         context=tf.train.Features(feature={
             FLAGS.labels_feature_key:
                 _int64_list_feature(sorted(map(int, labels.split(';')))),
-            FLAGS.video_file_key_feature_key:
+            FLAGS.video_file_feature_key:
                 _bytes_feature(_make_bytes(map(ord, video_file))),
         }),
         feature_lists=tf.train.FeatureLists(feature_list=feature_list))
