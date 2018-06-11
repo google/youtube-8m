@@ -24,6 +24,7 @@ import frame_level_models
 import video_level_models
 import readers
 import tensorflow as tf
+from tensorflow.python.lib.io import file_io
 from tensorflow import app
 from tensorflow import flags
 from tensorflow import gfile
@@ -155,7 +156,7 @@ def build_graph(reader,
 
 
 def get_latest_checkpoint():
-  index_files = glob.glob(os.path.join(FLAGS.train_dir, 'model.ckpt-*.index'))
+  index_files = file_io.get_matching_files(os.path.join(FLAGS.train_dir, 'model.ckpt-*.index'))
 
   # No files
   if not index_files:
@@ -281,10 +282,10 @@ def evaluate():
 
   # Write json of flags
   model_flags_path = os.path.join(FLAGS.train_dir, "model_flags.json")
-  if not os.path.exists(model_flags_path):
+  if not file_io.file_exists(model_flags_path):
     raise IOError(("Cannot find file %s. Did you run train.py on the same "
                    "--train_dir?") % model_flags_path)
-  flags_dict = json.loads(open(model_flags_path).read())
+  flags_dict = json.loads(file_io.FileIO(model_flags_path, mode="r").read())
 
   with tf.Graph().as_default():
     # convert feature_names and feature_sizes to lists of values
