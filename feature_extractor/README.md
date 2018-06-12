@@ -39,7 +39,7 @@ to allow for multiple labels per video.
 
 Then, you can create the `tfrecord` by calling the binary:
 
-    python extract_tfrecords_main.py --input /path/to/vid_dataset.csv \
+    python extract_tfrecords_main.py --input_videos_csv /path/to/vid_dataset.csv \
         --output_tfrecords_file /path/to/output.tfrecord
 
 Now, you can use the output file for training and/or inference using our starter
