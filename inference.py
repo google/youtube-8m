@@ -19,7 +19,6 @@ import glob
 import json
 import tarfile
 import time
-import sys
 import numpy
 import tensorflow as tf
 from tensorflow.python.lib.io import file_io
