@@ -27,24 +27,34 @@ MODEL_DIR = os.path.join(os.getenv('HOME'), 'yt8m')
 
 class YouTube8MFeatureExtractor(object):
   """Extracts YouTube8M features for RGB frames.
+
   First time constructing this class will create directory `yt8m` inside your
   home directory, and will download inception model (85 MB) and YouTube8M PCA
   matrix (15 MB). If you want to use another directory, then pass it to argument
   `model_dir` of constructor.
+
   If the model_dir exist and contains the necessary files, then files will be
   re-used without download.
+
   Usage Example:
+
       from PIL import Image
       import numpy
+
       # Instantiate extractor. Slow if called first time on your machine, as it
       # needs to download 100 MB.
       extractor = YouTube8MFeatureExtractor()
+
       image_file = os.path.join(extractor._model_dir, 'cropped_panda.jpg')
+
       im = numpy.array(Image.open(image_file))
       features = extractor.extract_rgb_frame_features(im)
+
   ** Note: OpenCV reverses the order of channels (i.e. orders channels as BGR
   instead of RGB). If you are using OpenCV, then you must do:
+
       im = im[:, :, ::-1]  # Reverses order on last (i.e. channel) dimension.
+
   then call `extractor.extract_rgb_frame_features(im)`
   """
 
@@ -73,13 +83,16 @@ class YouTube8MFeatureExtractor(object):
 
   def extract_rgb_frame_features(self, frame_rgb, apply_pca=True):
     """Applies the YouTube8M feature extraction over an RGB frame.
+
     This passes `frame_rgb` to inception3 model, extracting hidden layer
     activations and passing it to the YouTube8M PCA transformation.
+
     Args:
       frame_rgb: numpy array of uint8 with shape (height, width, channels) where
         channels must be 3 (RGB), and height and weight can be anything, as the
         inception model will resize.
       apply_pca: If not set, PCA transformation will be skipped.
+
     Returns:
       Output of inception from `frame_rgb` (2048-D) and optionally passed into
       YouTube8M PCA transformation (1024-D).
@@ -89,24 +102,19 @@ class YouTube8MFeatureExtractor(object):
     with self._inception_graph.as_default():
       if apply_pca:
         frame_features = self.session.run('pca_final_feature:0',
-<<<<<<< HEAD
                                         feed_dict={'DecodeJpeg:0': frame_rgb})
       else:
         frame_features = self.session.run('pool_3/_reshape:0',
                                         feed_dict={'DecodeJpeg:0': frame_rgb})
-=======
-                                        feed_dict={'DecodeJpeg:0': frame_rgb})
-      else:
-        frame_features = self.session.run('pool_3/_reshape:0',
-                                        feed_dict={'DecodeJpeg:0': frame_rgb})
->>>>>>> 2327d4051d3991c9ba67179a555bc2a2d4340345
         frame_features = frame_features[0]
     return frame_features
 
   def apply_pca(self, frame_features):
     """Applies the YouTube8M PCA Transformation over `frame_features`.
+
     Args:
       frame_features: numpy array of floats, 2048 dimensional vector.
+
     Returns:
       1024 dimensional vector as a numpy array.
     """
