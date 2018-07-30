@@ -83,7 +83,7 @@ curl data.yt8m.org/download.py | shard=1,100 partition=2/frame/test mirror=us py
 Note: this readme will assume the directory `~/yt8m` for storing the dataset,
 code, and trained models. However, you can use another directory path.
 Nonetheless, you might find it convenient to simlink that directory to `~/yt8m`
-so that you can copy the commands from this page onto your terminal.
+so that you can copy the commands from this page onto your terminal. If you are located outside of North America, you should change the flag 'mirror' to 'eu' for Europe or 'asia' for Asia to speed up the transfer of the files.
 
 ### Try the starter code
 
