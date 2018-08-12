@@ -5,7 +5,7 @@ eval_path=$HOME/datasets/competitions/yt8m/2/val
 test_path=/media/linrongc/dream/data/yt8m/2/frame/test
 
 model_name=MixNeXtVladModel
-parameters="--nextvlad_cluster_size=128 --nextvlad_hidden_size=2048 \
+parameters="--groups=8 --nextvlad_cluster_size=128 --nextvlad_hidden_size=2048 \
             --expansion=2 --gating_reduction=8  --drop_rate=0.5 \
             --mix_number=3 --cl_temperature=3 --cl_lambda=9"
 

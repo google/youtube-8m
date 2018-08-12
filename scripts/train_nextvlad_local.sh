@@ -5,7 +5,7 @@ eval_path=$HOME/datasets/competitions/yt8m/2/val
 test_path=/media/linrongc/dream/data/yt8m/2/frame/test
 
 model_name=NeXtVLADModel
-parameters="--nextvlad_cluster_size=128 --nextvlad_hidden_size=2048 \
+parameters="--groups=8 --nextvlad_cluster_size=128 --nextvlad_hidden_size=2048 \
             --expansion=2 --gating_reduction=8 --drop_rate=0.5"
 
 train_dir=nextvlad_8g_5l2_5drop_128k_2048_2x80_logistic
