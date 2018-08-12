@@ -9,3 +9,4 @@ To reproduce the final submission experiments:
 ```bash
 bash scripts/train_mix_nextvlad_final_submission.sh
 ```
+# Don't forget to change the data paths!
