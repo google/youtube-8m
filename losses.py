@@ -43,7 +43,7 @@ class CrossEntropyLoss(BaseLoss):
 
   def calculate_loss(self, predictions, labels, **unused_params):
     with tf.name_scope("loss_xent"):
-      epsilon = 10e-6
+      epsilon = 1e-8
       float_labels = tf.cast(labels, tf.float32)
       cross_entropy_loss = float_labels * tf.log(predictions + epsilon) + (
           1 - float_labels) * tf.log(1 - predictions + epsilon)
@@ -84,7 +84,7 @@ class SoftmaxLoss(BaseLoss):
 
   def calculate_loss(self, predictions, labels, **unused_params):
     with tf.name_scope("loss_softmax"):
-      epsilon = 10e-8
+      epsilon = 1e-8
       float_labels = tf.cast(labels, tf.float32)
       # l1 normalization (labels are no less than 0)
       label_rowsum = tf.maximum(

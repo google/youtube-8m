@@ -204,7 +204,7 @@ def combine_gradients(tower_grads):
   for i in xrange(len(filtered_grads[0])):
     grads = [filtered_grads[t][i] for t in xrange(len(filtered_grads))]
     grad = tf.stack([x[0] for x in grads], 0)
-    grad = tf.reduce_sum(grad, 0)
+    grad = tf.reduce_mean(grad, 0)
     final_grads.append((grad, filtered_grads[0][i][1],))
 
   return final_grads
