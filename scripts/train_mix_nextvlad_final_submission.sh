@@ -20,7 +20,7 @@ echo "data path: " $datapath
 echo "evaluation path: " $eval_path
 echo "results folder: " $result_folder
 
-python train.py ${parameters} --model=${model_name} --num_readers=8 --learning_rate_decay_examples 2000000 \
+python train.py ${parameters} --model=${model_name} --num_readers=8 --learning_rate_decay_examples 2500000 --num_epochs=15\
                 --video_level_classifier_model=LogisticModel --label_loss=CrossEntropyLoss --start_new_model=False \
                 --train_data_pattern=${datapath}/[tv][ar]*/[tv]*.tfrecord --train_dir=${train_dir} --frame_features=True \
                 --feature_names="rgb,audio" --feature_sizes="1024,128" --batch_size=80 --base_learning_rate=0.0002 \
