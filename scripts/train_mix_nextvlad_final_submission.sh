@@ -5,11 +5,11 @@ eval_path=$HOME/datasets/competitions/yt8m/2/val
 test_path=/media/linrongc/dream/data/yt8m/2/frame/test
 
 model_name=MixNeXtVladModel
-parameters="--groups=8 --nextvlad_cluster_size=128 --nextvlad_hidden_size=2048 \
-            --expansion=2 --gating_reduction=8  --drop_rate=0.5 \
+parameters="--groups=8 --nextvlad_cluster_size=112 --nextvlad_hidden_size=2048 \
+            --expansion=2 --gating_reduction=16  --drop_rate=0.5 \
             --mix_number=3 --cl_temperature=3 --cl_lambda=9"
 
-train_dir=mix3_nextvlad_3T_8g_5l2_5drop_128k_2048_2x80_logistic
+train_dir=mix3_nextvlad_3T_8g_5l2_5drop_112k_2048_2x80_logistic
 result_folder=results
 
 echo "model name: " $model_name

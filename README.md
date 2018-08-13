@@ -19,3 +19,6 @@ The parameters of the model can be adjusted by modifying the bash scripts.
 
 I have some modification on the train.py, eval.py and utils.py. If you plan to incorporate the solution 
 into your own framework, don't forget those either.
+
+The solution is based on the Youtube-8M Tensorflow Starter Code. Please refer to YOUTUBE8M_README.md or https://github.com/google/youtube-8m
+for more details!
