@@ -22,3 +22,24 @@ into your own framework, don't forget those either.
 
 The solution is based on the Youtube-8M Tensorflow Starter Code. Please refer to YOUTUBE8M_README.md or https://github.com/google/youtube-8m
 for more details!
+
+Our implementation is based on the code from Willow, who is the winner of fist Youtube8M competition
+(https://github.com/antoine77340/Youtube-8M-WILLOW)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
