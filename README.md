@@ -20,11 +20,12 @@ The parameters of the model can be adjusted by modifying the bash scripts.
 I have some modification on the train.py, eval.py and utils.py. If you plan to incorporate the solution 
 into your own framework, don't forget those either.
 
-The solution is based on the Youtube-8M Tensorflow Starter Code. Please refer to YOUTUBE8M_README.md or https://github.com/google/youtube-8m
+The solution is based on the Youtube-8M Tensorflow Starter Code and the code from Willow, who is the winner of fist Youtube8M competition. 
+Please refer to YOUTUBE8M_README.md or (https://github.com/google/youtube-8m) and (https://github.com/antoine77340/Youtube-8M-WILLOW)
 for more details!
 
-Our implementation is based on the code from Willow, who is the winner of fist Youtube8M competition
-(https://github.com/antoine77340/Youtube-8M-WILLOW)
+
+
 
 
 
