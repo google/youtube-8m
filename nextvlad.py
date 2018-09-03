@@ -147,7 +147,7 @@ class NeXtVLADModel(models.BaseModel):
             scope="hidden1_bn",
             fused=False)
 
-        activation = tf.nn.relu(activation)
+        # activation = tf.nn.relu(activation)
 
         gating_weights_1 = tf.get_variable("gating_weights_1",
                                            [hidden1_size, hidden1_size // gating_reduction],
