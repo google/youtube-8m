@@ -17,7 +17,7 @@ The parameters of the model can be adjusted by modifying the bash scripts.
 
 ### Don't forget to change the data paths!
 
-I have some modification on the train.py, eval.py and utils.py. If you plan to incorporate the solution 
+I have some modifications inside the train.py, eval.py and utils.py. If you plan to incorporate the solution 
 into your own framework, don't forget those either.
 
 The solution is based on the Youtube-8M Tensorflow Starter Code and the code from Willow, who is the winner of fist Youtube8M competition. 
