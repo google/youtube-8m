@@ -204,7 +204,7 @@ def evaluation_loop(video_id_batch, prediction_batch, label_batch, loss,
       global_step_val = os.path.basename(latest_checkpoint).split("-")[-1]
 
       # Save model
-      saver.save(sess, os.path.join(FLAGS.train_dir, "inference_model"))
+      saver.save(sess, os.path.join(FLAGS.train_dir, "inference_model", "inference_model"))
     else:
       logging.info("No checkpoint file found.")
       return global_step_val
