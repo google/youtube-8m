@@ -323,7 +323,8 @@ def evaluate():
 
     saver = tf.train.Saver(tf.global_variables())
     summary_writer = tf.summary.FileWriter(
-        FLAGS.train_dir, graph=tf.get_default_graph())
+        os.path.join(FLAGS.train_dir, "eval"),
+        graph=tf.get_default_graph())
 
     evl_metrics = eval_util.EvaluationMetrics(reader.num_classes, FLAGS.top_k)
 
