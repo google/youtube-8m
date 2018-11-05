@@ -204,7 +204,7 @@ def evaluation_loop(video_id_batch, prediction_batch, label_batch, loss,
       global_step_val = os.path.basename(latest_checkpoint).split("-")[-1]
 
       # Save model
-      saver.save(sess, os.path.join(FLAGS.train_dir, "inference_model"))
+      saver.save(sess, os.path.join(FLAGS.train_dir, "inference_model", "inference_model"))
     else:
       logging.info("No checkpoint file found.")
       return global_step_val
@@ -323,7 +323,8 @@ def evaluate():
 
     saver = tf.train.Saver(tf.global_variables())
     summary_writer = tf.summary.FileWriter(
-        FLAGS.train_dir, graph=tf.get_default_graph())
+        os.path.join(FLAGS.train_dir, "eval"),
+        graph=tf.get_default_graph())
 
     evl_metrics = eval_util.EvaluationMetrics(reader.num_classes, FLAGS.top_k)
 
