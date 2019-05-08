@@ -56,6 +56,12 @@ if __name__ == "__main__":
       "Otherwise, --train_data_pattern must be aggregated video-level "
       "features. The model must also be set appropriately (i.e. to read 3D "
       "batches VS 4D batches.")
+  flags.DEFINE_bool(
+      "segment_labels", False,
+      "If set, then --train_data_pattern must be frame-level features (but with"
+      " segment_labels). Otherwise, --train_data_pattern must be aggregated "
+      "video-level features. The model must also be set appropriately (i.e. to "
+      "read 3D batches VS 4D batches.")
   flags.DEFINE_string(
       "model", "LogisticModel",
       "Which architecture to use for the model. Models are defined "
@@ -66,9 +72,9 @@ if __name__ == "__main__":
       " new model instance.")
 
   # Training flags.
-  flags.DEFINE_integer("num_gpu", 1,
-                       "The maximum number of GPU devices to use for training. "
-                       "Flag only applies if GPUs are installed")
+  flags.DEFINE_integer(
+      "num_gpu", 1, "The maximum number of GPU devices to use for training. "
+      "Flag only applies if GPUs are installed")
   flags.DEFINE_integer("batch_size", 1024,
                        "How many examples to process per batch for training.")
   flags.DEFINE_string("label_loss", "CrossEntropyLoss",
@@ -79,20 +85,24 @@ if __name__ == "__main__":
       "a weight of 1).")
   flags.DEFINE_float("base_learning_rate", 0.01,
                      "Which learning rate to start with.")
-  flags.DEFINE_float("learning_rate_decay", 0.95,
-                     "Learning rate decay factor to be applied every "
-                     "learning_rate_decay_examples.")
-  flags.DEFINE_float("learning_rate_decay_examples", 4000000,
-                     "Multiply current learning rate by learning_rate_decay "
-                     "every learning_rate_decay_examples.")
-  flags.DEFINE_integer("num_epochs", 5,
-                       "How many passes to make over the dataset before "
-                       "halting training.")
-  flags.DEFINE_integer("max_steps", None,
-                       "The maximum number of iterations of the training loop.")
-  flags.DEFINE_integer("export_model_steps", 1000,
-                       "The period, in number of steps, with which the model "
-                       "is exported for batch prediction.")
+  flags.DEFINE_float(
+      "learning_rate_decay", 0.95,
+      "Learning rate decay factor to be applied every "
+      "learning_rate_decay_examples.")
+  flags.DEFINE_float(
+      "learning_rate_decay_examples", 4000000,
+      "Multiply current learning rate by learning_rate_decay "
+      "every learning_rate_decay_examples.")
+  flags.DEFINE_integer(
+      "num_epochs", 5, "How many passes to make over the dataset before "
+      "halting training.")
+  flags.DEFINE_integer(
+      "max_steps", None,
+      "The maximum number of iterations of the training loop.")
+  flags.DEFINE_integer(
+      "export_model_steps", 1000,
+      "The period, in number of steps, with which the model "
+      "is exported for batch prediction.")
 
   # Other flags.
   flags.DEFINE_integer("num_readers", 8,
@@ -105,13 +115,14 @@ if __name__ == "__main__":
       "Whether to write the device on which every op will run into the "
       "logs on startup.")
 
+
 def validate_class_name(flag_value, category, modules, expected_superclass):
   """Checks that the given string matches a class of the expected type.
 
   Args:
     flag_value: A string naming the class to instantiate.
-    category: A string used further describe the class in error messages
-              (e.g. 'model', 'reader', 'loss').
+    category: A string used further describe the class in error messages (e.g.
+      'model', 'reader', 'loss').
     modules: A list of modules to search for the given class.
     expected_superclass: A class that the given class should inherit from.
 
@@ -127,11 +138,12 @@ def validate_class_name(flag_value, category, modules, expected_superclass):
     if not candidate:
       continue
     if not issubclass(candidate, expected_superclass):
-      raise flags.FlagsError("%s '%s' doesn't inherit from %s." %
-                             (category, flag_value,
-                              expected_superclass.__name__))
+      raise flags.FlagsError(
+          "%s '%s' doesn't inherit from %s." %
+          (category, flag_value, expected_superclass.__name__))
     return True
   raise flags.FlagsError("Unable to find %s '%s'." % (category, flag_value))
+
 
 def get_input_data_tensors(reader,
                            data_pattern,
@@ -144,8 +156,8 @@ def get_input_data_tensors(reader,
     reader: A class which parses the training data.
     data_pattern: A 'glob' style path to the data files.
     batch_size: How many examples to process at a time.
-    num_epochs: How many passes to make over the training data. Set to 'None'
-                to run indefinitely.
+    num_epochs: How many passes to make over the training data. Set to 'None' to
+      run indefinitely.
     num_readers: How many I/O threads to use.
 
   Returns:
@@ -183,6 +195,7 @@ def find_class_by_name(name, modules):
   modules = [getattr(module, name, None) for module in modules]
   return next(a for a in modules if a)
 
+
 def build_graph(reader,
                 model,
                 train_data_pattern,
@@ -204,37 +217,37 @@ def build_graph(reader,
 
   Args:
     reader: The data file reader. It should inherit from BaseReader.
-    model: The core model (e.g. logistic or neural net). It should inherit
-           from BaseModel.
+    model: The core model (e.g. logistic or neural net). It should inherit from
+      BaseModel.
     train_data_pattern: glob path to the training data files.
     label_loss_fn: What kind of loss to apply to the model. It should inherit
-                from BaseLoss.
+      from BaseLoss.
     batch_size: How many examples to process at a time.
     base_learning_rate: What learning rate to initialize the optimizer with.
     optimizer_class: Which optimization algorithm to use.
     clip_gradient_norm: Magnitude of the gradient to clip to.
     regularization_penalty: How much weight to give the regularization loss
-                            compared to the label loss.
+      compared to the label loss.
     num_readers: How many threads to use for I/O operations.
-    num_epochs: How many passes to make over the data. 'None' means an
-                unlimited number of passes.
+    num_epochs: How many passes to make over the data. 'None' means an unlimited
+      number of passes.
   """
 
   global_step = tf.Variable(0, trainable=False, name="global_step")
 
   local_device_protos = device_lib.list_local_devices()
-  gpus = [x.name for x in local_device_protos if x.device_type == 'GPU']
+  gpus = [x.name for x in local_device_protos if x.device_type == "GPU"]
   gpus = gpus[:FLAGS.num_gpu]
   num_gpus = len(gpus)
 
   if num_gpus > 0:
     logging.info("Using the following GPUs to train: " + str(gpus))
     num_towers = num_gpus
-    device_string = '/gpu:%d'
+    device_string = "/gpu:%d"
   else:
     logging.info("No GPUs found. Training on CPU.")
     num_towers = 1
-    device_string = '/cpu:%d'
+    device_string = "/cpu:%d"
 
   learning_rate = tf.train.exponential_decay(
       base_learning_rate,
@@ -242,16 +255,20 @@ def build_graph(reader,
       learning_rate_decay_examples,
       learning_rate_decay,
       staircase=True)
-  tf.summary.scalar('learning_rate', learning_rate)
+  tf.summary.scalar("learning_rate", learning_rate)
 
   optimizer = optimizer_class(learning_rate)
-  unused_video_id, model_input_raw, labels_batch, num_frames = (
+  input_data_dict = (
       get_input_data_tensors(
           reader,
           train_data_pattern,
           batch_size=batch_size * num_towers,
           num_readers=num_readers,
           num_epochs=num_epochs))
+  model_input_raw = input_data_dict["video_matrix"]
+  labels_batch = input_data_dict["labels"]
+  num_frames = input_data_dict["num_frames"]
+  print("model_input_shape, ", model_input_raw.shape)
   tf.summary.histogram("model/input_raw", model_input_raw)
 
   feature_dim = len(model_input_raw.get_shape()) - 1
@@ -270,12 +287,13 @@ def build_graph(reader,
     # line. They have to be nested.
     with tf.device(device_string % i):
       with (tf.variable_scope(("tower"), reuse=True if i > 0 else None)):
-        with (slim.arg_scope([slim.model_variable, slim.variable], device="/cpu:0" if num_gpus!=1 else "/gpu:0")):
+        with (slim.arg_scope([slim.model_variable, slim.variable],
+                             device="/cpu:0" if num_gpus != 1 else "/gpu:0")):
           result = model.create_model(
-            tower_inputs[i],
-            num_frames=tower_num_frames[i],
-            vocab_size=reader.num_classes,
-            labels=tower_labels[i])
+              tower_inputs[i],
+              num_frames=tower_num_frames[i],
+              vocab_size=reader.num_classes,
+              labels=tower_labels[i])
           for variable in slim.get_model_variables():
             tf.summary.histogram(variable.op.name, variable)
 
@@ -285,7 +303,8 @@ def build_graph(reader,
           if "loss" in result.keys():
             label_loss = result["loss"]
           else:
-            label_loss = label_loss_fn.calculate_loss(predictions, tower_labels[i])
+            label_loss = label_loss_fn.calculate_loss(predictions,
+                                                      tower_labels[i])
 
           if "regularization_loss" in result.keys():
             reg_loss = result["regularization_loss"]
@@ -313,8 +332,8 @@ def build_graph(reader,
 
           # Incorporate the L2 weight penalties etc.
           final_loss = regularization_penalty * reg_loss + label_loss
-          gradients = optimizer.compute_gradients(final_loss,
-              colocate_gradients_with_ops=False)
+          gradients = optimizer.compute_gradients(
+              final_loss, colocate_gradients_with_ops=False)
           tower_gradients.append(gradients)
   label_loss = tf.reduce_mean(tf.stack(tower_label_losses))
   tf.summary.scalar("label_loss", label_loss)
@@ -324,10 +343,12 @@ def build_graph(reader,
   merged_gradients = utils.combine_gradients(tower_gradients)
 
   if clip_gradient_norm > 0:
-    with tf.name_scope('clip_grads'):
-      merged_gradients = utils.clip_gradient_norms(merged_gradients, clip_gradient_norm)
+    with tf.name_scope("clip_grads"):
+      merged_gradients = utils.clip_gradient_norms(merged_gradients,
+                                                   clip_gradient_norm)
 
-  train_op = optimizer.apply_gradients(merged_gradients, global_step=global_step)
+  train_op = optimizer.apply_gradients(
+      merged_gradients, global_step=global_step)
 
   tf.add_to_collection("global_step", global_step)
   tf.add_to_collection("loss", label_loss)
@@ -342,14 +363,21 @@ def build_graph(reader,
 class Trainer(object):
   """A Trainer to train a Tensorflow graph."""
 
-  def __init__(self, cluster, task, train_dir, model, reader, model_exporter,
-               log_device_placement=True, max_steps=None,
+  def __init__(self,
+               cluster,
+               task,
+               train_dir,
+               model,
+               reader,
+               model_exporter,
+               log_device_placement=True,
+               max_steps=None,
                export_model_steps=1000):
     """"Creates a Trainer.
 
     Args:
-      cluster: A tf.train.ClusterSpec if the execution is distributed.
-        None otherwise.
+      cluster: A tf.train.ClusterSpec if the execution is distributed. None
+        otherwise.
       task: A TaskSpec describing the job type and the task index.
     """
 
@@ -358,7 +386,7 @@ class Trainer(object):
     self.is_master = (task.type == "master" and task.index == 0)
     self.train_dir = train_dir
     self.config = tf.ConfigProto(
-        allow_soft_placement=True,log_device_placement=log_device_placement)
+        allow_soft_placement=True, log_device_placement=log_device_placement)
     self.model = model
     self.reader = reader
     self.model_exporter = model_exporter
@@ -366,6 +394,7 @@ class Trainer(object):
     self.max_steps_reached = False
     self.export_model_steps = export_model_steps
     self.last_model_export_step = 0
+
 
 #     if self.is_master and self.task.index > 0:
 #       raise StandardError("%s: Only one replica of master expected",
@@ -394,10 +423,10 @@ class Trainer(object):
     if file_io.file_exists(flags_json_path):
       existing_flags = json.load(file_io.FileIO(flags_json_path, mode="r"))
       if existing_flags != model_flags_dict:
-        logging.error("Model flags do not match existing file %s. Please "
-                      "delete the file, change --train_dir, or pass flag "
-                      "--start_new_model",
-                      flags_json_path)
+        logging.error(
+            "Model flags do not match existing file %s. Please "
+            "delete the file, change --train_dir, or pass flag "
+            "--start_new_model", flags_json_path)
         logging.error("Ran model with flags: %s", str(model_flags_dict))
         logging.error("Previously ran with flags: %s", str(existing_flags))
         exit(1)
@@ -451,17 +480,19 @@ class Trainer(object):
 
           if self.is_master and global_step_val % 10 == 0 and self.train_dir:
             eval_start_time = time.time()
-            hit_at_one = eval_util.calculate_hit_at_one(predictions_val, labels_val)
-            perr = eval_util.calculate_precision_at_equal_recall_rate(predictions_val,
-                                                                      labels_val)
+            hit_at_one = eval_util.calculate_hit_at_one(predictions_val,
+                                                        labels_val)
+            perr = eval_util.calculate_precision_at_equal_recall_rate(
+                predictions_val, labels_val)
             gap = eval_util.calculate_gap(predictions_val, labels_val)
             eval_end_time = time.time()
             eval_time = eval_end_time - eval_start_time
 
-            logging.info("training step " + str(global_step_val) + " | Loss: " + ("%.2f" % loss_val) +
-              " Examples/sec: " + ("%.2f" % examples_per_second) + " | Hit@1: " +
-              ("%.2f" % hit_at_one) + " PERR: " + ("%.2f" % perr) +
-              " GAP: " + ("%.2f" % gap))
+            logging.info("training step " + str(global_step_val) + " | Loss: " +
+                         ("%.2f" % loss_val) + " Examples/sec: " +
+                         ("%.2f" % examples_per_second) + " | Hit@1: " +
+                         ("%.2f" % hit_at_one) + " PERR: " + ("%.2f" % perr) +
+                         " GAP: " + ("%.2f" % gap))
 
             sv.summary_writer.add_summary(
                 utils.MakeSummary("model/Training_Hit@1", hit_at_one),
@@ -477,15 +508,16 @@ class Trainer(object):
 
             # Exporting the model every x steps
             time_to_export = ((self.last_model_export_step == 0) or
-                (global_step_val - self.last_model_export_step
-                 >= self.export_model_steps))
+                              (global_step_val - self.last_model_export_step >=
+                               self.export_model_steps))
 
             if self.is_master and time_to_export:
               self.export_model(global_step_val, sv.saver, sv.save_path, sess)
               self.last_model_export_step = global_step_val
           else:
             logging.info("training step " + str(global_step_val) + " | Loss: " +
-              ("%.2f" % loss_val) + " Examples/sec: " + ("%.2f" % examples_per_second))
+                         ("%.2f" % loss_val) + " Examples/sec: " +
+                         ("%.2f" % examples_per_second))
       except tf.errors.OutOfRangeError:
         logging.info("%s: Done training -- epoch limit reached.",
                      task_as_string(self.task))
@@ -530,9 +562,8 @@ class Trainer(object):
   def remove_training_directory(self, train_dir):
     """Removes the training directory."""
     try:
-      logging.info(
-          "%s: Removing existing train directory.",
-          task_as_string(self.task))
+      logging.info("%s: Removing existing train directory.",
+                   task_as_string(self.task))
       gfile.DeleteRecursively(train_dir)
     except:
       logging.error(
@@ -555,7 +586,7 @@ class Trainer(object):
     meta_filename = latest_checkpoint + ".meta"
     if not gfile.Exists(meta_filename):
       logging.info("%s: No meta graph file found. Building a new model.",
-                     task_as_string(self.task))
+                   task_as_string(self.task))
       return None
     else:
       return meta_filename
@@ -571,19 +602,20 @@ class Trainer(object):
     label_loss_fn = find_class_by_name(FLAGS.label_loss, [losses])()
     optimizer_class = find_class_by_name(FLAGS.optimizer, [tf.train])
 
-    build_graph(reader=reader,
-                 model=model,
-                 optimizer_class=optimizer_class,
-                 clip_gradient_norm=FLAGS.clip_gradient_norm,
-                 train_data_pattern=FLAGS.train_data_pattern,
-                 label_loss_fn=label_loss_fn,
-                 base_learning_rate=FLAGS.base_learning_rate,
-                 learning_rate_decay=FLAGS.learning_rate_decay,
-                 learning_rate_decay_examples=FLAGS.learning_rate_decay_examples,
-                 regularization_penalty=FLAGS.regularization_penalty,
-                 num_readers=FLAGS.num_readers,
-                 batch_size=FLAGS.batch_size,
-                 num_epochs=FLAGS.num_epochs)
+    build_graph(
+        reader=reader,
+        model=model,
+        optimizer_class=optimizer_class,
+        clip_gradient_norm=FLAGS.clip_gradient_norm,
+        train_data_pattern=FLAGS.train_data_pattern,
+        label_loss_fn=label_loss_fn,
+        base_learning_rate=FLAGS.base_learning_rate,
+        learning_rate_decay=FLAGS.learning_rate_decay,
+        learning_rate_decay_examples=FLAGS.learning_rate_decay_examples,
+        regularization_penalty=FLAGS.regularization_penalty,
+        num_readers=FLAGS.num_readers,
+        batch_size=FLAGS.batch_size,
+        num_epochs=FLAGS.num_epochs)
 
     return tf.train.Saver(max_to_keep=0, keep_checkpoint_every_n_hours=0.25)
 
@@ -595,7 +627,9 @@ def get_reader():
 
   if FLAGS.frame_features:
     reader = readers.YT8MFrameFeatureReader(
-        feature_names=feature_names, feature_sizes=feature_sizes)
+        feature_names=feature_names,
+        feature_sizes=feature_sizes,
+        segment_labels=FLAGS.segment_labels)
   else:
     reader = readers.YT8MAggregatedFeatureReader(
         feature_names=feature_names, feature_sizes=feature_sizes)
@@ -610,8 +644,8 @@ class ParameterServer(object):
     """Creates a ParameterServer.
 
     Args:
-      cluster: A tf.train.ClusterSpec if the execution is distributed.
-        None otherwise.
+      cluster: A tf.train.ClusterSpec if the execution is distributed. None
+        otherwise.
       task: A TaskSpec describing the job type and the task index.
     """
 
@@ -631,8 +665,8 @@ def start_server(cluster, task):
   """Creates a Server.
 
   Args:
-    cluster: A tf.train.ClusterSpec if the execution is distributed.
-      None otherwise.
+    cluster: A tf.train.ClusterSpec if the execution is distributed. None
+      otherwise.
     task: A TaskSpec describing the job type and the task index.
   """
 
@@ -650,8 +684,10 @@ def start_server(cluster, task):
       job_name=task.type,
       task_index=task.index)
 
+
 def task_as_string(task):
   return "/job:%s/task:%s" % (task.type, task.index)
+
 
 def main(unused_argv):
   # Load the environment.
@@ -667,20 +703,18 @@ def main(unused_argv):
 
   # Logging the version.
   logging.set_verbosity(tf.logging.INFO)
-  logging.info("%s: Tensorflow version: %s.",
-               task_as_string(task), tf.__version__)
+  logging.info("%s: Tensorflow version: %s.", task_as_string(task),
+               tf.__version__)
 
   # Dispatch to a master, a worker, or a parameter server.
   if not cluster or task.type == "master" or task.type == "worker":
     model = find_class_by_name(FLAGS.model,
-        [frame_level_models, video_level_models])()
+                               [frame_level_models, video_level_models])()
 
     reader = get_reader()
 
     model_exporter = export_model.ModelExporter(
-        frame_features=FLAGS.frame_features,
-        model=model,
-        reader=reader)
+        frame_features=FLAGS.frame_features, model=model, reader=reader)
 
     Trainer(cluster, task, FLAGS.train_dir, model, reader, model_exporter,
             FLAGS.log_device_placement, FLAGS.max_steps,
@@ -691,6 +725,7 @@ def main(unused_argv):
   else:
     raise ValueError("%s: Invalid task_type: %s." %
                      (task_as_string(task), task.type))
+
 
 if __name__ == "__main__":
   app.run()
