@@ -277,8 +277,6 @@ class YT8MFrameFeatureReader(BaseReader):
           max_quantized_value, min_quantized_value)
       if num_frames == -1:
         num_frames = num_frames_in_this_feature
-      else:
-        tf.assert_equal(num_frames, num_frames_in_this_feature).mark_used()
 
       feature_matrices[feature_index] = feature_matrix
 
