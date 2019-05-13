@@ -119,11 +119,15 @@ def build_graph(reader,
   """
 
   global_step = tf.Variable(0, trainable=False, name="global_step")
-  video_id_batch, model_input_raw, labels_batch, num_frames = get_input_evaluation_tensors(  # pylint: disable=g-line-too-long
+  input_data_dict = get_input_evaluation_tensors(
       reader,
       eval_data_pattern,
       batch_size=batch_size,
       num_readers=num_readers)
+  video_id_batch = input_data_dict["video_ids"]
+  model_input_raw = input_data_dict["video_matrix"]
+  labels_batch = input_data_dict["labels"]
+  num_frames = input_data_dict["num_frames"]
   tf.summary.histogram("model_input_raw", model_input_raw)
 
   feature_dim = len(model_input_raw.get_shape()) - 1

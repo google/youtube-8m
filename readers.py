@@ -11,13 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Provides readers configured for different datasets."""
 
 import tensorflow as tf
 import utils
 
 from tensorflow import logging
+
+
 def resize_axis(tensor, axis, new_size, fill_value=0):
   """Truncates or pads a tensor to new_size on on a given axis.
 
@@ -29,8 +30,8 @@ def resize_axis(tensor, axis, new_size, fill_value=0):
     axis: An integer representing the dimension to be sliced.
     new_size: An integer or 0d tensor representing the new value for
       tensor.shape[axis].
-    fill_value: Value to use to fill any new entries in the tensor. Will be
-      cast to the type of tensor.
+    fill_value: Value to use to fill any new entries in the tensor. Will be cast
+      to the type of tensor.
 
   Returns:
     The resized tensor.
@@ -54,6 +55,7 @@ def resize_axis(tensor, axis, new_size, fill_value=0):
   new_shape[axis] = new_size
   resized.set_shape(new_shape)
   return resized
+
 
 class BaseReader(object):
   """Inherit from this class when implementing new readers."""
@@ -111,11 +113,13 @@ class YT8MAggregatedFeatureReader(BaseReader):
     num_features = len(self.feature_names)
     assert num_features > 0, "self.feature_names is empty!"
     assert len(self.feature_names) == len(self.feature_sizes), \
-    "length of feature_names (={}) != length of feature_sizes (={})".format( \
-    len(self.feature_names), len(self.feature_sizes))
+    "length of feature_names (={}) != length of feature_sizes (={})".format(
+        len(self.feature_names), len(self.feature_sizes))
 
-    feature_map = {"id": tf.FixedLenFeature([], tf.string),
-                   "labels": tf.VarLenFeature(tf.int64)}
+    feature_map = {
+        "id": tf.FixedLenFeature([], tf.string),
+        "labels": tf.VarLenFeature(tf.int64)
+    }
     for feature_index in range(num_features):
       feature_map[self.feature_names[feature_index]] = tf.FixedLenFeature(
           [self.feature_sizes[feature_index]], tf.float32)
@@ -123,10 +127,18 @@ class YT8MAggregatedFeatureReader(BaseReader):
     features = tf.parse_example(serialized_examples, features=feature_map)
     labels = tf.sparse_to_indicator(features["labels"], self.num_classes)
     labels.set_shape([None, self.num_classes])
-    concatenated_features = tf.concat([
-        features[feature_name] for feature_name in self.feature_names], 1)
+    concatenated_features = tf.concat(
+        [features[feature_name] for feature_name in self.feature_names], 1)
 
-    return features["id"], concatenated_features, labels, tf.ones([tf.shape(serialized_examples)[0]])
+    output_dict = {
+        "video_ids": features["id"],
+        "video_matrix": concatenated_features,
+        "labels": labels,
+        "num_frames": tf.ones([tf.shape(serialized_examples)[0]])
+    }
+
+    return output_dict
+
 
 class YT8MFrameFeatureReader(BaseReader):
   """Reads TFRecords of SequenceExamples.
@@ -141,7 +153,8 @@ class YT8MFrameFeatureReader(BaseReader):
                num_classes=3862,
                feature_sizes=[1024, 128],
                feature_names=["rgb", "audio"],
-               max_frames=300):
+               max_frames=300,
+               segment_labels=False):
     """Construct a YT8MFrameFeatureReader.
 
     Args:
@@ -149,6 +162,7 @@ class YT8MFrameFeatureReader(BaseReader):
       feature_sizes: positive integer(s) for the feature dimensions as a list.
       feature_names: the feature name(s) in the tensorflow record as a list.
       max_frames: the maximum number of frames to process.
+      segment_labels: if we read segment labels instead.
     """
 
     assert len(feature_names) == len(feature_sizes), \
@@ -159,13 +173,10 @@ class YT8MFrameFeatureReader(BaseReader):
     self.feature_sizes = feature_sizes
     self.feature_names = feature_names
     self.max_frames = max_frames
+    self.segment_labels = segment_labels
 
-  def get_video_matrix(self,
-                       features,
-                       feature_size,
-                       max_frames,
-                       max_quantized_value,
-                       min_quantized_value):
+  def get_video_matrix(self, features, feature_size, max_frames,
+                       max_quantized_value, min_quantized_value):
     """Decodes features from an input string and quantizes it.
 
     Args:
@@ -184,8 +195,7 @@ class YT8MFrameFeatureReader(BaseReader):
         [-1, feature_size])
 
     num_frames = tf.minimum(tf.shape(decoded_features)[0], max_frames)
-    feature_matrix = utils.Dequantize(decoded_features,
-                                      max_quantized_value,
+    feature_matrix = utils.Dequantize(decoded_features, max_quantized_value,
                                       min_quantized_value)
     feature_matrix = resize_axis(feature_matrix, 0, max_frames)
     return feature_matrix, num_frames
@@ -208,48 +218,65 @@ class YT8MFrameFeatureReader(BaseReader):
     _, serialized_example = reader.read(filename_queue)
 
     return self.prepare_serialized_examples(serialized_example,
-        max_quantized_value, min_quantized_value)
+                                            max_quantized_value,
+                                            min_quantized_value)
 
-  def prepare_serialized_examples(self, serialized_example,
-      max_quantized_value=2, min_quantized_value=-2):
+  def prepare_serialized_examples(self,
+                                  serialized_example,
+                                  max_quantized_value=2,
+                                  min_quantized_value=-2):
+    """Parse single serialized SequenceExample from the TFRecords."""
 
+    # Read/parse frame/segment-level labels.
+    context_features = {
+        "id": tf.FixedLenFeature([], tf.string),
+    }
+    if self.segment_labels:
+      context_features.update({
+          "segment_labels": tf.VarLenFeature(tf.int64),
+          "segment_start_times": tf.VarLenFeature(tf.int64),
+          "segment_end_times": tf.VarLenFeature(tf.int64),
+          "segment_scores": tf.VarLenFeature(tf.float32)
+      })
+    else:
+      context_features.update({"labels": tf.VarLenFeature(tf.int64)})
+    sequence_features = {
+        feature_name: tf.FixedLenSequenceFeature([], dtype=tf.string)
+        for feature_name in self.feature_names
+    }
     contexts, features = tf.parse_single_sequence_example(
         serialized_example,
-        context_features={"id": tf.FixedLenFeature(
-            [], tf.string),
-                          "labels": tf.VarLenFeature(tf.int64)},
-        sequence_features={
-            feature_name : tf.FixedLenSequenceFeature([], dtype=tf.string)
-            for feature_name in self.feature_names
-        })
+        context_features=context_features,
+        sequence_features=sequence_features)
 
-    # read ground truth labels
-    labels = (tf.cast(
-        tf.sparse_to_dense(contexts["labels"].values, (self.num_classes,), 1,
-            validate_indices=False),
-        tf.bool))
+    # Densify frame/segment-level labels.
+    if self.segment_labels:
+      pass
+    else:
+      labels = (
+          tf.cast(
+              tf.sparse_to_dense(
+                  contexts["labels"].values, (self.num_classes,),
+                  1,
+                  validate_indices=False), tf.bool))
 
     # loads (potentially) different types of features and concatenates them
     num_features = len(self.feature_names)
     assert num_features > 0, "No feature selected: feature_names is empty!"
 
     assert len(self.feature_names) == len(self.feature_sizes), \
-    "length of feature_names (={}) != length of feature_sizes (={})".format( \
-    len(self.feature_names), len(self.feature_sizes))
+    "length of feature_names (={}) != length of feature_sizes (={})".format(
+        len(self.feature_names), len(self.feature_sizes))
 
     num_frames = -1  # the number of frames in the video
     feature_matrices = [None] * num_features  # an array of different features
     for feature_index in range(num_features):
       feature_matrix, num_frames_in_this_feature = self.get_video_matrix(
           features[self.feature_names[feature_index]],
-          self.feature_sizes[feature_index],
-          self.max_frames,
-          max_quantized_value,
-          min_quantized_value)
+          self.feature_sizes[feature_index], self.max_frames,
+          max_quantized_value, min_quantized_value)
       if num_frames == -1:
         num_frames = num_frames_in_this_feature
-      else:
-        tf.assert_equal(num_frames, num_frames_in_this_feature)
 
       feature_matrices[feature_index] = feature_matrix
 
@@ -266,5 +293,11 @@ class YT8MFrameFeatureReader(BaseReader):
     batch_labels = tf.expand_dims(labels, 0)
     batch_frames = tf.expand_dims(num_frames, 0)
 
-    return batch_video_ids, batch_video_matrix, batch_labels, batch_frames
+    output_dict = {
+        "video_ids": batch_video_ids,
+        "video_matrix": batch_video_matrix,
+        "labels": batch_labels,
+        "num_frames": batch_frames
+    }
 
+    return output_dict

@@ -24,6 +24,7 @@ from tensorflow.python.saved_model import utils as saved_model_utils
 
 _TOP_PREDICTIONS_IN_OUTPUT = 20
 
+
 class ModelExporter(object):
 
   def __init__(self, frame_features, model, reader):
@@ -49,11 +50,13 @@ class ModelExporter(object):
             outputs=self.outputs,
             method_name=signature_constants.PREDICT_METHOD_NAME)
 
-        signature_map = {signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY:
-                         signature}
+        signature_map = {
+            signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY: signature
+        }
 
         model_builder = saved_model_builder.SavedModelBuilder(model_dir)
-        model_builder.add_meta_graph_and_variables(session,
+        model_builder.add_meta_graph_and_variables(
+            session,
             tags=[tag_constants.SERVING],
             signature_def_map=signature_map,
             clear_devices=True)
@@ -65,8 +68,8 @@ class ModelExporter(object):
 
       fn = lambda x: self.build_prediction_graph(x)
       video_id_output, top_indices_output, top_predictions_output = (
-          tf.map_fn(fn, serialized_examples,
-                    dtype=(tf.string, tf.int32, tf.float32)))
+          tf.map_fn(
+              fn, serialized_examples, dtype=(tf.string, tf.int32, tf.float32)))
 
     else:
       serialized_examples = tf.placeholder(tf.string, shape=(None,))
@@ -74,19 +77,29 @@ class ModelExporter(object):
       video_id_output, top_indices_output, top_predictions_output = (
           self.build_prediction_graph(serialized_examples))
 
-    inputs = {"example_bytes":
-              saved_model_utils.build_tensor_info(serialized_examples)}
+    inputs = {
+        "example_bytes":
+            saved_model_utils.build_tensor_info(serialized_examples)
+    }
 
     outputs = {
-        "video_id": saved_model_utils.build_tensor_info(video_id_output),
-        "class_indexes": saved_model_utils.build_tensor_info(top_indices_output),
-        "predictions": saved_model_utils.build_tensor_info(top_predictions_output)}
+        "video_id":
+            saved_model_utils.build_tensor_info(video_id_output),
+        "class_indexes":
+            saved_model_utils.build_tensor_info(top_indices_output),
+        "predictions":
+            saved_model_utils.build_tensor_info(top_predictions_output)
+    }
 
     return inputs, outputs
 
   def build_prediction_graph(self, serialized_examples):
-    video_id, model_input_raw, labels_batch, num_frames = (
+    input_data_dict = (
         self.reader.prepare_serialized_examples(serialized_examples))
+    video_id = input_data_dict["video_ids"]
+    model_input_raw = input_data_dict["video_matrix"]
+    labels_batch = input_data_dict["labels"]
+    num_frames = input_data_dict["num_frames"]
 
     feature_dim = len(model_input_raw.get_shape()) - 1
     model_input = tf.nn.l2_normalize(model_input_raw, feature_dim)
@@ -105,5 +118,5 @@ class ModelExporter(object):
       predictions = result["predictions"]
 
       top_predictions, top_indices = tf.nn.top_k(predictions,
-          _TOP_PREDICTIONS_IN_OUTPUT)
+                                                 _TOP_PREDICTIONS_IN_OUTPUT)
     return video_id, top_indices, top_predictions
