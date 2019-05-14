@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Calculate or keep track of the interpolated average precision.
 
 It provides an interface for calculating interpolated average precision for an
@@ -67,8 +66,8 @@ class AveragePrecisionCalculator(object):
     This class is used to calculate the average precision for a single label.
 
     Args:
-      top_n: A positive Integer specifying the average precision at n, or
-        None to use all provided data points.
+      top_n: A positive Integer specifying the average precision at n, or None
+        to use all provided data points.
 
     Raises:
       ValueError: An error occurred when the top_n is not a positive integer.
@@ -99,11 +98,11 @@ class AveragePrecisionCalculator(object):
 
     Args:
       predictions: a list storing the prediction scores.
-      actuals: a list storing the ground truth labels. Any value
-      larger than 0 will be treated as positives, otherwise as negatives.
-      num_positives = If the 'predictions' and 'actuals' inputs aren't complete,
-      then it's possible some true positives were missed in them. In that case,
-      you can provide 'num_positives' in order to accurately track recall.
+      actuals: a list storing the ground truth labels. Any value larger than 0
+        will be treated as positives, otherwise as negatives. num_positives = If
+        the 'predictions' and 'actuals' inputs aren't complete, then it's
+        possible some true positives were missed in them. In that case, you can
+        provide 'num_positives' in order to accurately track recall.
 
     Raises:
       ValueError: An error occurred when the format of the input is not the
@@ -114,7 +113,8 @@ class AveragePrecisionCalculator(object):
 
     if not num_positives is None:
       if not isinstance(num_positives, numbers.Number) or num_positives < 0:
-        raise ValueError("'num_positives' was provided but it wan't a nonzero number.")
+        raise ValueError(
+            "'num_positives' was provided but it wan't a nonzero number.")
 
     if not num_positives is None:
       self._total_positives += num_positives
@@ -148,10 +148,11 @@ class AveragePrecisionCalculator(object):
       return 0
     predlists = numpy.array(list(zip(*self._heap)))
 
-    ap = self.ap_at_n(predlists[0],
-                      predlists[1],
-                      n=self._top_n,
-                      total_num_positives=self._total_positives)
+    ap = self.ap_at_n(
+        predlists[0],
+        predlists[1],
+        n=self._top_n,
+        total_num_positives=self._total_positives)
     return ap
 
   @staticmethod
@@ -161,7 +162,7 @@ class AveragePrecisionCalculator(object):
     Args:
       predictions: a numpy 1-D array storing the sparse prediction scores.
       actuals: a numpy 1-D array storing the ground truth labels. Any value
-      larger than 0 will be treated as positives, otherwise as negatives.
+        larger than 0 will be treated as positives, otherwise as negatives.
 
     Returns:
       The non-interpolated average precision at n.
@@ -172,9 +173,7 @@ class AveragePrecisionCalculator(object):
       ValueError: An error occurred when the format of the input is not the
       numpy 1-D array or the shape of predictions and actuals does not match.
     """
-    return AveragePrecisionCalculator.ap_at_n(predictions,
-                                              actuals,
-                                              n=None)
+    return AveragePrecisionCalculator.ap_at_n(predictions, actuals, n=None)
 
   @staticmethod
   def ap_at_n(predictions, actuals, n=20, total_num_positives=None):
@@ -183,11 +182,10 @@ class AveragePrecisionCalculator(object):
     Args:
       predictions: a numpy 1-D array storing the sparse prediction scores.
       actuals: a numpy 1-D array storing the ground truth labels. Any value
-      larger than 0 will be treated as positives, otherwise as negatives.
+        larger than 0 will be treated as positives, otherwise as negatives.
       n: the top n items to be considered in ap@n.
       total_num_positives : (optionally) you can specify the number of total
-        positive
-      in the list. If specified, it will be used in calculation.
+        positive in the list. If specified, it will be used in calculation.
 
     Returns:
       The non-interpolated average precision at n.
@@ -214,12 +212,10 @@ class AveragePrecisionCalculator(object):
     actuals = numpy.array(actuals)
 
     # add a shuffler to avoid overestimating the ap
-    predictions, actuals = AveragePrecisionCalculator._shuffle(predictions,
-                                                               actuals)
+    predictions, actuals = AveragePrecisionCalculator._shuffle(
+        predictions, actuals)
     sortidx = sorted(
-        range(len(predictions)),
-        key=lambda k: predictions[k],
-        reverse=True)
+        range(len(predictions)), key=lambda k: predictions[k], reverse=True)
 
     if total_num_positives is None:
       numpos = numpy.size(numpy.where(actuals > 0))
@@ -269,6 +265,6 @@ class AveragePrecisionCalculator(object):
       The normalized prediction.
     """
     denominator = numpy.max(predictions) - numpy.min(predictions)
-    ret = (predictions - numpy.min(predictions)) / numpy.max(denominator,
-                                                             epsilon)
+    ret = (predictions - numpy.min(predictions)) / numpy.max(
+        denominator, epsilon)
     return ret

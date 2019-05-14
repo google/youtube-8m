@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Contains model definitions."""
 import math
 
@@ -27,10 +26,15 @@ flags.DEFINE_integer(
     "moe_num_mixtures", 2,
     "The number of mixtures (excluding the dummy 'expert') used for MoeModel.")
 
+
 class LogisticModel(models.BaseModel):
   """Logistic model with L2 regularization."""
 
-  def create_model(self, model_input, vocab_size, l2_penalty=1e-8, **unused_params):
+  def create_model(self,
+                   model_input,
+                   vocab_size,
+                   l2_penalty=1e-8,
+                   **unused_params):
     """Creates a logistic model.
 
     Args:
@@ -40,11 +44,15 @@ class LogisticModel(models.BaseModel):
     Returns:
       A dictionary with a tensor containing the probability predictions of the
       model in the 'predictions' key. The dimensions of the tensor are
-      batch_size x num_classes."""
+      batch_size x num_classes.
+    """
     output = slim.fully_connected(
-        model_input, vocab_size, activation_fn=tf.nn.sigmoid,
+        model_input,
+        vocab_size,
+        activation_fn=tf.nn.sigmoid,
         weights_regularizer=slim.l2_regularizer(l2_penalty))
     return {"predictions": output}
+
 
 class MoeModel(models.BaseModel):
   """A softmax over a mixture of logistic models (with L2 regularization)."""
@@ -68,6 +76,7 @@ class MoeModel(models.BaseModel):
         always predicts the non-existence of an entity).
       l2_penalty: How much to penalize the squared magnitudes of parameter
         values.
+
     Returns:
       A dictionary with a tensor containing the probability predictions of the
       model in the 'predictions' key. The dimensions of the tensor are
@@ -89,12 +98,13 @@ class MoeModel(models.BaseModel):
         weights_regularizer=slim.l2_regularizer(l2_penalty),
         scope="experts")
 
-    gating_distribution = tf.nn.softmax(tf.reshape(
-        gate_activations,
-        [-1, num_mixtures + 1]))  # (Batch * #Labels) x (num_mixtures + 1)
-    expert_distribution = tf.nn.sigmoid(tf.reshape(
-        expert_activations,
-        [-1, num_mixtures]))  # (Batch * #Labels) x num_mixtures
+    gating_distribution = tf.nn.softmax(
+        tf.reshape(
+            gate_activations,
+            [-1, num_mixtures + 1]))  # (Batch * #Labels) x (num_mixtures + 1)
+    expert_distribution = tf.nn.sigmoid(
+        tf.reshape(expert_activations,
+                   [-1, num_mixtures]))  # (Batch * #Labels) x num_mixtures
 
     final_probabilities_by_class_and_batch = tf.reduce_sum(
         gating_distribution[:, :num_mixtures] * expert_distribution, 1)

@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Provides functions to help with evaluating models."""
 import datetime
 import numpy
@@ -21,18 +20,20 @@ from tensorflow.python.platform import gfile
 import mean_average_precision_calculator as map_calculator
 import average_precision_calculator as ap_calculator
 
+
 def flatten(l):
   """ Merges a list of lists into a single list. """
   return [item for sublist in l for item in sublist]
+
 
 def calculate_hit_at_one(predictions, actuals):
   """Performs a local (numpy) calculation of the hit at one.
 
   Args:
-    predictions: Matrix containing the outputs of the model.
-      Dimensions are 'batch' x 'num_classes'.
-    actuals: Matrix containing the ground truth labels.
-      Dimensions are 'batch' x 'num_classes'.
+    predictions: Matrix containing the outputs of the model. Dimensions are
+      'batch' x 'num_classes'.
+    actuals: Matrix containing the ground truth labels. Dimensions are 'batch' x
+      'num_classes'.
 
   Returns:
     float: The average hit at one across the entire batch.
@@ -46,10 +47,10 @@ def calculate_precision_at_equal_recall_rate(predictions, actuals):
   """Performs a local (numpy) calculation of the PERR.
 
   Args:
-    predictions: Matrix containing the outputs of the model.
-      Dimensions are 'batch' x 'num_classes'.
-    actuals: Matrix containing the ground truth labels.
-      Dimensions are 'batch' x 'num_classes'.
+    predictions: Matrix containing the outputs of the model. Dimensions are
+      'batch' x 'num_classes'.
+    actuals: Matrix containing the ground truth labels. Dimensions are 'batch' x
+      'num_classes'.
 
   Returns:
     float: The average precision at equal recall rate across the entire batch.
@@ -69,24 +70,27 @@ def calculate_precision_at_equal_recall_rate(predictions, actuals):
   aggregated_precision /= num_videos
   return aggregated_precision
 
+
 def calculate_gap(predictions, actuals, top_k=20):
   """Performs a local (numpy) calculation of the global average precision.
 
   Only the top_k predictions are taken for each of the videos.
 
   Args:
-    predictions: Matrix containing the outputs of the model.
-      Dimensions are 'batch' x 'num_classes'.
-    actuals: Matrix containing the ground truth labels.
-      Dimensions are 'batch' x 'num_classes'.
+    predictions: Matrix containing the outputs of the model. Dimensions are
+      'batch' x 'num_classes'.
+    actuals: Matrix containing the ground truth labels. Dimensions are 'batch' x
+      'num_classes'.
     top_k: How many predictions to use per video.
 
   Returns:
     float: The global average precision.
   """
   gap_calculator = ap_calculator.AveragePrecisionCalculator()
-  sparse_predictions, sparse_labels, num_positives = top_k_by_class(predictions, actuals, top_k)
-  gap_calculator.accumulate(flatten(sparse_predictions), flatten(sparse_labels), sum(num_positives))
+  sparse_predictions, sparse_labels, num_positives = top_k_by_class(
+      predictions, actuals, top_k)
+  gap_calculator.accumulate(
+      flatten(sparse_predictions), flatten(sparse_labels), sum(num_positives))
   return gap_calculator.peek_ap_at_n()
 
 
@@ -94,8 +98,8 @@ def top_k_by_class(predictions, labels, k=20):
   """Extracts the top k predictions for each video, sorted by class.
 
   Args:
-    predictions: A numpy matrix containing the outputs of the model.
-      Dimensions are 'batch' x 'num_classes'.
+    predictions: A numpy matrix containing the outputs of the model. Dimensions
+      are 'batch' x 'num_classes'.
     k: the top k non-zero entries to preserve in each prediction.
 
   Returns:
@@ -114,25 +118,31 @@ def top_k_by_class(predictions, labels, k=20):
     raise ValueError("k must be a positive integer.")
   k = min(k, predictions.shape[1])
   num_classes = predictions.shape[1]
-  prediction_triplets= []
+  prediction_triplets = []
   for video_index in range(predictions.shape[0]):
-    prediction_triplets.extend(top_k_triplets(predictions[video_index],labels[video_index], k))
+    prediction_triplets.extend(
+        top_k_triplets(predictions[video_index], labels[video_index], k))
   out_predictions = [[] for v in range(num_classes)]
   out_labels = [[] for v in range(num_classes)]
   for triplet in prediction_triplets:
     out_predictions[triplet[0]].append(triplet[1])
     out_labels[triplet[0]].append(triplet[2])
-  out_true_positives = [numpy.sum(labels[:,i]) for i in range(num_classes)]
+  out_true_positives = [numpy.sum(labels[:, i]) for i in range(num_classes)]
 
   return out_predictions, out_labels, out_true_positives
 
+
 def top_k_triplets(predictions, labels, k=20):
-  """Get the top_k for a 1-d numpy array. Returns a sparse list of tuples in
-  (prediction, class) format"""
+  """Get the top_k for a 1-d numpy array.
+
+  Returns a sparse list of tuples in
+  (prediction, class) format
+  """
   m = len(predictions)
   k = min(k, m)
   indices = numpy.argpartition(predictions, -k)[-k:]
   return [(index, predictions[index], labels[index]) for index in indices]
+
 
 class EvaluationMetrics(object):
   """A class to store the evaluation metrics."""
@@ -142,7 +152,8 @@ class EvaluationMetrics(object):
 
     Args:
       num_class: A positive integer specifying the number of classes.
-      top_k: A positive integer specifying how many predictions are considered per video.
+      top_k: A positive integer specifying how many predictions are considered
+        per video.
 
     Raises:
       ValueError: An error occurred when MeanAveragePrecisionCalculator cannot
@@ -151,7 +162,8 @@ class EvaluationMetrics(object):
     self.sum_hit_at_one = 0.0
     self.sum_perr = 0.0
     self.sum_loss = 0.0
-    self.map_calculator = map_calculator.MeanAveragePrecisionCalculator(num_class)
+    self.map_calculator = map_calculator.MeanAveragePrecisionCalculator(
+        num_class)
     self.global_ap_calculator = ap_calculator.AveragePrecisionCalculator()
     self.top_k = top_k
     self.num_examples = 0
@@ -162,8 +174,8 @@ class EvaluationMetrics(object):
     Args:
       predictions: A numpy matrix containing the outputs of the model.
         Dimensions are 'batch' x 'num_classes'.
-      labels: A numpy matrix containing the ground truth labels.
-        Dimensions are 'batch' x 'num_classes'.
+      labels: A numpy matrix containing the ground truth labels. Dimensions are
+        'batch' x 'num_classes'.
       loss: A numpy array containing the loss for each sample.
 
     Returns:
@@ -179,9 +191,12 @@ class EvaluationMetrics(object):
     mean_loss = numpy.mean(loss)
 
     # Take the top 20 predictions.
-    sparse_predictions, sparse_labels, num_positives = top_k_by_class(predictions, labels, self.top_k)
-    self.map_calculator.accumulate(sparse_predictions, sparse_labels, num_positives)
-    self.global_ap_calculator.accumulate(flatten(sparse_predictions), flatten(sparse_labels), sum(num_positives))
+    sparse_predictions, sparse_labels, num_positives = top_k_by_class(
+        predictions, labels, self.top_k)
+    self.map_calculator.accumulate(sparse_predictions, sparse_labels,
+                                   num_positives)
+    self.global_ap_calculator.accumulate(
+        flatten(sparse_predictions), flatten(sparse_labels), sum(num_positives))
 
     self.num_examples += batch_size
     self.sum_hit_at_one += mean_hit_at_one * batch_size
@@ -211,8 +226,13 @@ class EvaluationMetrics(object):
     gap = self.global_ap_calculator.peek_ap_at_n()
 
     epoch_info_dict = {}
-    return {"avg_hit_at_one": avg_hit_at_one, "avg_perr": avg_perr,
-            "avg_loss": avg_loss, "aps": aps, "gap": gap}
+    return {
+        "avg_hit_at_one": avg_hit_at_one,
+        "avg_perr": avg_perr,
+        "avg_loss": avg_loss,
+        "aps": aps,
+        "gap": gap
+    }
 
   def clear(self):
     """Clear the evaluation metrics and reset the EvaluationMetrics object."""
