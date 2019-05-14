@@ -27,7 +27,6 @@ import tensorflow as tf
 from tensorflow import app
 from tensorflow import flags
 from tensorflow import gfile
-# from tensorflow import logging
 from tensorflow.python.lib.io import file_io
 import utils
 import video_level_models
@@ -227,12 +226,10 @@ def evaluation_loop(video_id_batch, prediction_batch, label_batch, loss,
 
       examples_processed = 0
       while not coord.should_stop():
-        logging.info("Running eval step...")
         batch_start_time = time.time()
         _, predictions_val, labels_val, loss_val, summary_val = sess.run(
             fetches)
         seconds_per_batch = time.time() - batch_start_time
-        logging.info("calculating metrics...")
         example_per_second = labels_val.shape[0] / seconds_per_batch
         examples_processed += labels_val.shape[0]
 
