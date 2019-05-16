@@ -71,10 +71,11 @@ class YT8MAggregatedFeatureReader(BaseReader):
   The float features are assumed to be an average of dequantized values.
   """
 
-  def __init__(self,  # pylint: disable=dangerous-default-value
-               num_classes=3862,
-               feature_sizes=[1024, 128],
-               feature_names=["mean_rgb", "mean_audio"]):
+  def __init__(
+      self,  # pylint: disable=dangerous-default-value
+      num_classes=3862,
+      feature_sizes=[1024, 128],
+      feature_names=["mean_rgb", "mean_audio"]):
     """Construct a YT8MAggregatedFeatureReader.
 
     Args:
@@ -149,13 +150,14 @@ class YT8MFrameFeatureReader(BaseReader):
   back into a range between min_quantized_value and max_quantized_value.
   """
 
-  def __init__(self,  # pylint: disable=dangerous-default-value
-               num_classes=3862,
-               feature_sizes=[1024, 128],
-               feature_names=["rgb", "audio"],
-               max_frames=300,
-               segment_labels=False,
-               segment_size=5):
+  def __init__(
+      self,  # pylint: disable=dangerous-default-value
+      num_classes=3862,
+      feature_sizes=[1024, 128],
+      feature_names=["rgb", "audio"],
+      max_frames=300,
+      segment_labels=False,
+      segment_size=5):
     """Construct a YT8MFrameFeatureReader.
 
     Args:
@@ -319,12 +321,13 @@ class YT8MFrameFeatureReader(BaseReader):
           sparse_label_weights, validate_indices=False)
     else:
       # Process video-level labels.
-      labels = (
-          tf.cast(
-              tf.sparse_to_dense(
-                  contexts["labels"].values, (self.num_classes,),
-                  1,
-                  validate_indices=False), tf.bool))
+      label_indices = contexts["labels"].values
+      sparse_labels = tf.sparse.SparseTensor(
+          tf.expand_dims(label_indices, axis=-1),
+          tf.ones_like(contexts["labels"].values, dtype=tf.bool),
+          (self.num_classes,))
+      labels = tf.sparse.to_dense(
+          sparse_labels, default_value=False, validate_indices=False)
       # convert to batch format.
       batch_video_ids = tf.expand_dims(contexts["id"], 0)
       batch_video_matrix = tf.expand_dims(video_matrix, 0)
