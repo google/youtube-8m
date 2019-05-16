@@ -13,7 +13,6 @@
 # limitations under the License.
 """Binary for evaluating Tensorflow models on the YouTube-8M dataset."""
 
-import glob
 import json
 import os
 import time
