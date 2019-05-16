@@ -16,8 +16,6 @@
 import tensorflow as tf
 import utils
 
-from tensorflow import logging
-
 
 def resize_axis(tensor, axis, new_size, fill_value=0):
   """Truncates or pads a tensor to new_size on on a given axis.
@@ -73,7 +71,7 @@ class YT8MAggregatedFeatureReader(BaseReader):
   The float features are assumed to be an average of dequantized values.
   """
 
-  def __init__(self,
+  def __init__(self,  # pylint: disable=dangerous-default-value
                num_classes=3862,
                feature_sizes=[1024, 128],
                feature_names=["mean_rgb", "mean_audio"]):
@@ -85,9 +83,9 @@ class YT8MAggregatedFeatureReader(BaseReader):
       feature_names: the feature name(s) in the tensorflow record as a list.
     """
 
-    assert len(feature_names) == len(feature_sizes), \
-    "length of feature_names (={}) != length of feature_sizes (={})".format( \
-    len(feature_names), len(feature_sizes))
+    assert len(feature_names) == len(feature_sizes), (
+        "length of feature_names (={}) != length of feature_sizes (={})".format(
+            len(feature_names), len(feature_sizes)))
 
     self.num_classes = num_classes
     self.feature_sizes = feature_sizes
@@ -98,6 +96,7 @@ class YT8MAggregatedFeatureReader(BaseReader):
 
     Args:
       filename_queue: A tensorflow queue of filename locations.
+      batch_size: batch size used for feature output.
 
     Returns:
       A tuple of video indexes, features, labels, and padding data.
@@ -109,6 +108,7 @@ class YT8MAggregatedFeatureReader(BaseReader):
     return self.prepare_serialized_examples(serialized_examples)
 
   def prepare_serialized_examples(self, serialized_examples):
+    """Parse a single video-level TF Example."""
     # set the mapping from the fields to data types in the proto
     num_features = len(self.feature_names)
     assert num_features > 0, "self.feature_names is empty!"
@@ -149,7 +149,7 @@ class YT8MFrameFeatureReader(BaseReader):
   back into a range between min_quantized_value and max_quantized_value.
   """
 
-  def __init__(self,
+  def __init__(self,  # pylint: disable=dangerous-default-value
                num_classes=3862,
                feature_sizes=[1024, 128],
                feature_names=["rgb", "audio"],
@@ -168,8 +168,8 @@ class YT8MFrameFeatureReader(BaseReader):
     """
 
     assert len(feature_names) == len(feature_sizes), (
-    "length of feature_names (={}) != length of feature_sizes (={})".format( \
-    len(feature_names), len(feature_sizes)))
+        "length of feature_names (={}) != length of feature_sizes (={})".format(
+            len(feature_names), len(feature_sizes)))
 
     self.num_classes = num_classes
     self.feature_sizes = feature_sizes
