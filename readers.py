@@ -251,18 +251,7 @@ class YT8MFrameFeatureReader(BaseReader):
 
     # Densify frame/segment-level labels.
     if self.segment_labels:
-      # For segment labels, all labels are in-exhausively rated. So we only
-      # evaluate the rated labels.
-      label_indices = contexts["segment_labels"].values
-      label_values = contexts["segment_scores"].values
-      sparse_labels = tf.sparse.SparseTensor(label_indices, label_values,
-                                             (self.num_classes,))
-      labels = tf.sparse.to_dense(sparse_labels, validate_indices=False)
-      sparse_label_weights = tf.sparse.SparseTensor(
-          label_indices, tf.ones_like(label_indices, dtype=tf.float32),
-          (self.num_classes,))
-      label_weights = tf.sparse.to_dense(
-          sparse_label_weights, validate_indices=False)
+      pass
     else:
       labels = (
           tf.cast(
@@ -270,7 +259,6 @@ class YT8MFrameFeatureReader(BaseReader):
                   contexts["labels"].values, (self.num_classes,),
                   1,
                   validate_indices=False), tf.bool))
-      label_weights = None
 
     # loads (potentially) different types of features and concatenates them
     num_features = len(self.feature_names)
@@ -309,9 +297,7 @@ class YT8MFrameFeatureReader(BaseReader):
         "video_ids": batch_video_ids,
         "video_matrix": batch_video_matrix,
         "labels": batch_labels,
-        "num_frames": batch_frames,
+        "num_frames": batch_frames
     }
-    if label_weights is not None:
-      output_dict["label_weights"] = tf.expand_dims(label_weights, 0)
 
     return output_dict
