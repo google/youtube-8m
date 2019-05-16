@@ -154,7 +154,8 @@ class YT8MFrameFeatureReader(BaseReader):
                feature_sizes=[1024, 128],
                feature_names=["rgb", "audio"],
                max_frames=300,
-               segment_labels=False):
+               segment_labels=False,
+               segment_size=5):
     """Construct a YT8MFrameFeatureReader.
 
     Args:
@@ -163,17 +164,19 @@ class YT8MFrameFeatureReader(BaseReader):
       feature_names: the feature name(s) in the tensorflow record as a list.
       max_frames: the maximum number of frames to process.
       segment_labels: if we read segment labels instead.
+      segment_size: the segment_size used for reading segments.
     """
 
-    assert len(feature_names) == len(feature_sizes), \
+    assert len(feature_names) == len(feature_sizes), (
     "length of feature_names (={}) != length of feature_sizes (={})".format( \
-    len(feature_names), len(feature_sizes))
+    len(feature_names), len(feature_sizes)))
 
     self.num_classes = num_classes
     self.feature_sizes = feature_sizes
     self.feature_names = feature_names
     self.max_frames = max_frames
     self.segment_labels = segment_labels
+    self.segment_size = segment_size
 
   def get_video_matrix(self, features, feature_size, max_frames,
                        max_quantized_value, min_quantized_value):
@@ -233,9 +236,10 @@ class YT8MFrameFeatureReader(BaseReader):
     }
     if self.segment_labels:
       context_features.update({
+          # There is no need to read end-time given we always assume the segment
+          # has the same size.
           "segment_labels": tf.VarLenFeature(tf.int64),
           "segment_start_times": tf.VarLenFeature(tf.int64),
-          "segment_end_times": tf.VarLenFeature(tf.int64),
           "segment_scores": tf.VarLenFeature(tf.float32)
       })
     else:
@@ -249,24 +253,13 @@ class YT8MFrameFeatureReader(BaseReader):
         context_features=context_features,
         sequence_features=sequence_features)
 
-    # Densify frame/segment-level labels.
-    if self.segment_labels:
-      pass
-    else:
-      labels = (
-          tf.cast(
-              tf.sparse_to_dense(
-                  contexts["labels"].values, (self.num_classes,),
-                  1,
-                  validate_indices=False), tf.bool))
-
     # loads (potentially) different types of features and concatenates them
     num_features = len(self.feature_names)
     assert num_features > 0, "No feature selected: feature_names is empty!"
 
-    assert len(self.feature_names) == len(self.feature_sizes), \
-    "length of feature_names (={}) != length of feature_sizes (={})".format(
-        len(self.feature_names), len(self.feature_sizes))
+    assert len(self.feature_names) == len(self.feature_sizes), (
+        "length of feature_names (={}) != length of feature_sizes (={})".format(
+            len(self.feature_names), len(self.feature_sizes)))
 
     num_frames = -1  # the number of frames in the video
     feature_matrices = [None] * num_features  # an array of different features
@@ -286,18 +279,66 @@ class YT8MFrameFeatureReader(BaseReader):
     # concatenate different features
     video_matrix = tf.concat(feature_matrices, 1)
 
-    # convert to batch format.
-    # TODO: Do proper batch reads to remove the IO bottleneck.
-    batch_video_ids = tf.expand_dims(contexts["id"], 0)
-    batch_video_matrix = tf.expand_dims(video_matrix, 0)
-    batch_labels = tf.expand_dims(labels, 0)
-    batch_frames = tf.expand_dims(num_frames, 0)
+    # Partition frame-level feature matrix to segment-level feature matrix.
+    if self.segment_labels:
+      start_times = contexts["segment_start_times"].values
+      # Here we assume all the segments that started at the same start time has
+      # the same segment_size.
+      uniq_start_times, seg_idxs = tf.unique(
+          start_times, out_idx=tf.dtypes.int64)
+      # TODO(zhengxu): Ensure the segment_sizes are all same.
+      segment_size = self.segment_size
+      # Range gather matrix, e.g., [[0,1,2],[1,2,3]] for segment_size == 3.
+      range_mtx = tf.expand_dims(
+          uniq_start_times, axis=-1) + tf.expand_dims(
+              tf.range(0, segment_size, dtype=tf.int64), axis=0)
+      # Shape: [num_segment, segment_size, feature_dim].
+      batch_video_matrix = tf.gather_nd(video_matrix,
+                                        tf.expand_dims(range_mtx, axis=-1))
+      num_segment = tf.shape(batch_video_matrix)[0]
+      batch_video_ids = tf.reshape(
+          tf.tile([contexts["id"]], [num_segment]), (num_segment,))
+      batch_frames = tf.reshape(
+          tf.tile([segment_size], [num_segment]), (num_segment,))
+
+      # For segment labels, all labels are not exhausively rated. So we only
+      # evaluate the rated labels.
+
+      # Label indices for each segment, shape: [num_segment, 2].
+      label_indices = tf.stack([seg_idxs, contexts["segment_labels"].values],
+                               axis=-1)
+      label_values = contexts["segment_scores"].values
+      sparse_labels = tf.sparse.SparseTensor(label_indices, label_values,
+                                             (num_segment, self.num_classes))
+      batch_labels = tf.sparse.to_dense(sparse_labels, validate_indices=False)
+
+      sparse_label_weights = tf.sparse.SparseTensor(
+          label_indices, tf.ones_like(label_values, dtype=tf.float32),
+          (num_segment, self.num_classes))
+      batch_label_weights = tf.sparse.to_dense(
+          sparse_label_weights, validate_indices=False)
+    else:
+      # Process video-level labels.
+      labels = (
+          tf.cast(
+              tf.sparse_to_dense(
+                  contexts["labels"].values, (self.num_classes,),
+                  1,
+                  validate_indices=False), tf.bool))
+      # convert to batch format.
+      batch_video_ids = tf.expand_dims(contexts["id"], 0)
+      batch_video_matrix = tf.expand_dims(video_matrix, 0)
+      batch_labels = tf.expand_dims(labels, 0)
+      batch_frames = tf.expand_dims(num_frames, 0)
+      batch_label_weights = None
 
     output_dict = {
         "video_ids": batch_video_ids,
         "video_matrix": batch_video_matrix,
         "labels": batch_labels,
-        "num_frames": batch_frames
+        "num_frames": batch_frames,
     }
+    if batch_label_weights is not None:
+      output_dict["label_weights"] = batch_label_weights
 
     return output_dict
