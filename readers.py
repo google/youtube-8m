@@ -71,8 +71,8 @@ class YT8MAggregatedFeatureReader(BaseReader):
   The float features are assumed to be an average of dequantized values.
   """
 
-  def __init__(
-      self,  # pylint: disable=dangerous-default-value
+  def __init__(  # pylint: disable=dangerous-default-value
+      self,
       num_classes=3862,
       feature_sizes=[1024, 128],
       feature_names=["mean_rgb", "mean_audio"]):
@@ -150,8 +150,8 @@ class YT8MFrameFeatureReader(BaseReader):
   back into a range between min_quantized_value and max_quantized_value.
   """
 
-  def __init__(
-      self,  # pylint: disable=dangerous-default-value
+  def __init__(  # pylint: disable=dangerous-default-value
+      self,
       num_classes=3862,
       feature_sizes=[1024, 128],
       feature_names=["rgb", "audio"],
