@@ -181,7 +181,9 @@ def evaluation_loop(fetches, saver, summary_writer, evl_metrics,
   """
 
   global_step_val = -1
-  with tf.Session() as sess:
+  with tf.Session(
+      config=tf.ConfigProto(gpu_options=tf.GPUOptions(
+          allow_growth=True))) as sess:
     latest_checkpoint = tf.train.latest_checkpoint(FLAGS.train_dir)
     if latest_checkpoint:
       logging.info("Loading checkpoint for eval: %s", latest_checkpoint)
@@ -233,9 +235,8 @@ def evaluation_loop(fetches, saver, summary_writer, evl_metrics,
         if FLAGS.segment_labels:
           # This is a workaround to ignore the unrated labels.
           predictions *= output_data_dict["label_weights"]
-        iteration_info_dict = evl_metrics.accumulate(
-            predictions, labels_val,
-            output_data_dict["loss"])
+        iteration_info_dict = evl_metrics.accumulate(predictions, labels_val,
+                                                     output_data_dict["loss"])
         iteration_info_dict["examples_per_second"] = example_per_second
 
         iterinfo = utils.AddGlobalStepSummary(
