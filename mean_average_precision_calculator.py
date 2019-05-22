@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Calculate the mean average precision.
 
 It provides an interface for calculating mean average precision
@@ -42,8 +41,7 @@ import average_precision_calculator
 
 
 class MeanAveragePrecisionCalculator(object):
-  """This class is to calculate mean average precision.
-  """
+  """This class is to calculate mean average precision."""
 
   def __init__(self, num_class):
     """Construct a calculator to calculate the (macro) average precision.
@@ -51,9 +49,8 @@ class MeanAveragePrecisionCalculator(object):
     Args:
       num_class: A positive Integer specifying the number of classes.
       top_n_array: A list of positive integers specifying the top n for each
-      class. The top n in each class will be used to calculate its average
-      precision at n.
-      The size of the array must be num_class.
+        class. The top n in each class will be used to calculate its average
+        precision at n. The size of the array must be num_class.
 
     Raises:
       ValueError: An error occurred when num_class is not a positive integer;
@@ -73,13 +70,13 @@ class MeanAveragePrecisionCalculator(object):
 
     Args:
       predictions: A list of lists storing the prediction scores. The outer
-      dimension corresponds to classes.
+        dimension corresponds to classes.
       actuals: A list of lists storing the ground truth labels. The dimensions
-      should correspond to the predictions input. Any value
-      larger than 0 will be treated as positives, otherwise as negatives.
+        should correspond to the predictions input. Any value larger than 0 will
+        be treated as positives, otherwise as negatives.
       num_positives: If provided, it is a list of numbers representing the
-      number of true positives for each class. If not provided, the number of
-      true positives will be inferred from the 'actuals' array.
+        number of true positives for each class. If not provided, the number of
+        true positives will be inferred from the 'actuals' array.
 
     Raises:
       ValueError: An error occurred when the shape of predictions and actuals
@@ -97,8 +94,8 @@ class MeanAveragePrecisionCalculator(object):
       calculator.clear()
 
   def is_empty(self):
-    return ([calculator.heap_size for calculator in self._ap_calculators] ==
-            [0 for _ in range(self._num_class)])
+    return ([calculator.heap_size for calculator in self._ap_calculators
+            ] == [0 for _ in range(self._num_class)])
 
   def peek_map_at_n(self):
     """Peek the non-interpolated mean average precision at n.
@@ -107,6 +104,7 @@ class MeanAveragePrecisionCalculator(object):
       An array of non-interpolated average precision at n (default 0) for each
       class.
     """
-    aps = [self._ap_calculators[i].peek_ap_at_n()
-           for i in range(self._num_class)]
+    aps = [
+        self._ap_calculators[i].peek_ap_at_n() for i in range(self._num_class)
+    ]
     return aps

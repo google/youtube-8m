@@ -73,13 +73,11 @@ class YouTube8MFeatureExtractor(object):
 
     # Load Inception Network
     download_path = self._maybe_download(INCEPTION_TF_GRAPH)
-    inception_proto_file = os.path.join(
-        self._model_dir, 'classify_image_graph_def.pb')
+    inception_proto_file = os.path.join(self._model_dir,
+                                        'classify_image_graph_def.pb')
     if not os.path.exists(inception_proto_file):
       tarfile.open(download_path, 'r:gz').extractall(model_dir)
     self._load_inception(inception_proto_file)
-
-
 
   def extract_rgb_frame_features(self, frame_rgb, apply_pca=True):
     """Applies the YouTube8M feature extraction over an RGB frame.
@@ -101,11 +99,11 @@ class YouTube8MFeatureExtractor(object):
     assert frame_rgb.shape[2] == 3  # 3 channels (R, G, B)
     with self._inception_graph.as_default():
       if apply_pca:
-        frame_features = self.session.run('pca_final_feature:0',
-                                        feed_dict={'DecodeJpeg:0': frame_rgb})
+        frame_features = self.session.run(
+            'pca_final_feature:0', feed_dict={'DecodeJpeg:0': frame_rgb})
       else:
-        frame_features = self.session.run('pool_3/_reshape:0',
-                                        feed_dict={'DecodeJpeg:0': frame_rgb})
+        frame_features = self.session.run(
+            'pool_3/_reshape:0', feed_dict={'DecodeJpeg:0': frame_rgb})
         frame_features = frame_features[0]
     return frame_features
 
@@ -136,9 +134,11 @@ class YouTube8MFeatureExtractor(object):
       return download_path
 
     def _progress(count, block_size, total_size):
-      sys.stdout.write('\r>> Downloading %s %.1f%%' % (
-          filename, float(count * block_size) / float(total_size) * 100.0))
+      sys.stdout.write(
+          '\r>> Downloading %s %.1f%%' %
+          (filename, float(count * block_size) / float(total_size) * 100.0))
       sys.stdout.flush()
+
     urllib.request.urlretrieve(url, download_path, _progress)
     statinfo = os.stat(download_path)
     print('Succesfully downloaded', filename, statinfo.st_size, 'bytes.')
@@ -150,17 +150,20 @@ class YouTube8MFeatureExtractor(object):
     with self._inception_graph.as_default():
       _ = tf.import_graph_def(graph_def, name='')
       self.session = tf.Session()
-      Frame_Features = self.session.graph.get_tensor_by_name('pool_3/_reshape:0')
+      Frame_Features = self.session.graph.get_tensor_by_name(
+          'pool_3/_reshape:0')
       Pca_Mean = tf.constant(value=self.pca_mean, dtype=tf.float32)
       Pca_Eigenvecs = tf.constant(value=self.pca_eigenvecs, dtype=tf.float32)
       Pca_Eigenvals = tf.constant(value=self.pca_eigenvals, dtype=tf.float32)
       Feats = Frame_Features[0] - Pca_Mean
-      Feats = tf.reshape(tf.matmul(tf.reshape(Feats, [1, 2048]), Pca_Eigenvecs), [1024, ])
+      Feats = tf.reshape(
+          tf.matmul(tf.reshape(Feats, [1, 2048]), Pca_Eigenvecs), [
+              1024,
+          ])
       tf.divide(Feats, tf.sqrt(Pca_Eigenvals + 1e-4), name='pca_final_feature')
 
   def _load_pca(self):
-    self.pca_mean = numpy.load(
-        os.path.join(self._model_dir, 'mean.npy'))[:, 0]
+    self.pca_mean = numpy.load(os.path.join(self._model_dir, 'mean.npy'))[:, 0]
     self.pca_eigenvals = numpy.load(
         os.path.join(self._model_dir, 'eigenvals.npy'))[:1024, 0]
     self.pca_eigenvecs = numpy.load(

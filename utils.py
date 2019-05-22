@@ -11,16 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-"""Contains a collection of util functions for training and evaluating.
-"""
+"""Contains a collection of util functions for training and evaluating."""
 
 import numpy
 import tensorflow as tf
 from tensorflow import logging
 
 try:
-  xrange          # Python 2
+  xrange  # Python 2
 except NameError:
   xrange = range  # Python 3
 
@@ -89,10 +87,11 @@ def AddGlobalStepSummary(summary_writer,
                     examples_per_second), global_step_val)
 
   summary_writer.flush()
-  info = ("global_step {0} | Batch Hit@1: {1:.3f} | Batch PERR: {2:.3f} | Batch Loss: {3:.3f} "
-          "| Examples_per_sec: {4:.3f}").format(
-              global_step_val, this_hit_at_one, this_perr, this_loss,
-              examples_per_second)
+  info = (
+      "global_step {0} | Batch Hit@1: {1:.3f} | Batch PERR: {2:.3f} | Batch "
+      "Loss: {3:.3f} | Examples_per_sec: {4:.3f}").format(global_step_val, this_hit_at_one,
+                                            this_perr, this_loss,
+                                            examples_per_second)
   return info
 
 
@@ -130,20 +129,20 @@ def AddEpochSummary(summary_writer,
       MakeSummary("Epoch/" + summary_scope + "_Avg_Loss", avg_loss),
       global_step_val)
   summary_writer.add_summary(
-      MakeSummary("Epoch/" + summary_scope + "_MAP", mean_ap),
-          global_step_val)
+      MakeSummary("Epoch/" + summary_scope + "_MAP", mean_ap), global_step_val)
   summary_writer.add_summary(
-      MakeSummary("Epoch/" + summary_scope + "_GAP", gap),
-          global_step_val)
+      MakeSummary("Epoch/" + summary_scope + "_GAP", gap), global_step_val)
   summary_writer.flush()
 
   info = ("epoch/eval number {0} | Avg_Hit@1: {1:.3f} | Avg_PERR: {2:.3f} "
           "| MAP: {3:.3f} | GAP: {4:.3f} | Avg_Loss: {5:3f}").format(
-          epoch_id, avg_hit_at_one, avg_perr, mean_ap, gap, avg_loss)
+              epoch_id, avg_hit_at_one, avg_perr, mean_ap, gap, avg_loss)
   return info
+
 
 def GetListOfFeatureNamesAndSizes(feature_names, feature_sizes):
   """Extract the list of feature names and the dimensionality of each feature
+
      from string of comma separated values.
 
   Args:
@@ -155,15 +154,18 @@ def GetListOfFeatureNamesAndSizes(feature_names, feature_sizes):
     Elements in the first/second list are strings/integers.
   """
   list_of_feature_names = [
-      feature_names.strip() for feature_names in feature_names.split(',')]
+      feature_names.strip() for feature_names in feature_names.split(",")
+  ]
   list_of_feature_sizes = [
-      int(feature_sizes) for feature_sizes in feature_sizes.split(',')]
+      int(feature_sizes) for feature_sizes in feature_sizes.split(",")
+  ]
   if len(list_of_feature_names) != len(list_of_feature_sizes):
     logging.error("length of the feature names (=" +
                   str(len(list_of_feature_names)) + ") != length of feature "
                   "sizes (=" + str(len(list_of_feature_sizes)) + ")")
 
   return list_of_feature_names, list_of_feature_sizes
+
 
 def clip_gradient_norms(gradients_to_variables, max_norm):
   """Clips the gradients by the given value.
@@ -186,25 +188,32 @@ def clip_gradient_norms(gradients_to_variables, max_norm):
     clipped_grads_and_vars.append((grad, var))
   return clipped_grads_and_vars
 
+
 def combine_gradients(tower_grads):
   """Calculate the combined gradient for each shared variable across all towers.
 
   Note that this function provides a synchronization point across all towers.
 
   Args:
-    tower_grads: List of lists of (gradient, variable) tuples. The outer list
-      is over individual gradients. The inner list is over the gradient
-      calculation for each tower.
+    tower_grads: List of lists of (gradient, variable) tuples. The outer list is
+      over individual gradients. The inner list is over the gradient calculation
+      for each tower.
+
   Returns:
      List of pairs of (gradient, variable) where the gradient has been summed
      across all towers.
   """
-  filtered_grads = [[x for x in grad_list if x[0] is not None] for grad_list in tower_grads]
+  filtered_grads = [
+      [x for x in grad_list if x[0] is not None] for grad_list in tower_grads
+  ]
   final_grads = []
   for i in xrange(len(filtered_grads[0])):
     grads = [filtered_grads[t][i] for t in xrange(len(filtered_grads))]
     grad = tf.stack([x[0] for x in grads], 0)
     grad = tf.reduce_sum(grad, 0)
-    final_grads.append((grad, filtered_grads[0][i][1],))
+    final_grads.append((
+        grad,
+        filtered_grads[0][i][1],
+    ))
 
   return final_grads
