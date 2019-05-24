@@ -43,12 +43,14 @@ CAP_PROP_POS_MSEC = 0
 
 if __name__ == '__main__':
   # Required flags for input and output.
-  flags.DEFINE_string('output_tfrecords_file', None,
-                      'File containing tfrecords will be written at this path.')
-  flags.DEFINE_string('input_videos_csv', None,
-                      'CSV file with lines "<video_file>,<labels>", where '
-                      '<video_file> must be a path of a video and <labels> '
-                      'must be an integer list joined with semi-colon ";"')
+  flags.DEFINE_string(
+      'output_tfrecords_file', None,
+      'File containing tfrecords will be written at this path.')
+  flags.DEFINE_string(
+      'input_videos_csv', None,
+      'CSV file with lines "<video_file>,<labels>", where '
+      '<video_file> must be a path of a video and <labels> '
+      'must be an integer list joined with semi-colon ";"')
   # Optional flags.
   flags.DEFINE_string('model_dir', os.path.join(os.getenv('HOME'), 'yt8m'),
                       'Directory to store model files. It defaults to ~/yt8m')
@@ -56,26 +58,31 @@ if __name__ == '__main__':
   # The following flags are set to match the YouTube-8M dataset format.
   flags.DEFINE_integer('frames_per_second', 1,
                        'This many frames per second will be processed')
-  flags.DEFINE_boolean('skip_frame_level_features', False,
-                       'If set, frame-level features will not be written: only '
-                       'video-level features will be written with feature '
-                       'names mean_*')
-  flags.DEFINE_string('labels_feature_key', 'labels',
-                      'Labels will be written to context feature with this '
-                      'key, as int64 list feature.')
-  flags.DEFINE_string('image_feature_key', 'rgb',
-                      'Image features will be written to sequence feature with '
-                      'this key, as bytes list feature, with only one entry, '
-                      'containing quantized feature string.')
-  flags.DEFINE_string('video_file_feature_key', 'id',
-                      'Input <video_file> will be written to context feature '
-                      'with this key, as bytes list feature, with only one '
-                      'entry, containing the file path of the video. This '
-                      'can be used for debugging but not for training or eval.')
-  flags.DEFINE_boolean('insert_zero_audio_features', True,
-                       'If set, inserts features with name "audio" to be 128-D '
-                       'zero vectors. This allows you to use YouTube-8M '
-                       'pre-trained model.')
+  flags.DEFINE_boolean(
+      'skip_frame_level_features', False,
+      'If set, frame-level features will not be written: only '
+      'video-level features will be written with feature '
+      'names mean_*')
+  flags.DEFINE_string(
+      'labels_feature_key', 'labels',
+      'Labels will be written to context feature with this '
+      'key, as int64 list feature.')
+  flags.DEFINE_string(
+      'image_feature_key', 'rgb',
+      'Image features will be written to sequence feature with '
+      'this key, as bytes list feature, with only one entry, '
+      'containing quantized feature string.')
+  flags.DEFINE_string(
+      'video_file_feature_key', 'id',
+      'Input <video_file> will be written to context feature '
+      'with this key, as bytes list feature, with only one '
+      'entry, containing the file path of the video. This '
+      'can be used for debugging but not for training or eval.')
+  flags.DEFINE_boolean(
+      'insert_zero_audio_features', True,
+      'If set, inserts features with name "audio" to be 128-D '
+      'zero vectors. This allows you to use YouTube-8M '
+      'pre-trained model.')
 
 
 def frame_iterator(filename, every_ms=1000, max_num_frames=300):
@@ -147,7 +154,7 @@ def main(unused_argv):
     rgb_features = []
     sum_rgb_features = None
     for rgb in frame_iterator(
-        video_file, every_ms=1000.0/FLAGS.frames_per_second):
+        video_file, every_ms=1000.0 / FLAGS.frames_per_second):
       features = extractor.extract_rgb_frame_features(rgb[:, :, ::-1])
       if sum_rgb_features is None:
         sum_rgb_features = features
@@ -167,12 +174,13 @@ def main(unused_argv):
         FLAGS.image_feature_key: tf.train.FeatureList(feature=rgb_features),
     }
     context_features = {
-        FLAGS.labels_feature_key: _int64_list_feature(
-            sorted(map(int, labels.split(';')))),
-        FLAGS.video_file_feature_key: _bytes_feature(_make_bytes(
-            map(ord, video_file))),
-        'mean_' + FLAGS.image_feature_key: tf.train.Feature(
-            float_list=tf.train.FloatList(value=mean_rgb_features)),
+        FLAGS.labels_feature_key:
+            _int64_list_feature(sorted(map(int, labels.split(';')))),
+        FLAGS.video_file_feature_key:
+            _bytes_feature(_make_bytes(map(ord, video_file))),
+        'mean_' + FLAGS.image_feature_key:
+            tf.train.Feature(
+                float_list=tf.train.FloatList(value=mean_rgb_features)),
     }
 
     if FLAGS.insert_zero_audio_features:
@@ -193,8 +201,8 @@ def main(unused_argv):
     total_written += 1
 
   writer.close()
-  print('Successfully encoded %i out of %i videos' % (
-      total_written, total_written + total_error))
+  print('Successfully encoded %i out of %i videos' %
+        (total_written, total_written + total_error))
 
 
 if __name__ == '__main__':

@@ -11,14 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-"""Contains a collection of util functions for model construction.
-"""
+"""Contains a collection of util functions for model construction."""
 import numpy
 import tensorflow as tf
 from tensorflow import logging
 from tensorflow import flags
 import tensorflow.contrib.slim as slim
+
 
 def SampleRandomSequence(model_input, num_frames, num_samples):
   """Samples a random sequence of frames of size num_samples.
@@ -69,12 +68,14 @@ def SampleRandomFrames(model_input, num_frames, num_samples):
   index = tf.stack([batch_index, frame_index], 2)
   return tf.gather_nd(model_input, index)
 
+
 def FramePooling(frames, method, **unused_params):
   """Pools over the frames of a video.
 
   Args:
     frames: A tensor with shape [batch_size, num_frames, feature_size].
     method: "average", "max", "attention", or "none".
+
   Returns:
     A tensor with shape [batch_size, feature_size] for average, max, or
     attention pooling. A tensor with shape [batch_size*num_frames, feature_size]
