@@ -89,9 +89,9 @@ def AddGlobalStepSummary(summary_writer,
   summary_writer.flush()
   info = (
       "global_step {0} | Batch Hit@1: {1:.3f} | Batch PERR: {2:.3f} | Batch "
-      "Loss: {3:.3f} | Examples_per_sec: {4:.3f}").format(global_step_val, this_hit_at_one,
-                                            this_perr, this_loss,
-                                            examples_per_second)
+      "Loss: {3:.3f} | Examples_per_sec: {4:.3f}").format(
+          global_step_val, this_hit_at_one, this_perr, this_loss,
+          examples_per_second)
   return info
 
 
@@ -135,8 +135,9 @@ def AddEpochSummary(summary_writer,
   summary_writer.flush()
 
   info = ("epoch/eval number {0} | Avg_Hit@1: {1:.3f} | Avg_PERR: {2:.3f} "
-          "| MAP: {3:.3f} | GAP: {4:.3f} | Avg_Loss: {5:3f}").format(
-              epoch_id, avg_hit_at_one, avg_perr, mean_ap, gap, avg_loss)
+          "| MAP: {3:.3f} | GAP: {4:.3f} | Avg_Loss: {5:3f} | num_classes: {6}"
+         ).format(epoch_id, avg_hit_at_one, avg_perr, mean_ap, gap, avg_loss,
+                  len(aps))
   return info
 
 
