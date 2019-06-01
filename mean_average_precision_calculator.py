@@ -43,14 +43,12 @@ import average_precision_calculator
 class MeanAveragePrecisionCalculator(object):
   """This class is to calculate mean average precision."""
 
-  def __init__(self, num_class):
+  def __init__(self, num_class, filter_empty_classes=True):
     """Construct a calculator to calculate the (macro) average precision.
 
     Args:
       num_class: A positive Integer specifying the number of classes.
-      top_n_array: A list of positive integers specifying the top n for each
-        class. The top n in each class will be used to calculate its average
-        precision at n. The size of the array must be num_class.
+      filter_empty_classes: whether to filter classes without any positives.
 
     Raises:
       ValueError: An error occurred when num_class is not a positive integer;
@@ -61,6 +59,7 @@ class MeanAveragePrecisionCalculator(object):
 
     self._ap_calculators = []  # member of AveragePrecisionCalculator
     self._num_class = num_class  # total number of classes
+    self._filter_empty_classes = filter_empty_classes
     for i in range(num_class):
       self._ap_calculators.append(
           average_precision_calculator.AveragePrecisionCalculator())
@@ -83,10 +82,10 @@ class MeanAveragePrecisionCalculator(object):
       does not match.
     """
     if not num_positives:
-      num_positives = [None for i in predictions.shape[1]]
+      num_positives = [None for i in self._num_class]
 
     calculators = self._ap_calculators
-    for i in range(len(predictions)):
+    for i in range(self._num_class):
       calculators[i].accumulate(predictions[i], actuals[i], num_positives[i])
 
   def clear(self):
@@ -104,7 +103,9 @@ class MeanAveragePrecisionCalculator(object):
       An array of non-interpolated average precision at n (default 0) for each
       class.
     """
-    aps = [
-        self._ap_calculators[i].peek_ap_at_n() for i in range(self._num_class)
-    ]
+    aps = []
+    for i in range(self._num_class):
+      if (not self._filter_empty_classes or
+          self._ap_calculators[i].num_accumulated_positives > 0):
+        aps.append(self._ap_calculators[i].peek_ap_at_n())
     return aps
