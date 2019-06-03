@@ -13,22 +13,23 @@
 # limitations under the License.
 """Binary for generating predictions over a set of videos."""
 
-import os
+from __future__ import print_function
+
 import glob
 import json
+import os
 import tarfile
 import time
 import numpy
+
+import readers
 import tensorflow as tf
-from tensorflow.python.lib.io import file_io
 from tensorflow import app
 from tensorflow import flags
 from tensorflow import gfile
 from tensorflow import logging
+from tensorflow.python.lib.io import file_io
 
-import eval_util
-import losses
-import readers
 import utils
 
 FLAGS = flags.FLAGS
@@ -128,12 +129,13 @@ def get_input_data_tensors(reader, data_pattern, batch_size, num_readers=1):
 
 def inference(reader, train_dir, data_pattern, out_file_location, batch_size,
               top_k):
+  """Inference function."""
   with tf.Session(config=tf.ConfigProto(
       allow_soft_placement=True)) as sess, gfile.Open(out_file_location,
                                                       "w+") as out_file:
     video_id_batch, video_batch, num_frames_batch = get_input_data_tensors(
         reader, data_pattern, batch_size)
-    checkpoint_file = os.path.join(FLAGS.train_dir, "inference_model",
+    checkpoint_file = os.path.join(train_dir, "inference_model",
                                    "inference_model")
     if not gfile.Exists(checkpoint_file + ".meta"):
       raise IOError("Cannot find %s. Did you run eval.py?" % checkpoint_file)
@@ -145,7 +147,7 @@ def inference(reader, train_dir, data_pattern, out_file_location, batch_size,
         for model_file in glob.glob(checkpoint_file + ".*"):
           tar.add(model_file, arcname=os.path.basename(model_file))
         tar.add(
-            os.path.join(FLAGS.train_dir, "model_flags.json"),
+            os.path.join(train_dir, "model_flags.json"),
             arcname="model_flags.json")
       print("Tarred model onto " + FLAGS.output_model_tgz)
     with tf.device("/cpu:0"):
@@ -187,7 +189,6 @@ def inference(reader, train_dir, data_pattern, out_file_location, batch_size,
                                     })
         now = time.time()
         num_examples_processed += len(video_batch_val)
-        num_classes = predictions_val.shape[1]
         logging.info("num examples processed: " + str(num_examples_processed) +
                      " elapsed seconds: " + "{0:.2f}".format(now - start_time))
         for line in format_lines(video_id_batch_val, predictions_val, top_k):
@@ -232,11 +233,11 @@ def main(unused_argv):
     reader = readers.YT8MAggregatedFeatureReader(
         feature_names=feature_names, feature_sizes=feature_sizes)
 
-  if FLAGS.output_file is "":
+  if not FLAGS.output_file:
     raise ValueError("'output_file' was not specified. "
                      "Unable to continue with inference.")
 
-  if FLAGS.input_data_pattern is "":
+  if not FLAGS.input_data_pattern:
     raise ValueError("'input_data_pattern' was not specified. "
                      "Unable to continue with inference.")
 
