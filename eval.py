@@ -46,8 +46,8 @@ if __name__ == "__main__":
       "sequence feature as well as a 'labels' int64 context feature.")
   flags.DEFINE_bool(
       "segment_labels", False,
-      "If set, then --train_data_pattern must be frame-level features (but with"
-      " segment_labels). Otherwise, --train_data_pattern must be aggregated "
+      "If set, then --eval_data_pattern must be frame-level features (but with"
+      " segment_labels). Otherwise, --eval_data_pattern must be aggregated "
       "video-level features. The model must also be set appropriately (i.e. to "
       "read 3D batches VS 4D batches.")
 
