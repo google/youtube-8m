@@ -12,17 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Provides functions to help with evaluating models."""
-import datetime
-import numpy
-
-from tensorflow.python.platform import gfile
-
-import mean_average_precision_calculator as map_calculator
 import average_precision_calculator as ap_calculator
+import mean_average_precision_calculator as map_calculator
+import numpy
+from tensorflow.python.platform import gfile
 
 
 def flatten(l):
-  """ Merges a list of lists into a single list. """
+  """Merges a list of lists into a single list. """
   return [item for sublist in l for item in sublist]
 
 
@@ -122,8 +119,8 @@ def top_k_by_class(predictions, labels, k=20):
   for video_index in range(predictions.shape[0]):
     prediction_triplets.extend(
         top_k_triplets(predictions[video_index], labels[video_index], k))
-  out_predictions = [[] for v in range(num_classes)]
-  out_labels = [[] for v in range(num_classes)]
+  out_predictions = [[] for _ in range(num_classes)]
+  out_labels = [[] for _ in range(num_classes)]
   for triplet in prediction_triplets:
     out_predictions[triplet[0]].append(triplet[1])
     out_labels[triplet[0]].append(triplet[2])
@@ -147,13 +144,15 @@ def top_k_triplets(predictions, labels, k=20):
 class EvaluationMetrics(object):
   """A class to store the evaluation metrics."""
 
-  def __init__(self, num_class, top_k):
+  def __init__(self, num_class, top_k, top_n):
     """Construct an EvaluationMetrics object to store the evaluation metrics.
 
     Args:
       num_class: A positive integer specifying the number of classes.
       top_k: A positive integer specifying how many predictions are considered
         per video.
+      top_n: A positive Integer specifying the average precision at n, or None
+        to use all provided data points.
 
     Raises:
       ValueError: An error occurred when MeanAveragePrecisionCalculator cannot
@@ -163,7 +162,7 @@ class EvaluationMetrics(object):
     self.sum_perr = 0.0
     self.sum_loss = 0.0
     self.map_calculator = map_calculator.MeanAveragePrecisionCalculator(
-        num_class)
+        num_class, top_n=top_n)
     self.global_ap_calculator = ap_calculator.AveragePrecisionCalculator()
     self.top_k = top_k
     self.num_examples = 0
@@ -225,14 +224,14 @@ class EvaluationMetrics(object):
     aps = self.map_calculator.peek_map_at_n()
     gap = self.global_ap_calculator.peek_ap_at_n()
 
-    epoch_info_dict = {}
-    return {
+    epoch_info_dict = {
         "avg_hit_at_one": avg_hit_at_one,
         "avg_perr": avg_perr,
         "avg_loss": avg_loss,
         "aps": aps,
         "gap": gap
     }
+    return epoch_info_dict
 
   def clear(self):
     """Clear the evaluation metrics and reset the EvaluationMetrics object."""
