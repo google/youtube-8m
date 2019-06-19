@@ -83,7 +83,7 @@ class MeanAveragePrecisionCalculator(object):
       does not match.
     """
     if not num_positives:
-      num_positives = [None for i in self._num_class]
+      num_positives = [None for i in range(self._num_class)]
 
     calculators = self._ap_calculators
     for i in range(self._num_class):
