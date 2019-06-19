@@ -1,4 +1,4 @@
-"""Eval metric from inference file."""
+"""Eval mAP@N metric from inference file."""
 
 from __future__ import absolute_import
 from __future__ import division
@@ -27,19 +27,25 @@ flags.DEFINE_integer(
 
 FLAGS = flags.FLAGS
 
-# pylint: disable=missing-docstring
-
 
 class Labels(object):
+  """Contains the class to hold label objects.
+
+  This class can serialize and de-serialize the groundtruths.
+  The ground truth is in a mapping from (segment_id, class_id) -> label_score.
+  """
 
   def __init__(self, labels):
+    """__init__ method."""
     self._labels = labels
 
   @property
   def labels(self):
+    """Return the ground truth mapping. See class docstring for details."""
     return self._labels
 
   def to_file(self, file_name):
+    """Materialize the GT mapping to file."""
     with tf.gfile.Open(file_name, "w") as fobj:
       for k, v in self._labels.items():
         seg_id, label = k
@@ -48,6 +54,7 @@ class Labels(object):
 
   @classmethod
   def from_file(cls, file_name):
+    """Read the GT mapping from cached file."""
     labels = {}
     with tf.gfile.Open(file_name) as fobj:
       for line in fobj:
