@@ -114,7 +114,7 @@ class AveragePrecisionCalculator(object):
     if num_positives is not None:
       if not isinstance(num_positives, numbers.Number) or num_positives < 0.5:
         raise ValueError(
-            "'num_positives' was provided but it wan't a nonzero number.")
+            "'num_positives' was provided but it wasn't a nonzero number.")
 
     if num_positives is not None:
       self._total_positives += num_positives
