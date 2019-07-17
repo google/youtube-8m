@@ -36,10 +36,10 @@ model.
 
 The starter code requires Tensorflow. If you haven't installed it yet, follow
 the instructions on [tensorflow.org](https://www.tensorflow.org/install/). This
-code has been tested with Tensorflow 1.13. Going forward, we will continue to
+code has been tested with Tensorflow 1.14. Going forward, we will continue to
 target the latest released version of Tensorflow.
 
-Please verify that you have Python 2.7+ and Tensorflow 1.13 or higher installed
+Please verify that you have Python 3.6+ and Tensorflow 1.14 or higher installed
 by running the following commands:
 
 ```sh
@@ -88,9 +88,9 @@ python train.py --frame_features --model=FrameLevelLogisticModel \
 Evaluate the model by
 
 ```bash
-python eval.py
---eval_data_pattern=${HOME}/yt8m/3/frame/validate/validate*.tfrecord --train_dir
-~/yt8m/models/frame/sample_model --segment_labels
+python eval.py \
+--eval_data_pattern=${HOME}/yt8m/3/frame/validate/validate*.tfrecord \
+--train_dir ~/yt8m/models/frame/sample_model --segment_labels
 ```
 
 This will provide some comprehensive metrics, e.g., gAP, mAP, etc., for your
@@ -99,9 +99,9 @@ models.
 Produce CSV (`kaggle_solution.csv`) by doing inference:
 
 ```bash
-python
-inference.py --train_dir ~/yt8m/models/frame/sample_model
---output_file=$HOME/tmp/kaggle_solution.csv
+python \
+inference.py --train_dir ~/yt8m/models/frame/sample_model \
+--output_file=$HOME/tmp/kaggle_solution.csv \
 --input_data_pattern=${HOME}/yt8m/3/frame/test/test*.tfrecord --segment_labels
 ```
 
@@ -109,10 +109,17 @@ inference.py --train_dir ~/yt8m/models/frame/sample_model
 can do so by
 
 ```bash
-python segment_eval_inference.py
---eval_data_pattern=${HOME}/yt8m/3/frame/validate/validate*.tfrecord
---label_cache=$HOME/tmp/validate.label_cache
---submission_file=$HOME/tmp/kaggle_solution.csv --top_n=100000
+python inference.py --train_dir ~/yt8m/models/frame/sample_model \
+--output_file=$HOME/tmp/kaggle_solution_validation.csv \
+--input_data_pattern=${HOME}/yt8m/3/frame/validate/validate*.tfrecord \
+--segment_labels
+```
+
+```bash
+python segment_eval_inference.py \
+--eval_data_pattern=${HOME}/yt8m/3/frame/validate/validate*.tfrecord \
+--label_cache=$HOME/tmp/validate.label_cache \
+--submission_file=$HOME/tmp/kaggle_solution_validation.csv --top_n=100000
 ```
 
 **NOTE**: This script can be slow for the first time running. It will read
@@ -169,7 +176,7 @@ Platform account. To create and configure your account, please make sure you
 follow the instructions
 [here](https://cloud.google.com/ml/docs/how-tos/getting-set-up).
 
-Please also verify that you have Python 2.7+ and Tensorflow 1.13 or higher
+Please also verify that you have Python 3.6+ and Tensorflow 1.14 or higher
 installed by running the following commands:
 
 ```sh
