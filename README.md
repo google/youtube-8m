@@ -624,7 +624,7 @@ gets produced by our `inference.py`. In particular, the
 [predictions CSV file](https://www.kaggle.com/c/youtube8m-2018#evaluation) must
 have two fields: `Id,Labels` where `Id` is stored as `id` in the each test
 example and `Labels` is a space-delimited list of integer label IDs. The `.tgz`
-must contain these 4 files at minumum:
+must contain these 4 files at minimum:
 
 *   `model_flags.json`: a JSON file with keys `feature_sizes`, `frame_features`,
     and `feature_names`. These must be set to values that would match what can
