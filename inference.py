@@ -248,7 +248,7 @@ def inference(reader, train_dir, data_pattern, out_file_location, batch_size,
               # Simply skip the non-integer line.
               continue
 
-    out_file.write("VideoId,LabelConfidencePairs\n")
+    out_file.write(u"VideoId,LabelConfidencePairs\n".encode("utf8"))
 
     try:
       while not coord.should_stop():
