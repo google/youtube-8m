@@ -331,7 +331,8 @@ def evaluate():
     summary_writer = tf.summary.FileWriter(
         os.path.join(FLAGS.train_dir, "eval"), graph=tf.get_default_graph())
 
-    evl_metrics = eval_util.EvaluationMetrics(reader.num_classes, FLAGS.top_k, None)
+    evl_metrics = eval_util.EvaluationMetrics(reader.num_classes, FLAGS.top_k,
+                                              None)
 
     last_global_step_val = -1
     while True:
