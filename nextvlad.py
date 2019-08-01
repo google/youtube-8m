@@ -210,7 +210,7 @@ class MixNeXtVladModel(models.BaseModel):
 
         max_frames = model_input.get_shape().as_list()[1]
 
-        ftr_mean = tf.reduce_mean(model_input, axis=-1)
+        ftr_mean = tf.reduce_mean(model_input, axis=1)
         ftr_mean = slim.batch_norm(ftr_mean,
                                    center=True,
                                    scale=True,
