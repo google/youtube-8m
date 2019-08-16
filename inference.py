@@ -314,6 +314,7 @@ def inference(reader, train_dir, data_pattern, out_file_location, batch_size,
               heapq.heappush(heaps[cls], (score, segment_id))
         logging.info("Writing sorted segment predictions to: %s",
                      final_out_file.name)
+        final_out_file.write("Class,Segments\n")
         for cls, cls_heap in heaps.items():
           cls_heap.sort(key=lambda x: x[0], reverse=True)
           final_out_file.write("%d,%s\n" %
