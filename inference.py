@@ -260,7 +260,7 @@ def inference(reader, train_dir, data_pattern, out_file_location, batch_size,
           video_segment_ids = results["video_segment_ids"]
           video_id_batch_val = video_id_batch_val[video_segment_ids[:, 0]]
           video_id_batch_val = np.array([
-              "%s:%d" % (x, y)
+              "%s:%d" % (x.decode("utf8"), y)
               for x, y in zip(video_id_batch_val, video_segment_ids[:, 1])
           ])
           video_batch_val = results["video_batch"]
