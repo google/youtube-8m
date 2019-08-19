@@ -161,7 +161,8 @@ class DbofModel(models.BaseModel):
     else:
       cluster_biases = tf.get_variable(
           "cluster_biases", [cluster_size],
-          initializer=tf.random_normal(stddev=1 / math.sqrt(feature_size)))
+          initializer=tf.random_normal_initializer(stddev=1 /
+                                                   math.sqrt(feature_size)))
       tf.summary.histogram("cluster_biases", cluster_biases)
       activation += cluster_biases
     activation = tf.nn.relu6(activation)
