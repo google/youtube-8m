@@ -240,7 +240,7 @@ def inference(reader, train_dir, data_pattern, out_file_location, batch_size,
       if FLAGS.segment_label_ids_file:
         whitelisted_cls_mask = np.zeros((predictions_tensor.get_shape()[-1],),
                                         dtype=np.float32)
-        with open(FLAGS.segment_label_ids_file) as fobj:
+        with tf.io.gfile.GFile(FLAGS.segment_label_ids_file) as fobj:
           for line in fobj:
             try:
               cls_id = int(line)
