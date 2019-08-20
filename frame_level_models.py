@@ -14,13 +14,12 @@
 """Contains a collection of models which operate on variable-length sequences."""
 import math
 
-import models
-import video_level_models
-import tensorflow as tf
 import model_utils as utils
-
-import tensorflow.contrib.slim as slim
+import models
+import tensorflow as tf
 from tensorflow import flags
+import tensorflow.contrib.slim as slim
+import video_level_models
 
 FLAGS = flags.FLAGS
 flags.DEFINE_integer("iterations", 30, "Number of frames per batch for DBoF.")
@@ -39,6 +38,10 @@ flags.DEFINE_string(
     "The pooling method used in the DBoF cluster layer. "
     "Choices are 'average' and 'max'.")
 flags.DEFINE_string(
+    "dbof_activation", "sigmoid",
+    "The nonlinear activation method for cluster and hidden dense layer, e.g., "
+    "sigmoid, relu6, etc.")
+flags.DEFINE_string(
     "video_level_classifier_model", "MoeModel",
     "Some Frame-Level models can be decomposed into a "
     "generalized pooling operation followed by a "
@@ -48,11 +51,10 @@ flags.DEFINE_integer("lstm_layers", 2, "Number of LSTM layers.")
 
 
 class FrameLevelLogisticModel(models.BaseModel):
+  """Creates a logistic classifier over the aggregated frame-level features."""
 
   def create_model(self, model_input, vocab_size, num_frames, **unused_params):
-    """Creates a model which uses a logistic classifier over the average of the
-
-    frame-level features.
+    """See base class.
 
     This class is intended to be an example for implementors of frame level
     models. If you want to train a model over averaged features it is more
@@ -94,18 +96,6 @@ class DbofModel(models.BaseModel):
 
   The model will randomly sample either frames or sequences of frames during
   training to speed up convergence.
-
-  Args:
-    model_input: A 'batch_size' x 'max_frames' x 'num_features' matrix of input
-      features.
-    vocab_size: The number of classes in the dataset.
-    num_frames: A vector of length 'batch' which indicates the number of frames
-      for each video (before padding).
-
-  Returns:
-    A dictionary with a tensor containing the probability predictions of the
-    model in the 'predictions' key. The dimensions of the tensor are
-    'batch_size' x 'num_classes'.
   """
 
   def create_model(self,
@@ -119,11 +109,32 @@ class DbofModel(models.BaseModel):
                    hidden_size=None,
                    is_training=True,
                    **unused_params):
+    """See base class.
+
+    Args:
+      model_input: A 'batch_size' x 'max_frames' x 'num_features' matrix of
+        input features.
+      vocab_size: The number of classes in the dataset.
+      num_frames: A vector of length 'batch' which indicates the number of
+        frames for each video (before padding).
+      iterations: the number of frames to be sampled.
+      add_batch_norm: whether to add batch norm during training.
+      sample_random_frames: whether to sample random frames or random sequences.
+      cluster_size: the output neuron number of the cluster layer.
+      hidden_size: the output neuron number of the hidden layer.
+      is_training: whether to build the graph in training mode.
+
+    Returns:
+      A dictionary with a tensor containing the probability predictions of the
+      model in the 'predictions' key. The dimensions of the tensor are
+      'batch_size' x 'num_classes'.
+    """
     iterations = iterations or FLAGS.iterations
     add_batch_norm = add_batch_norm or FLAGS.dbof_add_batch_norm
     random_frames = sample_random_frames or FLAGS.sample_random_frames
     cluster_size = cluster_size or FLAGS.dbof_cluster_size
     hidden1_size = hidden_size or FLAGS.dbof_hidden_size
+    act_fn = getattr(tf.nn, FLAGS.dbof_activation)
 
     num_frames = tf.cast(tf.expand_dims(num_frames, 1), tf.float32)
     if random_frames:
@@ -165,7 +176,7 @@ class DbofModel(models.BaseModel):
                                                    math.sqrt(feature_size)))
       tf.summary.histogram("cluster_biases", cluster_biases)
       activation += cluster_biases
-    activation = tf.nn.relu6(activation)
+    activation = act_fn(activation)
     tf.summary.histogram("cluster_output", activation)
 
     activation = tf.reshape(activation, [-1, max_frames, cluster_size])
@@ -190,7 +201,7 @@ class DbofModel(models.BaseModel):
           initializer=tf.random_normal_initializer(stddev=0.01))
       tf.summary.histogram("hidden1_biases", hidden1_biases)
       activation += hidden1_biases
-    activation = tf.nn.relu6(activation)
+    activation = act_fn(activation)
     tf.summary.histogram("hidden1_output", activation)
 
     aggregated_model = getattr(video_level_models,
@@ -200,9 +211,10 @@ class DbofModel(models.BaseModel):
 
 
 class LstmModel(models.BaseModel):
+  """Creates a model which uses a stack of LSTMs to represent the video."""
 
   def create_model(self, model_input, vocab_size, num_frames, **unused_params):
-    """Creates a model which uses a stack of LSTMs to represent the video.
+    """See base class.
 
     Args:
       model_input: A 'batch_size' x 'max_frames' x 'num_features' matrix of
@@ -224,9 +236,7 @@ class LstmModel(models.BaseModel):
         for _ in range(number_of_layers)
     ])
 
-    loss = 0.0
-
-    outputs, state = tf.nn.dynamic_rnn(
+    _, state = tf.nn.dynamic_rnn(
         stacked_lstm, model_input, sequence_length=num_frames, dtype=tf.float32)
 
     aggregated_model = getattr(video_level_models,
