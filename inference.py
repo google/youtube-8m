@@ -80,7 +80,7 @@ if __name__ == "__main__":
   flags.DEFINE_integer("top_k", 20, "How many predictions to output per video.")
 
   # Other flags.
-  flags.DEFINE_integer("batch_size", 8192,
+  flags.DEFINE_integer("batch_size", 512,
                        "How many examples to process per batch.")
   flags.DEFINE_integer("num_readers", 1,
                        "How many threads to use for reading input files.")
