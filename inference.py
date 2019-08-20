@@ -25,6 +25,7 @@ import time
 import numpy as np
 
 import readers
+from six.moves import urllib
 import tensorflow as tf
 from tensorflow import app
 from tensorflow import flags
@@ -66,8 +67,10 @@ if __name__ == "__main__":
       "read 3D batches VS 4D batches.")
   flags.DEFINE_integer("segment_max_pred", 25000,
                        "Limit total number of segment outputs per entity.")
-  flags.DEFINE_string("segment_label_ids_file", "segment_label_ids.csv",
-                      "The file that contains the segment label ids.")
+  flags.DEFINE_string(
+      "segment_label_ids_file",
+      "https://raw.githubusercontent.com/google/youtube-8m/master/segment_label_ids.csv",
+      "The file that contains the segment label ids.")
 
   # Output
   flags.DEFINE_string("output_file", "", "The file to save the predictions to.")
@@ -240,7 +243,13 @@ def inference(reader, train_dir, data_pattern, out_file_location, batch_size,
       if FLAGS.segment_label_ids_file:
         whitelisted_cls_mask = np.zeros((predictions_tensor.get_shape()[-1],),
                                         dtype=np.float32)
-        with open(FLAGS.segment_label_ids_file) as fobj:
+        segment_label_ids_file = FLAGS.segment_label_ids_file
+        if segment_label_ids_file.startswith("http"):
+          logging.info("Retrieving segment ID whitelist files from %s...",
+                       segment_label_ids_file)
+          segment_label_ids_file, _ = urllib.request.urlretrieve(
+              segment_label_ids_file)
+        with tf.io.gfile.GFile(segment_label_ids_file) as fobj:
           for line in fobj:
             try:
               cls_id = int(line)
