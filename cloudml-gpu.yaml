@@ -1,4 +1,5 @@
 trainingInput:
   scaleTier: CUSTOM
+  # https://cloud.google.com/ml-engine/docs/machine-types#machine_type_table
   masterType: standard_gpu
-  runtimeVersion: "1.13"
+  runtimeVersion: "1.14"
