@@ -47,8 +47,8 @@ class CrossEntropyLoss(BaseLoss):
     with tf.name_scope("loss_xent"):
       epsilon = 1e-5
       float_labels = tf.cast(labels, tf.float32)
-      cross_entropy_loss = float_labels * tf.log(predictions + epsilon) + (
-          1 - float_labels) * tf.log(1 - predictions + epsilon)
+      cross_entropy_loss = float_labels * tf.math.log(predictions + epsilon) + (
+          1 - float_labels) * tf.math.log(1 - predictions + epsilon)
       cross_entropy_loss = tf.negative(cross_entropy_loss)
       if label_weights is not None:
         cross_entropy_loss *= label_weights
