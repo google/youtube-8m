@@ -98,6 +98,11 @@ class DbofModel(models.BaseModel):
   training to speed up convergence.
   """
 
+  ACT_FN_MAP = {
+      "sigmoid": tf.nn.sigmoid,
+      "relu6": tf.nn.relu6,
+  }
+
   def create_model(self,
                    model_input,
                    vocab_size,
@@ -134,7 +139,9 @@ class DbofModel(models.BaseModel):
     random_frames = sample_random_frames or FLAGS.sample_random_frames
     cluster_size = cluster_size or FLAGS.dbof_cluster_size
     hidden1_size = hidden_size or FLAGS.dbof_hidden_size
-    act_fn = getattr(tf.nn, FLAGS.dbof_activation)
+    act_fn = self.ACT_FN_MAP.get(FLAGS.dbof_activation)
+    assert act_fn is not None, ("dbof_activation is not valid: %s." %
+                                FLAGS.dbof_activation)
 
     num_frames = tf.cast(tf.expand_dims(num_frames, 1), tf.float32)
     if random_frames:
