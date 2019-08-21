@@ -21,6 +21,11 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install tensorflow==1.14.0 six Pillow
+    - name: Lint Check
+      run: |
+        pip install yapf
+        yapf --diff *.py
+      if: ${{ matrix.python-version }} == '3.6'
     - name: Test with nosetests
       run: |
         pip install -U nose
