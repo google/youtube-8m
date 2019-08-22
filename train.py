@@ -530,13 +530,15 @@ class Trainer(object):
 
     last_checkpoint = saver.save(session, save_path, global_step_val)
 
-    model_dir = "{0}/export/step_{1}".format(self.train_dir, global_step_val)
-    logging.info("%s: Exporting the model at step %s to %s.",
-                 task_as_string(self.task), global_step_val, model_dir)
-
-    self.model_exporter.export_model(model_dir=model_dir,
-                                     global_step_val=global_step_val,
-                                     last_checkpoint=last_checkpoint)
+    # Temporarily disable the export. Given it might be the source which causes
+    # the cloud training performance issue.
+#     model_dir = "{0}/export/step_{1}".format(self.train_dir, global_step_val)
+#     logging.info("%s: Exporting the model at step %s to %s.",
+#                  task_as_string(self.task), global_step_val, model_dir)
+#
+#     self.model_exporter.export_model(model_dir=model_dir,
+#                                      global_step_val=global_step_val,
+#                                      last_checkpoint=last_checkpoint)
 
   def start_server_if_distributed(self):
     """Starts a server if the execution is distributed."""
