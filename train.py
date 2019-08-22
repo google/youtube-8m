@@ -175,19 +175,19 @@ def get_input_data_tensors(reader,
       raise IOError("Unable to find training files. data_pattern='" +
                     data_pattern + "'.")
     logging.info("Number of training files: %s.", str(len(files)))
-    filename_queue = tf.train.string_input_producer(
-        files, num_epochs=num_epochs, shuffle=True)
+    filename_queue = tf.train.string_input_producer(files,
+                                                    num_epochs=num_epochs,
+                                                    shuffle=True)
     training_data = [
         reader.prepare_reader(filename_queue) for _ in range(num_readers)
     ]
 
-    return tf.train.shuffle_batch_join(
-        training_data,
-        batch_size=batch_size,
-        capacity=batch_size * 5,
-        min_after_dequeue=batch_size,
-        allow_smaller_final_batch=True,
-        enqueue_many=True)
+    return tf.train.shuffle_batch_join(training_data,
+                                       batch_size=batch_size,
+                                       capacity=batch_size * 5,
+                                       min_after_dequeue=batch_size,
+                                       allow_smaller_final_batch=True,
+                                       enqueue_many=True)
 
 
 def find_class_by_name(name, modules):
@@ -249,22 +249,20 @@ def build_graph(reader,
     num_towers = 1
     device_string = "/cpu:%d"
 
-  learning_rate = tf.train.exponential_decay(
-      base_learning_rate,
-      global_step * batch_size * num_towers,
-      learning_rate_decay_examples,
-      learning_rate_decay,
-      staircase=True)
+  learning_rate = tf.train.exponential_decay(base_learning_rate,
+                                             global_step * batch_size *
+                                             num_towers,
+                                             learning_rate_decay_examples,
+                                             learning_rate_decay,
+                                             staircase=True)
   tf.summary.scalar("learning_rate", learning_rate)
 
   optimizer = optimizer_class(learning_rate)
-  input_data_dict = (
-      get_input_data_tensors(
-          reader,
-          train_data_pattern,
-          batch_size=batch_size * num_towers,
-          num_readers=num_readers,
-          num_epochs=num_epochs))
+  input_data_dict = (get_input_data_tensors(reader,
+                                            train_data_pattern,
+                                            batch_size=batch_size * num_towers,
+                                            num_readers=num_readers,
+                                            num_epochs=num_epochs))
   model_input_raw = input_data_dict["video_matrix"]
   labels_batch = input_data_dict["labels"]
   num_frames = input_data_dict["num_frames"]
@@ -289,11 +287,10 @@ def build_graph(reader,
       with (tf.variable_scope(("tower"), reuse=True if i > 0 else None)):
         with (slim.arg_scope([slim.model_variable, slim.variable],
                              device="/cpu:0" if num_gpus != 1 else "/gpu:0")):
-          result = model.create_model(
-              tower_inputs[i],
-              num_frames=tower_num_frames[i],
-              vocab_size=reader.num_classes,
-              labels=tower_labels[i])
+          result = model.create_model(tower_inputs[i],
+                                      num_frames=tower_num_frames[i],
+                                      vocab_size=reader.num_classes,
+                                      labels=tower_labels[i])
           for variable in slim.get_model_variables():
             tf.summary.histogram(variable.op.name, variable)
 
@@ -347,8 +344,8 @@ def build_graph(reader,
       merged_gradients = utils.clip_gradient_norms(merged_gradients,
                                                    clip_gradient_norm)
 
-  train_op = optimizer.apply_gradients(
-      merged_gradients, global_step=global_step)
+  train_op = optimizer.apply_gradients(merged_gradients,
+                                       global_step=global_step)
 
   tf.add_to_collection("global_step", global_step)
   tf.add_to_collection("loss", label_loss)
@@ -385,9 +382,8 @@ class Trainer(object):
     self.task = task
     self.is_master = (task.type == "master" and task.index == 0)
     self.train_dir = train_dir
-    self.config = tf.ConfigProto(
-        allow_soft_placement=True,
-        log_device_placement=log_device_placement)
+    self.config = tf.ConfigProto(allow_soft_placement=True,
+                                 log_device_placement=log_device_placement)
     self.config.gpu_options.allow_growth = True
     self.model = model
     self.reader = reader
@@ -456,15 +452,14 @@ class Trainer(object):
         train_op = tf.get_collection("train_op")[0]
         init_op = tf.global_variables_initializer()
 
-    sv = tf.train.Supervisor(
-        graph,
-        logdir=self.train_dir,
-        init_op=init_op,
-        is_chief=self.is_master,
-        global_step=global_step,
-        save_model_secs=15 * 60,
-        save_summaries_secs=120,
-        saver=saver)
+    sv = tf.train.Supervisor(graph,
+                             logdir=self.train_dir,
+                             init_op=init_op,
+                             is_chief=self.is_master,
+                             global_step=global_step,
+                             save_model_secs=15 * 60,
+                             save_summaries_secs=120,
+                             saver=saver)
 
     logging.info("%s: Starting managed session.", task_as_string(self.task))
     with sv.managed_session(target, config=self.config) as sess:
@@ -539,10 +534,9 @@ class Trainer(object):
     logging.info("%s: Exporting the model at step %s to %s.",
                  task_as_string(self.task), global_step_val, model_dir)
 
-    self.model_exporter.export_model(
-        model_dir=model_dir,
-        global_step_val=global_step_val,
-        last_checkpoint=last_checkpoint)
+    self.model_exporter.export_model(model_dir=model_dir,
+                                     global_step_val=global_step_val,
+                                     last_checkpoint=last_checkpoint)
 
   def start_server_if_distributed(self):
     """Starts a server if the execution is distributed."""
@@ -604,20 +598,19 @@ class Trainer(object):
     label_loss_fn = find_class_by_name(FLAGS.label_loss, [losses])()
     optimizer_class = find_class_by_name(FLAGS.optimizer, [tf.train])
 
-    build_graph(
-        reader=reader,
-        model=model,
-        optimizer_class=optimizer_class,
-        clip_gradient_norm=FLAGS.clip_gradient_norm,
-        train_data_pattern=FLAGS.train_data_pattern,
-        label_loss_fn=label_loss_fn,
-        base_learning_rate=FLAGS.base_learning_rate,
-        learning_rate_decay=FLAGS.learning_rate_decay,
-        learning_rate_decay_examples=FLAGS.learning_rate_decay_examples,
-        regularization_penalty=FLAGS.regularization_penalty,
-        num_readers=FLAGS.num_readers,
-        batch_size=FLAGS.batch_size,
-        num_epochs=FLAGS.num_epochs)
+    build_graph(reader=reader,
+                model=model,
+                optimizer_class=optimizer_class,
+                clip_gradient_norm=FLAGS.clip_gradient_norm,
+                train_data_pattern=FLAGS.train_data_pattern,
+                label_loss_fn=label_loss_fn,
+                base_learning_rate=FLAGS.base_learning_rate,
+                learning_rate_decay=FLAGS.learning_rate_decay,
+                learning_rate_decay_examples=FLAGS.learning_rate_decay_examples,
+                regularization_penalty=FLAGS.regularization_penalty,
+                num_readers=FLAGS.num_readers,
+                batch_size=FLAGS.batch_size,
+                num_epochs=FLAGS.num_epochs)
 
     return tf.train.Saver(max_to_keep=0, keep_checkpoint_every_n_hours=0.25)
 
@@ -628,13 +621,12 @@ def get_reader():
       FLAGS.feature_names, FLAGS.feature_sizes)
 
   if FLAGS.frame_features:
-    reader = readers.YT8MFrameFeatureReader(
-        feature_names=feature_names,
-        feature_sizes=feature_sizes,
-        segment_labels=FLAGS.segment_labels)
+    reader = readers.YT8MFrameFeatureReader(feature_names=feature_names,
+                                            feature_sizes=feature_sizes,
+                                            segment_labels=FLAGS.segment_labels)
   else:
-    reader = readers.YT8MAggregatedFeatureReader(
-        feature_names=feature_names, feature_sizes=feature_sizes)
+    reader = readers.YT8MAggregatedFeatureReader(feature_names=feature_names,
+                                                 feature_sizes=feature_sizes)
 
   return reader
 
@@ -680,11 +672,10 @@ def start_server(cluster, task):
                      task_as_string(task))
 
   # Create and start a server.
-  return tf.train.Server(
-      tf.train.ClusterSpec(cluster),
-      protocol="grpc",
-      job_name=task.type,
-      task_index=task.index)
+  return tf.train.Server(tf.train.ClusterSpec(cluster),
+                         protocol="grpc",
+                         job_name=task.type,
+                         task_index=task.index)
 
 
 def task_as_string(task):

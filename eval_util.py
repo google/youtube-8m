@@ -86,8 +86,8 @@ def calculate_gap(predictions, actuals, top_k=20):
   gap_calculator = ap_calculator.AveragePrecisionCalculator()
   sparse_predictions, sparse_labels, num_positives = top_k_by_class(
       predictions, actuals, top_k)
-  gap_calculator.accumulate(
-      flatten(sparse_predictions), flatten(sparse_labels), sum(num_positives))
+  gap_calculator.accumulate(flatten(sparse_predictions), flatten(sparse_labels),
+                            sum(num_positives))
   return gap_calculator.peek_ap_at_n()
 
 
@@ -194,8 +194,9 @@ class EvaluationMetrics(object):
         predictions, labels, self.top_k)
     self.map_calculator.accumulate(sparse_predictions, sparse_labels,
                                    num_positives)
-    self.global_ap_calculator.accumulate(
-        flatten(sparse_predictions), flatten(sparse_labels), sum(num_positives))
+    self.global_ap_calculator.accumulate(flatten(sparse_predictions),
+                                         flatten(sparse_labels),
+                                         sum(num_positives))
 
     self.num_examples += batch_size
     self.sum_hit_at_one += mean_hit_at_one * batch_size

@@ -92,11 +92,11 @@ class SoftmaxLoss(BaseLoss):
       epsilon = 10e-8
       float_labels = tf.cast(labels, tf.float32)
       # l1 normalization (labels are no less than 0)
-      label_rowsum = tf.maximum(
-          tf.reduce_sum(float_labels, 1, keep_dims=True), epsilon)
+      label_rowsum = tf.maximum(tf.reduce_sum(float_labels, 1, keep_dims=True),
+                                epsilon)
       norm_float_labels = tf.div(float_labels, label_rowsum)
       softmax_outputs = tf.nn.softmax(predictions)
       softmax_loss = tf.negative(
-          tf.reduce_sum(
-              tf.multiply(norm_float_labels, tf.log(softmax_outputs)), 1))
+          tf.reduce_sum(tf.multiply(norm_float_labels, tf.log(softmax_outputs)),
+                        1))
     return tf.reduce_mean(softmax_loss)

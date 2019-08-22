@@ -92,17 +92,17 @@ def get_input_evaluation_tensors(reader,
     if not files:
       raise IOError("Unable to find the evaluation files.")
     logging.info("number of evaluation files: %d", len(files))
-    filename_queue = tf.train.string_input_producer(
-        files, shuffle=False, num_epochs=1)
+    filename_queue = tf.train.string_input_producer(files,
+                                                    shuffle=False,
+                                                    num_epochs=1)
     eval_data = [
         reader.prepare_reader(filename_queue) for _ in range(num_readers)
     ]
-    return tf.train.batch_join(
-        eval_data,
-        batch_size=batch_size,
-        capacity=3 * batch_size,
-        allow_smaller_final_batch=True,
-        enqueue_many=True)
+    return tf.train.batch_join(eval_data,
+                               batch_size=batch_size,
+                               capacity=3 * batch_size,
+                               allow_smaller_final_batch=True,
+                               enqueue_many=True)
 
 
 def build_graph(reader,
@@ -125,8 +125,10 @@ def build_graph(reader,
   """
 
   global_step = tf.Variable(0, trainable=False, name="global_step")
-  input_data_dict = get_input_evaluation_tensors(
-      reader, eval_data_pattern, batch_size=batch_size, num_readers=num_readers)
+  input_data_dict = get_input_evaluation_tensors(reader,
+                                                 eval_data_pattern,
+                                                 batch_size=batch_size,
+                                                 num_readers=num_readers)
   video_id_batch = input_data_dict["video_ids"]
   model_input_raw = input_data_dict["video_matrix"]
   labels_batch = input_data_dict["labels"]
@@ -139,12 +141,11 @@ def build_graph(reader,
   model_input = tf.nn.l2_normalize(model_input_raw, feature_dim)
 
   with tf.variable_scope("tower"):
-    result = model.create_model(
-        model_input,
-        num_frames=num_frames,
-        vocab_size=reader.num_classes,
-        labels=labels_batch,
-        is_training=False)
+    result = model.create_model(model_input,
+                                num_frames=num_frames,
+                                vocab_size=reader.num_classes,
+                                labels=labels_batch,
+                                is_training=False)
     predictions = result["predictions"]
     tf.summary.histogram("model_activations", predictions)
     if "loss" in result.keys():
@@ -181,9 +182,8 @@ def evaluation_loop(fetches, saver, summary_writer, evl_metrics,
   """
 
   global_step_val = -1
-  with tf.Session(
-      config=tf.ConfigProto(gpu_options=tf.GPUOptions(
-          allow_growth=True))) as sess:
+  with tf.Session(config=tf.ConfigProto(gpu_options=tf.GPUOptions(
+      allow_growth=True))) as sess:
     latest_checkpoint = tf.train.latest_checkpoint(FLAGS.train_dir)
     if latest_checkpoint:
       logging.info("Loading checkpoint for eval: %s", latest_checkpoint)
@@ -239,11 +239,10 @@ def evaluation_loop(fetches, saver, summary_writer, evl_metrics,
                                                      output_data_dict["loss"])
         iteration_info_dict["examples_per_second"] = example_per_second
 
-        iterinfo = utils.AddGlobalStepSummary(
-            summary_writer,
-            global_step_val,
-            iteration_info_dict,
-            summary_scope="Eval")
+        iterinfo = utils.AddGlobalStepSummary(summary_writer,
+                                              global_step_val,
+                                              iteration_info_dict,
+                                              summary_scope="Eval")
         logging.info("examples_processed: %d | %s", examples_processed,
                      iterinfo)
 
@@ -256,11 +255,10 @@ def evaluation_loop(fetches, saver, summary_writer, evl_metrics,
       epoch_info_dict["epoch_id"] = global_step_val
 
       summary_writer.add_summary(summary_val, global_step_val)
-      epochinfo = utils.AddEpochSummary(
-          summary_writer,
-          global_step_val,
-          epoch_info_dict,
-          summary_scope="Eval")
+      epochinfo = utils.AddEpochSummary(summary_writer,
+                                        global_step_val,
+                                        epoch_info_dict,
+                                        summary_scope="Eval")
       logging.info(epochinfo)
       evl_metrics.clear()
     except Exception as e:  # pylint: disable=broad-except
@@ -296,8 +294,8 @@ def evaluate():
           feature_sizes=feature_sizes,
           segment_labels=FLAGS.segment_labels)
     else:
-      reader = readers.YT8MAggregatedFeatureReader(
-          feature_names=feature_names, feature_sizes=feature_sizes)
+      reader = readers.YT8MAggregatedFeatureReader(feature_names=feature_names,
+                                                   feature_sizes=feature_sizes)
 
     model = find_class_by_name(flags_dict["model"],
                                [frame_level_models, video_level_models])()
@@ -307,13 +305,12 @@ def evaluate():
       raise IOError("'eval_data_pattern' was not specified. Nothing to "
                     "evaluate.")
 
-    build_graph(
-        reader=reader,
-        model=model,
-        eval_data_pattern=FLAGS.eval_data_pattern,
-        label_loss_fn=label_loss_fn,
-        num_readers=FLAGS.num_readers,
-        batch_size=FLAGS.batch_size)
+    build_graph(reader=reader,
+                model=model,
+                eval_data_pattern=FLAGS.eval_data_pattern,
+                label_loss_fn=label_loss_fn,
+                num_readers=FLAGS.num_readers,
+                batch_size=FLAGS.batch_size)
     logging.info("built evaluation graph")
 
     # A dict of tensors to be run in Session.
@@ -328,8 +325,9 @@ def evaluate():
       fetches["label_weights"] = tf.get_collection("label_weights")[0]
 
     saver = tf.train.Saver(tf.global_variables())
-    summary_writer = tf.summary.FileWriter(
-        os.path.join(FLAGS.train_dir, "eval"), graph=tf.get_default_graph())
+    summary_writer = tf.summary.FileWriter(os.path.join(FLAGS.train_dir,
+                                                        "eval"),
+                                           graph=tf.get_default_graph())
 
     evl_metrics = eval_util.EvaluationMetrics(reader.num_classes, FLAGS.top_k,
                                               None)
