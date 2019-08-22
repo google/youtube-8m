@@ -75,15 +75,14 @@ class FrameLevelLogisticModel(models.BaseModel):
     num_frames = tf.cast(tf.expand_dims(num_frames, 1), tf.float32)
     feature_size = model_input.get_shape().as_list()[2]
 
-    denominators = tf.reshape(
-        tf.tile(num_frames, [1, feature_size]), [-1, feature_size])
+    denominators = tf.reshape(tf.tile(num_frames, [1, feature_size]),
+                              [-1, feature_size])
     avg_pooled = tf.reduce_sum(model_input, axis=[1]) / denominators
 
-    output = slim.fully_connected(
-        avg_pooled,
-        vocab_size,
-        activation_fn=tf.nn.sigmoid,
-        weights_regularizer=slim.l2_regularizer(1e-8))
+    output = slim.fully_connected(avg_pooled,
+                                  vocab_size,
+                                  activation_fn=tf.nn.sigmoid,
+                                  weights_regularizer=slim.l2_regularizer(1e-8))
     return {"predictions": output}
 
 
@@ -156,12 +155,11 @@ class DbofModel(models.BaseModel):
     tf.compat.v1.summary.histogram("input_hist", reshaped_input)
 
     if add_batch_norm:
-      reshaped_input = slim.batch_norm(
-          reshaped_input,
-          center=True,
-          scale=True,
-          is_training=is_training,
-          scope="input_bn")
+      reshaped_input = slim.batch_norm(reshaped_input,
+                                       center=True,
+                                       scale=True,
+                                       is_training=is_training,
+                                       scope="input_bn")
 
     cluster_weights = tf.compat.v1.get_variable(
         "cluster_weights", [feature_size, cluster_size],
@@ -170,12 +168,11 @@ class DbofModel(models.BaseModel):
     tf.compat.v1.summary.histogram("cluster_weights", cluster_weights)
     activation = tf.matmul(reshaped_input, cluster_weights)
     if add_batch_norm:
-      activation = slim.batch_norm(
-          activation,
-          center=True,
-          scale=True,
-          is_training=is_training,
-          scope="cluster_bn")
+      activation = slim.batch_norm(activation,
+                                   center=True,
+                                   scale=True,
+                                   is_training=is_training,
+                                   scope="cluster_bn")
     else:
       cluster_biases = tf.compat.v1.get_variable(
           "cluster_biases", [cluster_size],
@@ -196,12 +193,11 @@ class DbofModel(models.BaseModel):
     tf.compat.v1.summary.histogram("hidden1_weights", hidden1_weights)
     activation = tf.matmul(activation, hidden1_weights)
     if add_batch_norm:
-      activation = slim.batch_norm(
-          activation,
-          center=True,
-          scale=True,
-          is_training=is_training,
-          scope="hidden1_bn")
+      activation = slim.batch_norm(activation,
+                                   center=True,
+                                   scale=True,
+                                   is_training=is_training,
+                                   scope="hidden1_bn")
     else:
       hidden1_biases = tf.compat.v1.get_variable(
           "hidden1_biases", [hidden1_size],
@@ -213,8 +209,9 @@ class DbofModel(models.BaseModel):
 
     aggregated_model = getattr(video_level_models,
                                FLAGS.video_level_classifier_model)
-    return aggregated_model().create_model(
-        model_input=activation, vocab_size=vocab_size, **unused_params)
+    return aggregated_model().create_model(model_input=activation,
+                                           vocab_size=vocab_size,
+                                           **unused_params)
 
 
 class LstmModel(models.BaseModel):
@@ -243,11 +240,14 @@ class LstmModel(models.BaseModel):
         for _ in range(number_of_layers)
     ])
 
-    _, state = tf.nn.dynamic_rnn(
-        stacked_lstm, model_input, sequence_length=num_frames, dtype=tf.float32)
+    _, state = tf.nn.dynamic_rnn(stacked_lstm,
+                                 model_input,
+                                 sequence_length=num_frames,
+                                 dtype=tf.float32)
 
     aggregated_model = getattr(video_level_models,
                                FLAGS.video_level_classifier_model)
 
-    return aggregated_model().create_model(
-        model_input=state[-1].h, vocab_size=vocab_size, **unused_params)
+    return aggregated_model().create_model(model_input=state[-1].h,
+                                           vocab_size=vocab_size,
+                                           **unused_params)

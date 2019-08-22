@@ -149,11 +149,10 @@ class AveragePrecisionCalculator(object):
       return 0
     predlists = numpy.array(list(zip(*self._heap)))
 
-    ap = self.ap_at_n(
-        predlists[0],
-        predlists[1],
-        n=self._top_n,
-        total_num_positives=self._total_positives)
+    ap = self.ap_at_n(predlists[0],
+                      predlists[1],
+                      n=self._top_n,
+                      total_num_positives=self._total_positives)
     return ap
 
   @staticmethod
@@ -215,8 +214,9 @@ class AveragePrecisionCalculator(object):
     # add a shuffler to avoid overestimating the ap
     predictions, actuals = AveragePrecisionCalculator._shuffle(
         predictions, actuals)
-    sortidx = sorted(
-        range(len(predictions)), key=lambda k: predictions[k], reverse=True)
+    sortidx = sorted(range(len(predictions)),
+                     key=lambda k: predictions[k],
+                     reverse=True)
 
     if total_num_positives is None:
       numpos = numpy.size(numpy.where(actuals > 0))
