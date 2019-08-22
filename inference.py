@@ -129,17 +129,18 @@ def get_input_data_tensors(reader, data_pattern, batch_size, num_readers=1):
       raise IOError("Unable to find input files. data_pattern='" +
                     data_pattern + "'")
     logging.info("number of input files: " + str(len(files)))
-    filename_queue = tf.train.string_input_producer(files,
-                                                    num_epochs=1,
-                                                    shuffle=False)
+    filename_queue = tf.train.string_input_producer(
+        files, num_epochs=1, shuffle=False)
     examples_and_labels = [
         reader.prepare_reader(filename_queue) for _ in range(num_readers)
     ]
 
-    input_data_dict = (tf.train.batch_join(examples_and_labels,
-                                           batch_size=batch_size,
-                                           allow_smaller_final_batch=True,
-                                           enqueue_many=True))
+    input_data_dict = (
+        tf.train.batch_join(
+            examples_and_labels,
+            batch_size=batch_size,
+            allow_smaller_final_batch=True,
+            enqueue_many=True))
     video_id_batch = input_data_dict["video_ids"]
     video_batch = input_data_dict["video_matrix"]
     num_frames_batch = input_data_dict["num_frames"]
@@ -191,8 +192,9 @@ def inference(reader, train_dir, data_pattern, out_file_location, batch_size,
                                                       "w+") as out_file:
     video_id_batch, video_batch, num_frames_batch = get_input_data_tensors(
         reader, data_pattern, batch_size)
+    inference_model_name = "segment_inference_model" if FLAGS.segment_labels else "inference_model"
     checkpoint_file = os.path.join(train_dir, "inference_model",
-                                   "inference_model")
+                                   inference_model_name)
     if not gfile.Exists(checkpoint_file + ".meta"):
       raise IOError("Cannot find %s. Did you run eval.py?" % checkpoint_file)
     meta_graph_location = checkpoint_file + ".meta"
@@ -202,12 +204,13 @@ def inference(reader, train_dir, data_pattern, out_file_location, batch_size,
       with tarfile.open(FLAGS.output_model_tgz, "w:gz") as tar:
         for model_file in glob.glob(checkpoint_file + ".*"):
           tar.add(model_file, arcname=os.path.basename(model_file))
-        tar.add(os.path.join(train_dir, "model_flags.json"),
-                arcname="model_flags.json")
+        tar.add(
+            os.path.join(train_dir, "model_flags.json"),
+            arcname="model_flags.json")
       print("Tarred model onto " + FLAGS.output_model_tgz)
     with tf.device("/cpu:0"):
-      saver = tf.train.import_meta_graph(meta_graph_location,
-                                         clear_devices=True)
+      saver = tf.train.import_meta_graph(
+          meta_graph_location, clear_devices=True)
     logging.info("restoring variables from " + checkpoint_file)
     saver.restore(sess, checkpoint_file)
     input_tensor = tf.get_collection("input_batch_raw")[0]
@@ -356,11 +359,11 @@ def main(unused_argv):
       flags_dict["feature_names"], flags_dict["feature_sizes"])
 
   if flags_dict["frame_features"]:
-    reader = readers.YT8MFrameFeatureReader(feature_names=feature_names,
-                                            feature_sizes=feature_sizes)
+    reader = readers.YT8MFrameFeatureReader(
+        feature_names=feature_names, feature_sizes=feature_sizes)
   else:
-    reader = readers.YT8MAggregatedFeatureReader(feature_names=feature_names,
-                                                 feature_sizes=feature_sizes)
+    reader = readers.YT8MAggregatedFeatureReader(
+        feature_names=feature_names, feature_sizes=feature_sizes)
 
   if not FLAGS.output_file:
     raise ValueError("'output_file' was not specified. "
