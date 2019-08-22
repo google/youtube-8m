@@ -100,7 +100,7 @@ class YT8MAggregatedFeatureReader(BaseReader):
       batch_size: batch size used for feature output.
 
     Returns:
-      A tuple of video indexes, features, labels, and padding data.
+      A dict of video indexes, features, labels, and frame counts.
     """
     reader = tf.TFRecordReader()
     _, serialized_examples = reader.read_up_to(filename_queue, batch_size)
@@ -217,7 +217,7 @@ class YT8MFrameFeatureReader(BaseReader):
       min_quantized_value: the minimum of the quantized value.
 
     Returns:
-      A tuple of video indexes, video features, labels, and padding data.
+      A dict of video indexes, video features, labels, and frame counts.
     """
     reader = tf.TFRecordReader()
     _, serialized_example = reader.read(filename_queue)

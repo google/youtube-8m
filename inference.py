@@ -25,6 +25,7 @@ import time
 import numpy as np
 
 import readers
+from six.moves import urllib
 import tensorflow as tf
 from tensorflow import app
 from tensorflow import flags
@@ -66,8 +67,10 @@ if __name__ == "__main__":
       "read 3D batches VS 4D batches.")
   flags.DEFINE_integer("segment_max_pred", 25000,
                        "Limit total number of segment outputs per entity.")
-  flags.DEFINE_string("segment_label_ids_file", "segment_label_ids.csv",
-                      "The file that contains the segment label ids.")
+  flags.DEFINE_string(
+      "segment_label_ids_file",
+      "https://raw.githubusercontent.com/google/youtube-8m/master/segment_label_ids.csv",
+      "The file that contains the segment label ids.")
 
   # Output
   flags.DEFINE_string("output_file", "", "The file to save the predictions to.")
@@ -80,7 +83,7 @@ if __name__ == "__main__":
   flags.DEFINE_integer("top_k", 20, "How many predictions to output per video.")
 
   # Other flags.
-  flags.DEFINE_integer("batch_size", 8192,
+  flags.DEFINE_integer("batch_size", 512,
                        "How many examples to process per batch.")
   flags.DEFINE_integer("num_readers", 1,
                        "How many threads to use for reading input files.")
@@ -98,8 +101,9 @@ def format_lines(video_ids, predictions, top_k, whitelisted_cls_mask=None):
     line = [(class_index, predictions[video_index][class_index])
             for class_index in top_indices]
     line = sorted(line, key=lambda p: -p[1])
-    yield video_ids[video_index].decode("utf-8") + "," + " ".join(
-        "%i %g" % (label, score) for (label, score) in line) + "\n"
+    yield (video_ids[video_index] + "," +
+           " ".join("%i %g" % (label, score) for (label, score) in line) +
+           "\n").encode("utf8")
 
 
 def get_input_data_tensors(reader, data_pattern, batch_size, num_readers=1):
@@ -239,7 +243,13 @@ def inference(reader, train_dir, data_pattern, out_file_location, batch_size,
       if FLAGS.segment_label_ids_file:
         whitelisted_cls_mask = np.zeros((predictions_tensor.get_shape()[-1],),
                                         dtype=np.float32)
-        with open(FLAGS.segment_label_ids_file) as fobj:
+        segment_label_ids_file = FLAGS.segment_label_ids_file
+        if segment_label_ids_file.startswith("http"):
+          logging.info("Retrieving segment ID whitelist files from %s...",
+                       segment_label_ids_file)
+          segment_label_ids_file, _ = urllib.request.urlretrieve(
+              segment_label_ids_file)
+        with tf.io.gfile.GFile(segment_label_ids_file) as fobj:
           for line in fobj:
             try:
               cls_id = int(line)
@@ -248,7 +258,7 @@ def inference(reader, train_dir, data_pattern, out_file_location, batch_size,
               # Simply skip the non-integer line.
               continue
 
-    out_file.write("VideoId,LabelConfidencePairs\n")
+    out_file.write(u"VideoId,LabelConfidencePairs\n".encode("utf8"))
 
     try:
       while not coord.should_stop():
@@ -259,7 +269,7 @@ def inference(reader, train_dir, data_pattern, out_file_location, batch_size,
           video_segment_ids = results["video_segment_ids"]
           video_id_batch_val = video_id_batch_val[video_segment_ids[:, 0]]
           video_id_batch_val = np.array([
-              "%s:%d" % (x, y)
+              "%s:%d" % (x.decode("utf8"), y)
               for x, y in zip(video_id_batch_val, video_segment_ids[:, 1])
           ])
           video_batch_val = results["video_batch"]
@@ -295,7 +305,7 @@ def inference(reader, train_dir, data_pattern, out_file_location, batch_size,
         heaps = {}
         out_file.seek(0, 0)
         for line in out_file:
-          segment_id, preds = line.split(",")
+          segment_id, preds = line.decode("utf8").split(",")
           if segment_id == "VideoId":
             # Skip the headline.
             continue
@@ -313,6 +323,7 @@ def inference(reader, train_dir, data_pattern, out_file_location, batch_size,
               heapq.heappush(heaps[cls], (score, segment_id))
         logging.info("Writing sorted segment predictions to: %s",
                      final_out_file.name)
+        final_out_file.write("Class,Segments\n")
         for cls, cls_heap in heaps.items():
           cls_heap.sort(key=lambda x: x[0], reverse=True)
           final_out_file.write("%d,%s\n" %
