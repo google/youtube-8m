@@ -89,8 +89,8 @@ def read_labels(data_pattern, cache_path=""):
   }
 
   def _parse_se_func(sequence_example):
-    return tf.parse_single_sequence_example(
-        sequence_example, context_features=context_features)
+    return tf.parse_single_sequence_example(sequence_example,
+                                            context_features=context_features)
 
   ds = ds.map(_parse_se_func)
   rated_labels = {}
@@ -151,8 +151,8 @@ def main(unused_argv):
   """Entry function of the script."""
   if not FLAGS.submission_file:
     raise ValueError("You must input submission file.")
-  eval_labels = read_labels(
-      FLAGS.eval_data_pattern, cache_path=FLAGS.label_cache)
+  eval_labels = read_labels(FLAGS.eval_data_pattern,
+                            cache_path=FLAGS.label_cache)
   tf.logging.info("Total rated segments: %d." % len(eval_labels.labels))
   positive_counter = {}
   for k, v in eval_labels.labels.items():
@@ -160,8 +160,9 @@ def main(unused_argv):
     if v > 0:
       positive_counter[label_id] = positive_counter.get(label_id, 0) + 1
 
-  seg_preds = read_segment_predictions(
-      FLAGS.submission_file, eval_labels, top_n=FLAGS.top_n)
+  seg_preds = read_segment_predictions(FLAGS.submission_file,
+                                       eval_labels,
+                                       top_n=FLAGS.top_n)
   map_cal = map_calculator.MeanAveragePrecisionCalculator(len(seg_preds))
   seg_labels = []
   seg_scored_preds = []

@@ -67,9 +67,8 @@ class ModelExporter(object):
       serialized_examples = tf.placeholder(tf.string, shape=(None,))
 
       fn = lambda x: self.build_prediction_graph(x)
-      video_id_output, top_indices_output, top_predictions_output = (
-          tf.map_fn(
-              fn, serialized_examples, dtype=(tf.string, tf.int32, tf.float32)))
+      video_id_output, top_indices_output, top_predictions_output = (tf.map_fn(
+          fn, serialized_examples, dtype=(tf.string, tf.int32, tf.float32)))
 
     else:
       serialized_examples = tf.placeholder(tf.string, shape=(None,))
@@ -105,12 +104,11 @@ class ModelExporter(object):
     model_input = tf.nn.l2_normalize(model_input_raw, feature_dim)
 
     with tf.variable_scope("tower"):
-      result = self.model.create_model(
-          model_input,
-          num_frames=num_frames,
-          vocab_size=self.reader.num_classes,
-          labels=labels_batch,
-          is_training=False)
+      result = self.model.create_model(model_input,
+                                       num_frames=num_frames,
+                                       vocab_size=self.reader.num_classes,
+                                       labels=labels_batch,
+                                       is_training=False)
 
       for variable in slim.get_model_variables():
         tf.summary.histogram(variable.op.name, variable)

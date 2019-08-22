@@ -1,0 +1,31 @@
+name: Python package
+
+on: [push, pull_request]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 4
+      matrix:
+        python-version: [3.6]
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install tensorflow==1.14.0 six Pillow
+    - name: Yapf Check
+      run: |
+        pip install yapf
+        yapf --diff --style="{based_on_style: google, indent_width:2}" *.py
+    - name: Test with nosetests
+      run: |
+        pip install -U nose
+        nosetests
