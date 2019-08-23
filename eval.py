@@ -23,9 +23,7 @@ import frame_level_models
 import losses
 import readers
 import tensorflow as tf
-from tensorflow import app
 from tensorflow import flags
-from tensorflow import gfile
 from tensorflow.python.lib.io import file_io
 import utils
 import video_level_models
@@ -88,7 +86,7 @@ def get_input_evaluation_tensors(reader,
   """
   logging.info("Using batch size of %d for evaluation.", batch_size)
   with tf.name_scope("eval_input"):
-    files = gfile.Glob(data_pattern)
+    files = tf.io.gfile.glob(data_pattern)
     if not files:
       raise IOError("Unable to find the evaluation files.")
     logging.info("number of evaluation files: %d", len(files))
@@ -131,38 +129,40 @@ def build_graph(reader,
   model_input_raw = input_data_dict["video_matrix"]
   labels_batch = input_data_dict["labels"]
   num_frames = input_data_dict["num_frames"]
-  tf.summary.histogram("model_input_raw", model_input_raw)
+  tf.compat.v1.summary.histogram("model_input_raw", model_input_raw)
 
   feature_dim = len(model_input_raw.get_shape()) - 1
 
   # Normalize input features.
   model_input = tf.nn.l2_normalize(model_input_raw, feature_dim)
 
-  with tf.variable_scope("tower"):
+  with tf.compat.v1.variable_scope("tower"):
     result = model.create_model(
         model_input,
         num_frames=num_frames,
         vocab_size=reader.num_classes,
         labels=labels_batch,
         is_training=False)
+
     predictions = result["predictions"]
-    tf.summary.histogram("model_activations", predictions)
+    tf.compat.v1.summary.histogram("model_activations", predictions)
     if "loss" in result.keys():
       label_loss = result["loss"]
     else:
       label_loss = label_loss_fn.calculate_loss(predictions, labels_batch)
 
-  tf.add_to_collection("global_step", global_step)
-  tf.add_to_collection("loss", label_loss)
-  tf.add_to_collection("predictions", predictions)
-  tf.add_to_collection("input_batch", model_input)
-  tf.add_to_collection("input_batch_raw", model_input_raw)
-  tf.add_to_collection("video_id_batch", video_id_batch)
-  tf.add_to_collection("num_frames", num_frames)
-  tf.add_to_collection("labels", tf.cast(labels_batch, tf.float32))
+  tf.compat.v1.add_to_collection("global_step", global_step)
+  tf.compat.v1.add_to_collection("loss", label_loss)
+  tf.compat.v1.add_to_collection("predictions", predictions)
+  tf.compat.v1.add_to_collection("input_batch", model_input)
+  tf.compat.v1.add_to_collection("input_batch_raw", model_input_raw)
+  tf.compat.v1.add_to_collection("video_id_batch", video_id_batch)
+  tf.compat.v1.add_to_collection("num_frames", num_frames)
+  tf.compat.v1.add_to_collection("labels", tf.cast(labels_batch, tf.float32))
   if FLAGS.segment_labels:
-    tf.add_to_collection("label_weights", input_data_dict["label_weights"])
-  tf.add_to_collection("summary_op", tf.summary.merge_all())
+    tf.compat.v1.add_to_collection("label_weights",
+                                   input_data_dict["label_weights"])
+  tf.compat.v1.add_to_collection("summary_op", tf.compat.v1.summary.merge_all())
 
 
 def evaluation_loop(fetches, saver, summary_writer, evl_metrics,
@@ -194,10 +194,13 @@ def evaluation_loop(fetches, saver, summary_writer, evl_metrics,
       global_step_val = os.path.basename(latest_checkpoint).split("-")[-1]
 
       # Save model
-      inference_model_name = "segment_inference_model" if FLAGS.segment_labels else "inference_model"
+      inference_model_name = "inference_model"
+      if FLAGS.segment_labels:
+        inference_model_name = "segment_inference_model"
       saver.save(
           sess,
-          os.path.join(FLAGS.train_dir, "inference_model", inference_model_name))
+          os.path.join(FLAGS.train_dir, "inference_model",
+                       inference_model_name))
     else:
       logging.info("No checkpoint file found.")
       return global_step_val
@@ -214,7 +217,7 @@ def evaluation_loop(fetches, saver, summary_writer, evl_metrics,
     coord = tf.train.Coordinator()
     try:
       threads = []
-      for qr in tf.get_collection(tf.GraphKeys.QUEUE_RUNNERS):
+      for qr in tf.compat.v1.get_collection(tf.GraphKeys.QUEUE_RUNNERS):
         threads.extend(
             qr.create_threads(sess, coord=coord, daemon=True, start=True))
       logging.info("enter eval_once loop global_step_val = %s. ",
@@ -277,7 +280,7 @@ def evaluation_loop(fetches, saver, summary_writer, evl_metrics,
 
 def evaluate():
   """Starts main evaluation loop."""
-  tf.set_random_seed(0)  # for reproducibility
+  tf.compat.v1.set_random_seed(0)  # for reproducibility
 
   # Write json of flags
   model_flags_path = os.path.join(FLAGS.train_dir, "model_flags.json")
@@ -319,18 +322,19 @@ def evaluate():
 
     # A dict of tensors to be run in Session.
     fetches = {
-        "video_id": tf.get_collection("video_id_batch")[0],
-        "predictions": tf.get_collection("predictions")[0],
-        "labels": tf.get_collection("labels")[0],
-        "loss": tf.get_collection("loss")[0],
-        "summary": tf.get_collection("summary_op")[0]
+        "video_id": tf.compat.v1.get_collection("video_id_batch")[0],
+        "predictions": tf.compat.v1.get_collection("predictions")[0],
+        "labels": tf.compat.v1.get_collection("labels")[0],
+        "loss": tf.compat.v1.get_collection("loss")[0],
+        "summary": tf.compat.v1.get_collection("summary_op")[0]
     }
     if FLAGS.segment_labels:
-      fetches["label_weights"] = tf.get_collection("label_weights")[0]
+      fetches["label_weights"] = tf.compat.v1.get_collection("label_weights")[0]
 
-    saver = tf.train.Saver(tf.global_variables())
-    summary_writer = tf.summary.FileWriter(
-        os.path.join(FLAGS.train_dir, "eval"), graph=tf.get_default_graph())
+    saver = tf.compat.v1.train.Saver(tf.compat.v1.global_variables())
+    summary_writer = tf.compat.v1.summary.FileWriter(
+        os.path.join(FLAGS.train_dir, "eval"),
+        graph=tf.compat.v1.get_default_graph())
 
     evl_metrics = eval_util.EvaluationMetrics(reader.num_classes, FLAGS.top_k,
                                               None)
@@ -344,10 +348,10 @@ def evaluate():
 
 
 def main(unused_argv):
-  logging.set_verbosity(tf.logging.INFO)
+  logging.set_verbosity(logging.INFO)
   logging.info("tensorflow version: %s", tf.__version__)
   evaluate()
 
 
 if __name__ == "__main__":
-  app.run()
+  tf.compat.v1.app.run()
