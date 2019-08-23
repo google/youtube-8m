@@ -65,7 +65,7 @@ if __name__ == "__main__":
       " segment_labels). Otherwise, --input_data_pattern must be aggregated "
       "video-level features. The model must also be set appropriately (i.e. to "
       "read 3D batches VS 4D batches.")
-  flags.DEFINE_integer("segment_max_pred", 25000,
+  flags.DEFINE_integer("segment_max_pred", 100000,
                        "Limit total number of segment outputs per entity.")
   flags.DEFINE_string(
       "segment_label_ids_file",
