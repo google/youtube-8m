@@ -118,8 +118,8 @@ class YT8MAggregatedFeatureReader(BaseReader):
         len(self.feature_names), len(self.feature_sizes))
 
     feature_map = {
-        "id": tf.FixedLenFeature([], tf.string),
-        "labels": tf.VarLenFeature(tf.int64)
+        "id": tf.io.FixedLenFeature([], tf.string),
+        "labels": tf.io.VarLenFeature(tf.int64)
     }
     for feature_index in range(num_features):
       feature_map[self.feature_names[feature_index]] = tf.FixedLenFeature(
@@ -234,23 +234,23 @@ class YT8MFrameFeatureReader(BaseReader):
 
     # Read/parse frame/segment-level labels.
     context_features = {
-        "id": tf.FixedLenFeature([], tf.string),
+        "id": tf.io.FixedLenFeature([], tf.string),
     }
     if self.segment_labels:
       context_features.update({
           # There is no need to read end-time given we always assume the segment
           # has the same size.
-          "segment_labels": tf.VarLenFeature(tf.int64),
-          "segment_start_times": tf.VarLenFeature(tf.int64),
-          "segment_scores": tf.VarLenFeature(tf.float32)
+          "segment_labels": tf.io.VarLenFeature(tf.int64),
+          "segment_start_times": tf.io.VarLenFeature(tf.int64),
+          "segment_scores": tf.io.VarLenFeature(tf.float32)
       })
     else:
-      context_features.update({"labels": tf.VarLenFeature(tf.int64)})
+      context_features.update({"labels": tf.io.VarLenFeature(tf.int64)})
     sequence_features = {
-        feature_name: tf.FixedLenSequenceFeature([], dtype=tf.string)
+        feature_name: tf.io.FixedLenSequenceFeature([], dtype=tf.string)
         for feature_name in self.feature_names
     }
-    contexts, features = tf.parse_single_sequence_example(
+    contexts, features = tf.io.parse_single_sequence_example(
         serialized_example,
         context_features=context_features,
         sequence_features=sequence_features)
