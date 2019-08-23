@@ -283,8 +283,11 @@ def inference(reader, train_dir, data_pattern, out_file_location, batch_size,
                                     })
         now = time.time()
         num_examples_processed += len(video_batch_val)
+        elapsed_time = now - start_time
         logging.info("num examples processed: " + str(num_examples_processed) +
-                     " elapsed seconds: " + "{0:.2f}".format(now - start_time))
+                     " elapsed seconds: " + "{0:.2f}".format(elapsed_time) +
+                     " examples/sec: %.2f" %
+                     (num_examples_processed / elapsed_time))
         for line in format_lines(video_id_batch_val, predictions_val, top_k,
                                  whitelisted_cls_mask):
           out_file.write(line)
