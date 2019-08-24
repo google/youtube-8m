@@ -393,7 +393,6 @@ class Trainer(object):
     self.export_model_steps = export_model_steps
     self.last_model_export_step = 0
 
-
 #     if self.is_master and self.task.index > 0:
 #       raise StandardError("%s: Only one replica of master expected",
 #                           task_as_string(self.task))
@@ -532,6 +531,8 @@ class Trainer(object):
 
     # Temporarily disable the export. Given it might be the source which causes
     # the cloud training performance issue.
+
+
 #     model_dir = "{0}/export/step_{1}".format(self.train_dir, global_step_val)
 #     logging.info("%s: Exporting the model at step %s to %s.",
 #                  task_as_string(self.task), global_step_val, model_dir)
