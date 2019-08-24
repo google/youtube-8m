@@ -319,6 +319,9 @@ def inference(reader, train_dir, data_pattern, out_file_location, batch_size,
               float(preds[idx]) for idx in range(1, len(preds), 2)
           ]
           for cls, score in zip(pred_cls_ids, pred_cls_scores):
+            if not whitelisted_cls_mask[cls]:
+              # Skip non-whitelisted classes.
+              continue
             if cls not in heaps:
               heaps[cls] = []
             if len(heaps[cls]) >= FLAGS.segment_max_pred:
