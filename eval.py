@@ -194,9 +194,14 @@ def evaluation_loop(fetches, saver, summary_writer, evl_metrics,
       global_step_val = os.path.basename(latest_checkpoint).split("-")[-1]
 
       # Save model
+      if FLAGS.segment_labels:
+        inference_model_name = "segment_inference_model"
+      else:
+        inference_model_name = "inference_model"
       saver.save(
           sess,
-          os.path.join(FLAGS.train_dir, "inference_model", "inference_model"))
+          os.path.join(FLAGS.train_dir, "inference_model",
+                       inference_model_name))
     else:
       logging.info("No checkpoint file found.")
       return global_step_val
@@ -239,10 +244,11 @@ def evaluation_loop(fetches, saver, summary_writer, evl_metrics,
                                                      output_data_dict["loss"])
         iteration_info_dict["examples_per_second"] = example_per_second
 
-        iterinfo = utils.AddGlobalStepSummary(summary_writer,
-                                              global_step_val,
-                                              iteration_info_dict,
-                                              summary_scope="Eval")
+        iterinfo = utils.AddGlobalStepSummary(
+            summary_writer,
+            global_step_val,
+            iteration_info_dict,
+            summary_scope="SegEval" if FLAGS.segment_labels else "Eval")
         logging.info("examples_processed: %d | %s", examples_processed,
                      iterinfo)
 
@@ -255,10 +261,11 @@ def evaluation_loop(fetches, saver, summary_writer, evl_metrics,
       epoch_info_dict["epoch_id"] = global_step_val
 
       summary_writer.add_summary(summary_val, global_step_val)
-      epochinfo = utils.AddEpochSummary(summary_writer,
-                                        global_step_val,
-                                        epoch_info_dict,
-                                        summary_scope="Eval")
+      epochinfo = utils.AddEpochSummary(
+          summary_writer,
+          global_step_val,
+          epoch_info_dict,
+          summary_scope="SegEval" if FLAGS.segment_labels else "Eval")
       logging.info(epochinfo)
       evl_metrics.clear()
     except Exception as e:  # pylint: disable=broad-except
