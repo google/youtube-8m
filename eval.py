@@ -194,9 +194,10 @@ def evaluation_loop(fetches, saver, summary_writer, evl_metrics,
       global_step_val = os.path.basename(latest_checkpoint).split("-")[-1]
 
       # Save model
-      inference_model_name = "inference_model"
       if FLAGS.segment_labels:
         inference_model_name = "segment_inference_model"
+      else:
+        inference_model_name = "inference_model"
       saver.save(
           sess,
           os.path.join(FLAGS.train_dir, "inference_model",
