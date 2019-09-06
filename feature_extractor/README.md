@@ -1,4 +1,8 @@
-# YouTube8M Feature Extractor
+# Please use the [MediaPipe YouTube8M feature extractor](https://github.com/google/mediapipe/tree/master/mediapipe/examples/desktop/youtube8m) which extracts both RGB and audio features instead.
+
+---
+
+# YouTube8M Feature Extractor (DEPRECATED)
 
 This directory contains binary and library code that can extract YouTube8M
 features from images and videos. The code requires the Inception TensorFlow
