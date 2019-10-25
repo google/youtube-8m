@@ -27,6 +27,7 @@ model.
     *   [Evaluation and Inference](#evaluation-and-inference)
 *   [Create Your Own Dataset Files](#create-your-own-dataset-files)
 *   [Training without this Starter Code](#training-without-this-starter-code)
+*   [Export Your Model for MediaPipe Inference](#export-your-model-for-mediapipe-inference)
 *   [More Documents](#more-documents)
 *   [About This Project](#about-this-project)
 
@@ -320,6 +321,16 @@ and the following for the inference code:
 ```
 num examples processed: 8192 elapsed seconds: 14.85
 ```
+
+## Export Your Model for MediaPipe Inference
+To run inference with your model in [MediaPipe inference
+demo](https://github.com/google/mediapipe/tree/master/mediapipe/examples/desktop/youtube8m#steps-to-run-the-youtube-8m-inference-graph-with-the-yt8m-dataset), you need to export your checkpoint to a SavedModel.
+
+Example command:
+```sh
+python export_model_mediapipe.py --checkpoint_file  ~/yt8m/models/frame/sample_model/inference_model/segment_inference_model --output_dir /tmp/mediapipe/saved_model/
+```
+
 
 ## Create Your Own Dataset Files
 
