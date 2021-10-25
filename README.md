@@ -69,7 +69,7 @@ So the structure should look like
 
 ### Try the starter code
 
-Clone this git repo: `mkdir -p ~/yt8m/code cd ~/yt8m/code git clone
+Clone this git repo: `mkdir -p ~/yt8m/code && cd ~/yt8m/code && git clone
 https://github.com/google/youtube-8m.git`
 
 #### Train video-level model on frame-level features and inference at segment-level.
