@@ -196,7 +196,7 @@ For example, to download the output of the inference code from the previous
 section to your local machine, run:
 
 ```
-gsutil cp $BUCKET_NAME/${JOB_TO_EVAL}/predictions.csv .
+gcloud storage cp $BUCKET_NAME/${JOB_TO_EVAL}/predictions.csv .
 ```
 
 ### Testing Locally
@@ -226,7 +226,7 @@ features.
 ```bash
 BUCKET_NAME=gs://${USER}_yt8m_train_bucket
 # (One Time) Create a storage bucket to store training logs and checkpoints.
-gsutil mb -l us-east1 $BUCKET_NAME
+gcloud storage buckets create --location=us-east1 $BUCKET_NAME
 # Submit the training job.
 JOB_NAME=yt8m_train_$(date +%Y%m%d_%H%M%S); gcloud --verbosity=debug ai-platform jobs \
 submit training $JOB_NAME \
